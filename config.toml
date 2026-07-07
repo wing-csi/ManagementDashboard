@@ -25,6 +25,13 @@ label_prefix = "ai-level/"   # PR label,例:ai-level/L3
 trailer_key = "AI-Level"     # commit message / PR body 嘅 trailer,例:AI-Level: L3
 exclude_authors = ["dependabot[bot]", "renovate[bot]", "github-actions[bot]"]
 
+# 冇 label / trailer 時,用 PR 行為信號推斷 L2–L5:
+# agent bot 開 PR?有冇 review 來回?AI / 人手 commits 比例?diff 有冇 test?auto-merge?
+smart_inference = true
+
+# 當係 coding agent 處理嘅 GitHub 帳號(*[bot] 會自動當 agent,呢度加人型帳號)
+agent_authors = []
+
 # agent bot 帳號直接對應 level(啱用於 auto-merge pipeline)
 [classify.author_levels]
 # "my-agent[bot]" = "L5"

@@ -26,9 +26,25 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 | 1 | PR label | `ai-level/L3` | PR flow,喺 GitHub UI 直接搞掂 |
 | 2 | Trailer | commit message 或 PR body 加 `AI-Level: L3` | commit flow / Claude Code 自動寫 |
 | 3 | Author 對應 | config 入面 `"my-agent[bot]" = "L5"` | agent bot auto-merge pipeline |
-| 4 | Heuristic rules | message 含 `Co-Authored-By: Claude` → L3 | 冇明確標記時嘅兜底 |
+| 4 | Smart inference | 由 PR 行為推斷(下表) | 完全唔想人手標記 |
+| 5 | Heuristic rules | message 含 `Co-Authored-By: Claude` → L3 | 兜底 |
 
-四樣都冇 → 計「未分級」,反映喺覆蓋率 KPI。接受 `L3` / `l3` / `3` 寫法。
+五樣都冇 → 計「未分級」,反映喺覆蓋率 KPI。接受 `L3` / `l3` / `3` 寫法。
+
+### Smart inference 判級邏輯(PRs only)
+
+| 觀察到嘅 PR 行為 | 推斷 |
+|---|---|
+| agent bot 開 + 零人工 review + bot merge / auto-merge | L5 |
+| agent bot 開 + 人工只係最後 approve | L4 |
+| agent bot 開 + 有 `CHANGES_REQUESTED` / review threads | L3 |
+| 人開 PR,全部 commits 有 AI footer,冇 review 來回,diff 有 test files | L4 |
+| 全部 AI commits 但冇 test | L3 |
+| AI / 人手 commits 混雜,或者有中途 review 把關 | L3 |
+| AI commits 只佔少數(< 50%),冇 review 來回 | L2 |
+| 完全冇 AI 痕跡(冇 footer、唔係 bot 開) | 未分級 |
+
+**準確度 caveat**:L2/L3/L4 嘅真正分別在 coding session 入面(幾多次人工介入、邊個跑 verification),git/GitHub 只記錄結果,所以 inference 係推斷唔係觀測。最準嘅做法始終係喺 CLAUDE.md 叫 Claude Code commit 時自動寫 `AI-Level` trailer — agent 自己最清楚個 session 發生咗咩,而且完全唔使你人手做嘢。兩樣並存冇衝突:trailer 永遠優先,inference 做 safety net。
 
 | Level | 定義 |
 |---|---|
@@ -49,6 +65,8 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 | `classify.label_prefix` | `ai-level/` | PR label 前綴 |
 | `classify.trailer_key` | `AI-Level` | trailer key |
 | `classify.exclude_authors` | 3 個常見 bot | 完全唔計呢啲 author |
+| `classify.smart_inference` | `true` | 用 PR 行為信號推斷 level(見上表) |
+| `classify.agent_authors` | `[]` | 呢啲 login 當 coding agent(`*[bot]` 自動當 agent) |
 | `classify.author_levels` | `{}` | author login → level |
 | `classify.rules` | Claude Code 兩條 | 子字串 match → level,由上至下 |
 

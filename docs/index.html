@@ -445,13 +445,16 @@ function statsFromTasks(list) {
   const s = {
     byLevel: Object.fromEntries(LEVELS.map((l) => [l, 0])),
     untagged: 0, insTotal: 0, insAi: 0,
-    methods: { label: 0, trailer: 0, author: 0, rule: 0 },
+    methods: {},
   };
   for (const t of list) {
     s.insTotal += t.additions || 0;
     if (t.level) {
       s.byLevel[t.level]++;
-      if (t.method && s.methods[t.method] != null) s.methods[t.method]++;
+      if (t.method) {
+        const mk = t.method.split(':')[0];
+        s.methods[mk] = (s.methods[mk] || 0) + 1;
+      }
       if (AI_LOC_LEVELS.has(t.level)) s.insAi += t.additions || 0;
     } else {
       s.untagged++;
@@ -541,9 +544,8 @@ function renderSpectrum(cur) {
   const legend = $('legend');
   strip.innerHTML = '';
   legend.innerHTML = '';
-  const m = cur.methods;
-  const parts = [`label ${m.label}`, `trailer ${m.trailer}`, m.author ? `author ${m.author}` : '', `rule ${m.rule}`].filter(Boolean);
-  $('specNote').textContent = `已分級 ${cur.tagged} / ${cur.total} · ${parts.join(' · ')}`;
+  const parts = Object.entries(cur.methods).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`);
+  $('specNote').textContent = `已分級 ${cur.tagged} / ${cur.total}` + (parts.length ? ' · ' + parts.join(' · ') : '');
 
   const total = cur.total || 1;
   const segs = [{ key: 'untagged', n: cur.untagged }].concat(LEVELS.map((l) => ({ key: l, n: cur.byLevel[l] })));

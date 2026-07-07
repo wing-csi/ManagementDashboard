@@ -7,9 +7,13 @@ that docs/index.html aggregates client-side.
 
 Classification priority (first match wins):
     1. PR label            e.g. ai-level/L3
-    2. Trailer in message  e.g. "AI-Level: L3" in commit message or PR body
+    2. Trailer in message  e.g. "AI-Level: L3" in commit message, PR body,
+                           or any commit message inside the PR
     3. Author mapping      config [classify.author_levels]
-    4. Heuristic rules     config [[classify.rules]] substring match
+    4. Smart inference     (PRs only, config smart_inference) — infer L2–L5
+                           from PR behaviour: agent-authored? review rounds?
+                           AI/human commit mix? tests in diff? auto-merge?
+    5. Heuristic rules     config [[classify.rules]] substring match
 
 Task unit depends on `mode`:
     auto     merged PRs + commits with no associated PR (no double counting)
@@ -47,6 +51,8 @@ DEFAULT_CLASSIFY = {
     "trailer_key": "AI-Level",
     "exclude_authors": ["dependabot[bot]", "renovate[bot]", "github-actions[bot]"],
     "author_levels": {},
+    "agent_authors": [],  # logins treated as coding agents for inference
+    "smart_inference": True,  # infer level from PR review/merge behaviour
     "rules": [
         {"contains": "generated with [claude code]", "level": "L3"},
         {"contains": "co-authored-by: claude", "level": "L3"},
@@ -84,12 +90,22 @@ query($owner:String!,$name:String!,$cursor:String){
       pageInfo{ hasNextPage endCursor }
       nodes{
         number title body mergedAt updatedAt additions deletions url
-        author{ login }
+        author{ login __typename }
+        mergedBy{ login __typename }
+        autoMergeRequest{ enabledBy{ login } }
+        reviews(first:50){ nodes{ state author{ login __typename } } }
+        reviewThreads(first:1){ totalCount }
         labels(first:20){ nodes{ name } }
+        commits(first:50){ nodes{ commit{ message } } }
+        files(first:100){ nodes{ path } }
       }
     }
   }
 }"""
+
+TEST_PATH_RE = re.compile(
+    r"(^|/)tests?/|(^|/)test_|_test\.|\.test\.|\.spec\.|Test\.java$|Tests\.java$|Spec\."
+)
 
 
 class CollectError(Exception):
@@ -141,10 +157,10 @@ def normalize_level(raw: str) -> str | None:
     return f"L{match.group(1)}" if match else None
 
 
-def classify(
+def classify_explicit(
     cfg: dict, *, labels: tuple[str, ...] = (), text: str = "", author: str = ""
 ) -> tuple[str | None, str | None]:
-    """Return (level, method) using the priority ladder described above."""
+    """Explicit signals only: label → trailer → author mapping."""
     prefix = cfg["label_prefix"].lower()
     for label in labels:
         if label.lower().startswith(prefix):
@@ -162,7 +178,11 @@ def classify(
     mapped = cfg["author_levels"].get(author)
     if mapped and normalize_level(mapped):
         return normalize_level(mapped), "author"
+    return None, None
 
+
+def classify_rules(cfg: dict, text: str) -> tuple[str | None, str | None]:
+    """Fallback substring heuristics from config."""
     lowered = text.lower()
     for rule in cfg["rules"]:
         if rule["contains"].lower() in lowered:
@@ -170,6 +190,98 @@ def classify(
             if level:
                 return level, "rule"
     return None, None
+
+
+def classify(
+    cfg: dict, *, labels: tuple[str, ...] = (), text: str = "", author: str = ""
+) -> tuple[str | None, str | None]:
+    """Full ladder without behavioural inference (used for standalone commits)."""
+    level, method = classify_explicit(cfg, labels=labels, text=text, author=author)
+    if level:
+        return level, method
+    return classify_rules(cfg, text)
+
+
+@dataclass
+class PrSignals:
+    """Observable behaviour of a merged PR, used to infer the level."""
+
+    author_is_bot: bool
+    merged_by_bot: bool
+    auto_merge: bool
+    human_reviews: int  # reviews submitted by humans (any state)
+    changes_requested: int  # CHANGES_REQUESTED reviews by humans
+    review_threads: int  # inline review threads
+    total_commits: int
+    ai_commits: int  # commits whose message matches an AI rule (e.g. Claude footer)
+    touches_tests: bool  # diff includes test-looking file paths
+
+
+def _is_bot(actor: dict | None, cfg: dict) -> bool:
+    if not actor:
+        return False
+    login = actor.get("login") or ""
+    return (
+        actor.get("__typename") == "Bot"
+        or login.endswith("[bot]")
+        or login in cfg["agent_authors"]
+    )
+
+
+def extract_signals(node: dict, cfg: dict) -> PrSignals:
+    messages = [c["commit"]["message"] for c in (node.get("commits") or {}).get("nodes", [])]
+    ai_commits = sum(
+        1 for m in messages
+        if any(rule["contains"].lower() in m.lower() for rule in cfg["rules"])
+    )
+    reviews = [
+        r for r in (node.get("reviews") or {}).get("nodes", [])
+        if not _is_bot(r.get("author"), cfg)
+    ]
+    paths = [f["path"] for f in (node.get("files") or {}).get("nodes", [])]
+    return PrSignals(
+        author_is_bot=_is_bot(node.get("author"), cfg),
+        merged_by_bot=_is_bot(node.get("mergedBy"), cfg),
+        auto_merge=node.get("autoMergeRequest") is not None,
+        human_reviews=len(reviews),
+        changes_requested=sum(1 for r in reviews if r.get("state") == "CHANGES_REQUESTED"),
+        review_threads=(node.get("reviewThreads") or {}).get("totalCount", 0),
+        total_commits=len(messages),
+        ai_commits=ai_commits,
+        touches_tests=any(TEST_PATH_RE.search(p) for p in paths),
+    )
+
+
+def infer_level(s: PrSignals) -> tuple[str | None, str | None]:
+    """Infer L2–L5 from PR behaviour. Returns (None, None) without AI evidence.
+
+    The level ladder is defined by what happened *during the session*
+    (human turns, who verified) — GitHub only records the residue, so this
+    is an approximation. Explicit label/trailer always wins upstream.
+    """
+    if s.ai_commits == 0 and not s.author_is_bot:
+        return None, None  # no AI evidence — stay unclassified
+
+    checkpoints = s.changes_requested > 0 or s.review_threads > 0
+
+    if s.author_is_bot:
+        if not checkpoints and s.human_reviews == 0 and (s.merged_by_bot or s.auto_merge):
+            return "L5", "inference:auto-merged-agent-pr"
+        if checkpoints:
+            return "L3", "inference:agent-pr-with-checkpoints"
+        return "L4", "inference:agent-pr-final-review-only"
+
+    # human-opened PR carrying AI-marked commits
+    mixed = 0 < s.ai_commits < s.total_commits
+    if checkpoints or mixed:
+        if mixed and not checkpoints and s.ai_commits * 2 < s.total_commits:
+            return "L2", "inference:human-led-ai-assist"
+        return "L3", "inference:checkpoints-or-mixed-commits"
+
+    # every commit AI-marked, no review churn
+    if s.touches_tests:
+        return "L4", "inference:ai-end-to-end-with-tests"
+    return "L3", "inference:ai-authored-no-tests"
 
 
 def resolve_branch(client: GitHubClient, owner: str, name: str, branch: str | None) -> str:
@@ -244,8 +356,17 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> l
             if author in cfg["exclude_authors"]:
                 continue
             labels = tuple(l["name"] for l in node["labels"]["nodes"])
-            text = f"{node['title']}\n{node.get('body') or ''}"
-            level, method = classify(cfg, labels=labels, text=text, author=author)
+            commit_msgs = "\n".join(
+                c["commit"]["message"]
+                for c in (node.get("commits") or {}).get("nodes", [])
+            )
+            text = f"{node['title']}\n{node.get('body') or ''}\n{commit_msgs}"
+            # ladder: label → trailer → author → inference → substring rules
+            level, method = classify_explicit(cfg, labels=labels, text=text, author=author)
+            if level is None and cfg.get("smart_inference", True):
+                level, method = infer_level(extract_signals(node, cfg))
+            if level is None:
+                level, method = classify_rules(cfg, text)
             tasks.append(
                 Task(
                     repo=repo,

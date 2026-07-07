@@ -60,7 +60,9 @@ def commits_page(nodes, has_next=False, cursor=None):
 
 
 def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
-            merged="2026-05-02T10:00:00Z", updated=None, add=50):
+            author_type="User", merged="2026-05-02T10:00:00Z", updated=None, add=50,
+            commits=(), merged_by=("wing", "User"), auto_merge=False, reviews=(),
+            threads=0, files=()):
     return {
         "number": number,
         "title": title,
@@ -70,8 +72,17 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
         "additions": add,
         "deletions": 5,
         "url": f"https://github.com/wing/abci/pull/{number}",
-        "author": {"login": author},
+        "author": {"login": author, "__typename": author_type},
+        "mergedBy": {"login": merged_by[0], "__typename": merged_by[1]},
+        "autoMergeRequest": {"enabledBy": {"login": "agent"}} if auto_merge else None,
+        "reviews": {"nodes": [
+            {"state": st, "author": {"login": lg, "__typename": tp}}
+            for (st, lg, tp) in reviews
+        ]},
+        "reviewThreads": {"totalCount": threads},
         "labels": {"nodes": [{"name": l} for l in labels]},
+        "commits": {"nodes": [{"commit": {"message": m}} for m in commits]},
+        "files": {"nodes": [{"path": p} for p in files]},
     }
 
 
@@ -186,6 +197,105 @@ def test_collect_prs_trailer_in_body():
     client = FakeClient([prs_page([pr_node(number=7, body="details...\n\nAI-Level: 5")])])
     tasks = collect_prs(client, "wing/abci", SINCE, CFG)
     assert tasks[0].level == "L5" and tasks[0].method == "trailer"
+
+
+def test_collect_prs_trailer_in_inner_commit():
+    client = FakeClient([prs_page([
+        pr_node(number=8, commits=("feat: x\n\nAI-Level: L4",)),
+    ])])
+    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    assert tasks[0].level == "L4" and tasks[0].method == "trailer"
+
+
+def test_collect_prs_claude_footer_classified_by_inference():
+    footer = "feat: z\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\nCo-Authored-By: Claude <noreply@anthropic.com>"
+    client = FakeClient([prs_page([pr_node(number=9, commits=(footer,))])])
+    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    assert tasks[0].level == "L3" and tasks[0].method.startswith("inference:")
+
+
+def test_collect_prs_label_beats_inner_commit_signals():
+    client = FakeClient([prs_page([
+        pr_node(number=10, labels=("ai-level/L2",),
+                commits=("feat: y\n\nAI-Level: L4\nCo-Authored-By: Claude",)),
+    ])])
+    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    assert tasks[0].level == "L2" and tasks[0].method == "label"
+
+
+# ------------------------------------------------------------ inference
+
+CLAUDE_FOOTER = (
+    "feat: x\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n"
+    "Co-Authored-By: Claude <noreply@anthropic.com>"
+)
+
+
+def infer_one(**kwargs):
+    client = FakeClient([prs_page([pr_node(number=99, **kwargs)])])
+    return collect_prs(client, "wing/abci", SINCE, CFG)[0]
+
+
+def test_infer_l5_auto_merged_agent_pr():
+    t = infer_one(author="claude[bot]", author_type="Bot",
+                  merged_by=("claude[bot]", "Bot"), commits=(CLAUDE_FOOTER,))
+    assert t.level == "L5" and t.method == "inference:auto-merged-agent-pr"
+
+
+def test_infer_l4_agent_pr_human_final_review():
+    t = infer_one(author="claude[bot]", author_type="Bot",
+                  reviews=(("APPROVED", "wing", "User"),), commits=(CLAUDE_FOOTER,))
+    assert t.level == "L4" and t.method == "inference:agent-pr-final-review-only"
+
+
+def test_infer_l3_agent_pr_with_checkpoints():
+    t = infer_one(author="claude[bot]", author_type="Bot", threads=2,
+                  reviews=(("APPROVED", "wing", "User"),), commits=(CLAUDE_FOOTER,))
+    assert t.level == "L3" and t.method == "inference:agent-pr-with-checkpoints"
+
+
+def test_infer_l4_all_ai_commits_with_tests():
+    t = infer_one(commits=(CLAUDE_FOOTER, CLAUDE_FOOTER),
+                  files=("src/app.py", "tests/test_app.py"))
+    assert t.level == "L4" and t.method == "inference:ai-end-to-end-with-tests"
+
+
+def test_infer_l3_all_ai_commits_no_tests():
+    t = infer_one(commits=(CLAUDE_FOOTER,), files=("src/app.py",))
+    assert t.level == "L3" and t.method == "inference:ai-authored-no-tests"
+
+
+def test_infer_l3_changes_requested_means_checkpoints():
+    t = infer_one(commits=(CLAUDE_FOOTER, CLAUDE_FOOTER),
+                  reviews=(("CHANGES_REQUESTED", "bob", "User"),),
+                  files=("tests/test_app.py",))
+    assert t.level == "L3" and t.method == "inference:checkpoints-or-mixed-commits"
+
+
+def test_infer_l2_ai_minority_human_led():
+    t = infer_one(commits=(CLAUDE_FOOTER, "fix: a", "fix: b", "fix: c"))
+    assert t.level == "L2" and t.method == "inference:human-led-ai-assist"
+
+
+def test_infer_none_without_ai_evidence():
+    t = infer_one(commits=("fix: plain human commit",))
+    assert t.level is None and t.method is None
+
+
+def test_trailer_beats_inference():
+    t = infer_one(author="claude[bot]", author_type="Bot",
+                  merged_by=("claude[bot]", "Bot"),
+                  body="AI-Level: L2", commits=(CLAUDE_FOOTER,))
+    assert t.level == "L2" and t.method == "trailer"
+
+
+def test_inference_disabled_falls_back_to_rules():
+    cfg = {**CFG, "smart_inference": False}
+    client = FakeClient([prs_page([
+        pr_node(number=11, commits=(CLAUDE_FOOTER,), files=("tests/test_app.py",)),
+    ])])
+    tasks = collect_prs(client, "wing/abci", SINCE, cfg)
+    assert tasks[0].level == "L3" and tasks[0].method == "rule"
 
 
 # ---------------------------------------------------------------- config
