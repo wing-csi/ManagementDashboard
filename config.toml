@@ -12,11 +12,11 @@ mode = "auto"
 # ---- 要追蹤嘅 repos(逐個加)----
 
 [[repos]]
-name = "your-org/your-repo"
+name = "wing-csi/AIFlowTesting"
 # branch = "main"          # 唔填就自動用 default branch(只影響 commits)
 
 # [[repos]]
-# name = "your-org/another-repo"
+# name = "wing-csi/another-repo"
 
 # ---- 分級規則(priority:label → trailer → author → rules)----
 
