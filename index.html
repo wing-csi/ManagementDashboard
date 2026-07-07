@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自動化水平儀 · AI Autonomy Gauge</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+:root {
+  --paper: #F2F3EF;
+  --card: #FFFFFF;
+  --ink: #191D1B;
+  --muted: #6A7370;
+  --line: #E2E4DD;
+  --track: #EFF0EA;
+  --l1: #CBD2D9;
+  --l2: #9FB6D1;
+  --l3: #5F8CC6;
+  --l4: #2E5EB8;
+  --l5: #0A2F9C;
+  --untagged: #DFE1D8;
+  --alert: #C2452D;
+  --warn: #A8751B;
+  --radius: 10px;
+  --font-display: 'Space Grotesk', 'Noto Sans TC', system-ui, sans-serif;
+  --font-body: 'Noto Sans TC', -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 24px 40px; }
+
+/* ---------- header ---------- */
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 22px;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.masthead h1 {
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.masthead h1 small {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 10px;
+  letter-spacing: 0.06em;
+}
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.controls select {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  max-width: 220px;
+}
+.badge-demo {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--warn);
+  border: 1px dashed var(--warn);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.badge-demo.on { display: inline-block; }
+.stamp { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* ---------- KPI ---------- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.kpi .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.kpi .value {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+.kpi .value .unit { font-size: 17px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+.kpi .delta { font-family: var(--font-mono); font-size: 12px; margin-top: 6px; }
+.kpi .delta.up { color: var(--ink); }
+.kpi .delta.down { color: var(--alert); }
+.kpi .delta.flat { color: var(--muted); }
+.kpi .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.kpi .value.warned { color: var(--warn); }
+
+/* ---------- section cards ---------- */
+h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.card-note { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* ---------- spectrum (signature) ---------- */
+.spectrum-card { margin-bottom: 14px; }
+.spectrum { position: relative; margin: 26px 0 10px; }
+.strip {
+  display: flex;
+  height: 36px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.seg { position: relative; min-width: 0; }
+.seg span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.seg.dark span { color: #fff; }
+.seg.untagged {
+  background: repeating-linear-gradient(-45deg, var(--untagged), var(--untagged) 5px, #EDEEE7 5px, #EDEEE7 10px);
+}
+.threshold {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 2px;
+  background: var(--ink);
+}
+.threshold em {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.legend { margin-top: 18px; display: grid; gap: 8px; }
+.legend .row {
+  display: grid;
+  grid-template-columns: 44px 96px 1fr 52px 62px;
+  align-items: center;
+  gap: 12px;
+}
+.dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 8px; vertical-align: -1px; }
+.lv { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+.lv-name { font-size: 12.5px; color: var(--muted); }
+.bar-track { background: var(--track); border-radius: 4px; height: 8px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; }
+.legend .n, .legend .p { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+.legend .p { color: var(--muted); }
+
+/* ---------- chart + alerts ---------- */
+.duo { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px; }
+.chart-box { position: relative; height: 280px; }
+.alerts ul { list-style: none; display: grid; gap: 14px; }
+.alerts li { display: grid; grid-template-columns: 12px 1fr; gap: 10px; }
+.alerts .sig { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; }
+.alerts .sig.red { background: var(--alert); }
+.alerts .sig.amber { background: var(--warn); }
+.alerts .sig.ink { background: var(--l4); }
+.alerts .t { font-size: 13px; font-weight: 700; }
+.alerts .d { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.alerts .empty { font-size: 12.5px; color: var(--muted); }
+
+/* ---------- table ---------- */
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ink);
+  white-space: nowrap;
+}
+thead th.sortable { cursor: pointer; user-select: none; }
+thead th.sortable:hover { color: var(--ink); }
+thead th .arrow { font-size: 9px; margin-left: 3px; }
+tbody td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+td.mono { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+td.repo { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+td .tlink { font-family: var(--font-mono); font-size: 12px; color: var(--l4); text-decoration: none; }
+td .tlink:hover { text-decoration: underline; }
+td.subject { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+td.lines { font-family: var(--font-mono); font-size: 12px; text-align: right; white-space: nowrap; }
+td.lines .del { color: var(--muted); margin-left: 6px; }
+.chip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 999px;
+  padding: 2px 9px;
+  line-height: 1.5;
+}
+.chip.L1 { background: var(--l1); color: var(--ink); }
+.chip.L2 { background: var(--l2); color: var(--ink); }
+.chip.L3 { background: var(--l3); color: #fff; }
+.chip.L4 { background: var(--l4); color: #fff; }
+.chip.L5 { background: var(--l5); color: #fff; }
+.chip.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+.table-note { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 10px; }
+
+footer {
+  margin-top: 22px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .duo { grid-template-columns: 1fr; }
+  .legend .row { grid-template-columns: 40px 76px 1fr 42px 52px; gap: 8px; }
+  td.subject { max-width: 150px; }
+  .table-scroll { overflow-x: auto; }
+}
+@media print { .controls { display: none; } .card { border-color: #bbb; } }
+@media (prefers-reduced-motion: no-preference) {
+  .bar-fill, .seg { transition: width 0.35s ease, flex-basis 0.35s ease; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <div class="eyebrow" id="eyebrow">GITHUB TELEMETRY</div>
+      <h1>自動化水平儀 <small>AI AUTONOMY GAUGE</small></h1>
+    </div>
+    <div class="controls">
+      <span class="badge-demo" id="demoBadge">DEMO 數據 · 未讀到 data/metrics.json</span>
+      <select id="repoSel" aria-label="Repo"></select>
+      <select id="windowSel" aria-label="統計範圍">
+        <option value="30">近 30 日</option>
+        <option value="60">近 60 日</option>
+        <option value="90" selected>近 90 日</option>
+        <option value="180">近 180 日</option>
+      </select>
+      <span class="stamp" id="stamp"></span>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="card kpi">
+      <div class="label">L3+ 自動化佔比</div>
+      <div class="value" id="kpiL3">–</div>
+      <div class="delta" id="kpiL3d"></div>
+      <div class="sub">task 由 agent 主導完成的比例</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">出碼率(近似)</div>
+      <div class="value" id="kpiLoc">–</div>
+      <div class="delta" id="kpiLocd"></div>
+      <div class="sub">L2+ tasks 插入行數佔比</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">已分級 Tasks</div>
+      <div class="value" id="kpiTasks">–</div>
+      <div class="delta" id="kpiTasksd"></div>
+      <div class="sub" id="kpiTasksSub">–</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">分級覆蓋率</div>
+      <div class="value" id="kpiCov">–</div>
+      <div class="delta" id="kpiCovd"></div>
+      <div class="sub" id="kpiCovSub">–</div>
+    </div>
+  </section>
+
+  <section class="card spectrum-card">
+    <div class="card-head">
+      <h2>自動化水平分佈</h2>
+      <span class="card-note" id="specNote"></span>
+    </div>
+    <div class="spectrum">
+      <div class="strip" id="strip"></div>
+      <div class="threshold" id="threshold"><em>L3 自動化門檻</em></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="duo">
+    <div class="card">
+      <div class="card-head">
+        <h2>每週 Task 構成 × L3+ 趨勢</h2>
+        <span class="card-note">bar = tasks / 週 · line = L3+ %</span>
+      </div>
+      <div class="chart-box"><canvas id="weeklyChart"></canvas></div>
+    </div>
+    <div class="card alerts">
+      <div class="card-head"><h2>異常提醒</h2></div>
+      <ul id="alertList"></ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>最近 Tasks</h2>
+      <span class="card-note" id="tableNote">source: GitHub GraphQL API</span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" data-key="date">日期<span class="arrow"></span></th>
+            <th>Repo</th>
+            <th>Task</th>
+            <th>Title</th>
+            <th class="sortable" data-key="level">Level<span class="arrow"></span></th>
+            <th class="sortable" data-key="additions" style="text-align:right">± 行數<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="taskRows"></tbody>
+      </table>
+    </div>
+    <div class="table-note" id="tableCap"></div>
+  </section>
+
+  <footer>
+    <span>資料來源:GitHub GraphQL API → scripts/collect_github.py → Actions → Pages</span>
+    <span id="footStamp"></span>
+  </footer>
+</div>
+
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ */
+/* Demo fallback — replaced by ./data/metrics.json when it exists      */
+/* ------------------------------------------------------------------ */
+const DEMO_DATA = {"schema_version":2,"generated_at":"2026-07-06T21:00:00+00:00","window_days":180,"mode":"auto","repos":["wing/abci","wing/hk-tax-helper"],"tasks":[{"repo":"wing/abci","kind":"commit","id":"4d34c37","url":"https://github.com/wing/abci/commit/4d34c37","date":"2026-07-03","title":"feat: audit log middleware","level":"L2","method":"trailer","additions":32,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"301","url":"https://github.com/wing/abci/pull/301","date":"2026-07-03","title":"feat: webhook retry queue","level":"L2","method":"label","additions":39,"deletions":10,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"26ac564","url":"https://github.com/wing/abci/commit/26ac564","date":"2026-07-03","title":"chore: bump spring-boot","level":null,"method":null,"additions":46,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"303","url":"https://github.com/wing/abci/pull/303","date":"2026-07-03","title":"test: importer edge cases","level":"L1","method":"label","additions":20,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"304","url":"https://github.com/wing/abci/pull/304","date":"2026-07-03","title":"feat: order reconciliation job","level":"L2","method":"label","additions":38,"deletions":2,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"28783d6","url":"https://github.com/wing/hk-tax-helper/commit/28783d6","date":"2026-07-03","title":"docs: 2025/26 rates","level":null,"method":null,"additions":39,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"296","url":"https://github.com/wing/abci/pull/296","date":"2026-07-02","title":"chore: bump spring-boot","level":"L1","method":"label","additions":9,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"298","url":"https://github.com/wing/abci/pull/298","date":"2026-07-02","title":"fix: n+1 query on invoice list","level":"L2","method":"label","additions":33,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"302","url":"https://github.com/wing/abci/pull/302","date":"2026-07-02","title":"feat: batch report exporter","level":null,"method":null,"additions":36,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"1386862","url":"https://github.com/wing/abci/commit/1386862","date":"2026-07-02","title":"feat: idempotency keys for POST /orders","level":"L3","method":"label","additions":76,"deletions":4,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"68","url":"https://github.com/wing/hk-tax-helper/pull/68","date":"2026-07-02","title":"feat: IR56B parser","level":"L4","method":"label","additions":137,"deletions":10,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"297","url":"https://github.com/wing/abci/pull/297","date":"2026-07-01","title":"feat: order reconciliation job","level":"L3","method":"rule","additions":84,"deletions":28,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"300","url":"https://github.com/wing/abci/pull/300","date":"2026-07-01","title":"feat: batch report exporter","level":"L3","method":"label","additions":70,"deletions":11,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"67","url":"https://github.com/wing/hk-tax-helper/pull/67","date":"2026-07-01","title":"refactor: tax band table to config","level":"L2","method":"rule","additions":33,"deletions":11,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"965cf4e","url":"https://github.com/wing/hk-tax-helper/commit/965cf4e","date":"2026-07-01","title":"docs: 2025/26 rates","level":"L2","method":"trailer","additions":49,"deletions":13,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"795bf37","url":"https://github.com/wing/hk-tax-helper/commit/795bf37","date":"2026-07-01","title":"refactor: tax band table to config","level":"L1","method":"trailer","additions":14,"deletions":2,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"4083065","url":"https://github.com/wing/hk-tax-helper/commit/4083065","date":"2026-07-01","title":"fix: dependent parent allowance rounding","level":"L3","method":"label","additions":84,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"299","url":"https://github.com/wing/abci/pull/299","date":"2026-06-29","title":"feat: audit log middleware","level":"L2","method":"label","additions":42,"deletions":11,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"f61e1f7","url":"https://github.com/wing/hk-tax-helper/commit/f61e1f7","date":"2026-06-29","title":"feat: joint assessment calculator","level":"L2","method":"label","additions":52,"deletions":5,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"294","url":"https://github.com/wing/abci/pull/294","date":"2026-06-26","title":"fix: n+1 query on invoice list","level":"L2","method":"label","additions":34,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"855202c","url":"https://github.com/wing/abci/commit/855202c","date":"2026-06-26","title":"feat: batch report exporter","level":"L3","method":"label","additions":84,"deletions":23,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"53e69a2","url":"https://github.com/wing/abci/commit/53e69a2","date":"2026-06-25","title":"feat: audit log middleware","level":"L2","method":"label","additions":41,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"f1f44f9","url":"https://github.com/wing/abci/commit/f1f44f9","date":"2026-06-25","title":"feat: audit log middleware","level":"L4","method":"trailer","additions":122,"deletions":31,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"293","url":"https://github.com/wing/abci/pull/293","date":"2026-06-25","title":"feat: webhook retry queue","level":"L3","method":"label","additions":81,"deletions":16,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"295","url":"https://github.com/wing/abci/pull/295","date":"2026-06-25","title":"refactor: extract pricing service","level":null,"method":null,"additions":45,"deletions":8,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"64","url":"https://github.com/wing/hk-tax-helper/pull/64","date":"2026-06-25","title":"test: separate assessment scenarios","level":null,"method":null,"additions":42,"deletions":10,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"291","url":"https://github.com/wing/abci/pull/291","date":"2026-06-24","title":"fix: csv encoding for TC chars","level":"L2","method":"rule","additions":41,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"6f61667","url":"https://github.com/wing/abci/commit/6f61667","date":"2026-06-24","title":"test: importer edge cases","level":"L2","method":"label","additions":46,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"b82f8d2","url":"https://github.com/wing/abci/commit/b82f8d2","date":"2026-06-24","title":"feat: webhook retry queue","level":"L1","method":"label","additions":4,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"292","url":"https://github.com/wing/abci/pull/292","date":"2026-06-24","title":"feat: order reconciliation job","level":"L3","method":"trailer","additions":70,"deletions":9,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"63","url":"https://github.com/wing/hk-tax-helper/pull/63","date":"2026-06-24","title":"feat: joint assessment calculator","level":"L3","method":"trailer","additions":73,"deletions":23,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"66","url":"https://github.com/wing/hk-tax-helper/pull/66","date":"2026-06-24","title":"fix: TC locale formatting","level":"L3","method":"trailer","additions":69,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"290","url":"https://github.com/wing/abci/pull/290","date":"2026-06-23","title":"fix: timezone bug in scheduler","level":"L1","method":"label","additions":18,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"e65ddae","url":"https://github.com/wing/abci/commit/e65ddae","date":"2026-06-22","title":"fix: timezone bug in scheduler","level":"L3","method":"rule","additions":62,"deletions":12,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"65","url":"https://github.com/wing/hk-tax-helper/pull/65","date":"2026-06-22","title":"fix: dependent parent allowance rounding","level":"L2","method":"trailer","additions":36,"deletions":12,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"279","url":"https://github.com/wing/abci/pull/279","date":"2026-06-19","title":"feat: idempotency keys for POST /orders","level":"L4","method":"rule","additions":139,"deletions":10,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"283","url":"https://github.com/wing/abci/pull/283","date":"2026-06-19","title":"feat: webhook retry queue","level":"L2","method":"rule","additions":44,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"286","url":"https://github.com/wing/abci/pull/286","date":"2026-06-19","title":"test: importer edge cases","level":"L2","method":"label","additions":53,"deletions":13,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"57dbf0b","url":"https://github.com/wing/abci/commit/57dbf0b","date":"2026-06-19","title":"fix: n+1 query on invoice list","level":"L2","method":"label","additions":45,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"282","url":"https://github.com/wing/abci/pull/282","date":"2026-06-18","title":"docs: playbook update","level":"L3","method":"label","additions":70,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"289","url":"https://github.com/wing/abci/pull/289","date":"2026-06-18","title":"docs: playbook update","level":"L2","method":"label","additions":31,"deletions":3,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"61","url":"https://github.com/wing/hk-tax-helper/pull/61","date":"2026-06-18","title":"test: separate assessment scenarios","level":"L2","method":"label","additions":46,"deletions":15,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"75b2158","url":"https://github.com/wing/hk-tax-helper/commit/75b2158","date":"2026-06-18","title":"test: separate assessment scenarios","level":"L3","method":"rule","additions":64,"deletions":8,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"62","url":"https://github.com/wing/hk-tax-helper/pull/62","date":"2026-06-18","title":"docs: 2025/26 rates","level":"L4","method":"trailer","additions":134,"deletions":36,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"9538887","url":"https://github.com/wing/abci/commit/9538887","date":"2026-06-17","title":"fix: csv encoding for TC chars","level":"L3","method":"trailer","additions":72,"deletions":20,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"281","url":"https://github.com/wing/abci/pull/281","date":"2026-06-16","title":"feat: auto-merge label pipeline","level":"L3","method":"label","additions":70,"deletions":19,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"288","url":"https://github.com/wing/abci/pull/288","date":"2026-06-16","title":"chore: bump spring-boot","level":null,"method":null,"additions":29,"deletions":9,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"6fc83b8","url":"https://github.com/wing/hk-tax-helper/commit/6fc83b8","date":"2026-06-16","title":"feat: joint assessment calculator","level":"L2","method":"label","additions":41,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"278","url":"https://github.com/wing/abci/pull/278","date":"2026-06-15","title":"feat: idempotency keys for POST /orders","level":"L3","method":"label","additions":77,"deletions":20,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"280","url":"https://github.com/wing/abci/pull/280","date":"2026-06-15","title":"fix: csv encoding for TC chars","level":"L4","method":"label","additions":135,"deletions":16,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"284","url":"https://github.com/wing/abci/pull/284","date":"2026-06-15","title":"feat: audit log middleware","level":"L1","method":"label","additions":22,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"285","url":"https://github.com/wing/abci/pull/285","date":"2026-06-15","title":"feat: webhook retry queue","level":null,"method":null,"additions":26,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"287","url":"https://github.com/wing/abci/pull/287","date":"2026-06-15","title":"fix: csv encoding for TC chars","level":"L5","method":"label","additions":196,"deletions":33,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"d630af1","url":"https://github.com/wing/hk-tax-helper/commit/d630af1","date":"2026-06-15","title":"feat: export to PDF summary","level":null,"method":null,"additions":41,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"269","url":"https://github.com/wing/abci/pull/269","date":"2026-06-12","title":"feat: idempotency keys for POST /orders","level":"L2","method":"rule","additions":33,"deletions":2,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"60","url":"https://github.com/wing/hk-tax-helper/pull/60","date":"2026-06-12","title":"fix: dependent parent allowance rounding","level":"L2","method":"label","additions":48,"deletions":5,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"268","url":"https://github.com/wing/abci/pull/268","date":"2026-06-11","title":"docs: playbook update","level":"L3","method":"rule","additions":80,"deletions":13,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"272","url":"https://github.com/wing/abci/pull/272","date":"2026-06-11","title":"feat: auto-merge label pipeline","level":null,"method":null,"additions":28,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"271","url":"https://github.com/wing/abci/pull/271","date":"2026-06-10","title":"feat: audit log middleware","level":"L4","method":"label","additions":116,"deletions":33,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"274","url":"https://github.com/wing/abci/pull/274","date":"2026-06-10","title":"fix: race in job scheduler","level":"L3","method":"rule","additions":84,"deletions":27,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"275","url":"https://github.com/wing/abci/pull/275","date":"2026-06-10","title":"docs: playbook update","level":"L1","method":"label","additions":18,"deletions":4,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"3b44d8d","url":"https://github.com/wing/hk-tax-helper/commit/3b44d8d","date":"2026-06-10","title":"refactor: tax band table to config","level":"L1","method":"rule","additions":14,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"bccf969","url":"https://github.com/wing/abci/commit/bccf969","date":"2026-06-09","title":"fix: race in job scheduler","level":"L4","method":"rule","additions":118,"deletions":34,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"273","url":"https://github.com/wing/abci/pull/273","date":"2026-06-09","title":"refactor: extract pricing service","level":"L1","method":"rule","additions":27,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"276","url":"https://github.com/wing/abci/pull/276","date":"2026-06-09","title":"feat: order reconciliation job","level":"L3","method":"trailer","additions":79,"deletions":20,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"58","url":"https://github.com/wing/hk-tax-helper/pull/58","date":"2026-06-09","title":"test: separate assessment scenarios","level":"L2","method":"label","additions":38,"deletions":12,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"59","url":"https://github.com/wing/hk-tax-helper/pull/59","date":"2026-06-09","title":"fix: dependent parent allowance rounding","level":"L3","method":"label","additions":83,"deletions":14,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"270","url":"https://github.com/wing/abci/pull/270","date":"2026-06-08","title":"test: importer edge cases","level":"L2","method":"trailer","additions":47,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"9d9e4e3","url":"https://github.com/wing/abci/commit/9d9e4e3","date":"2026-06-08","title":"feat: batch report exporter","level":"L2","method":"label","additions":39,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"277","url":"https://github.com/wing/abci/pull/277","date":"2026-06-08","title":"test: importer edge cases","level":"L3","method":"trailer","additions":71,"deletions":13,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"25cab16","url":"https://github.com/wing/hk-tax-helper/commit/25cab16","date":"2026-06-08","title":"feat: joint assessment calculator","level":null,"method":null,"additions":38,"deletions":0,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"0c65896","url":"https://github.com/wing/hk-tax-helper/commit/0c65896","date":"2026-06-05","title":"docs: 2025/26 rates","level":"L3","method":"label","additions":72,"deletions":1,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"57","url":"https://github.com/wing/hk-tax-helper/pull/57","date":"2026-06-05","title":"feat: export to PDF summary","level":null,"method":null,"additions":26,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"208e7c2","url":"https://github.com/wing/abci/commit/208e7c2","date":"2026-06-04","title":"fix: csv encoding for TC chars","level":"L3","method":"label","additions":85,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"085eeaf","url":"https://github.com/wing/abci/commit/085eeaf","date":"2026-06-04","title":"feat: webhook retry queue","level":"L3","method":"trailer","additions":81,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"263","url":"https://github.com/wing/abci/pull/263","date":"2026-06-04","title":"fix: timezone bug in scheduler","level":"L2","method":"label","additions":44,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"264","url":"https://github.com/wing/abci/pull/264","date":"2026-06-04","title":"refactor: extract pricing service","level":"L2","method":"label","additions":35,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"266","url":"https://github.com/wing/abci/pull/266","date":"2026-06-04","title":"feat: audit log middleware","level":null,"method":null,"additions":39,"deletions":5,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"267","url":"https://github.com/wing/abci/pull/267","date":"2026-06-04","title":"fix: n+1 query on invoice list","level":"L5","method":"rule","additions":193,"deletions":36,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"260","url":"https://github.com/wing/abci/pull/260","date":"2026-06-03","title":"feat: audit log middleware","level":"L1","method":"rule","additions":5,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"262","url":"https://github.com/wing/abci/pull/262","date":"2026-06-03","title":"fix: timezone bug in scheduler","level":"L2","method":"label","additions":35,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"265","url":"https://github.com/wing/abci/pull/265","date":"2026-06-03","title":"chore: bump spring-boot","level":"L2","method":"trailer","additions":31,"deletions":2,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"c0c2be2","url":"https://github.com/wing/hk-tax-helper/commit/c0c2be2","date":"2026-06-03","title":"docs: 2025/26 rates","level":"L2","method":"trailer","additions":53,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"4a913bc","url":"https://github.com/wing/abci/commit/4a913bc","date":"2026-06-02","title":"fix: timezone bug in scheduler","level":"L3","method":"rule","additions":85,"deletions":26,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"261","url":"https://github.com/wing/abci/pull/261","date":"2026-06-01","title":"feat: idempotency keys for POST /orders","level":"L3","method":"trailer","additions":71,"deletions":18,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"46c8dbb","url":"https://github.com/wing/abci/commit/46c8dbb","date":"2026-06-01","title":"test: importer edge cases","level":"L4","method":"label","additions":128,"deletions":42,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"252","url":"https://github.com/wing/abci/pull/252","date":"2026-05-29","title":"fix: race in job scheduler","level":"L4","method":"label","additions":119,"deletions":13,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"253","url":"https://github.com/wing/abci/pull/253","date":"2026-05-29","title":"fix: csv encoding for TC chars","level":"L2","method":"label","additions":34,"deletions":11,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"56","url":"https://github.com/wing/hk-tax-helper/pull/56","date":"2026-05-29","title":"test: separate assessment scenarios","level":"L4","method":"label","additions":128,"deletions":6,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"98d311a","url":"https://github.com/wing/hk-tax-helper/commit/98d311a","date":"2026-05-29","title":"refactor: tax band table to config","level":"L2","method":"label","additions":52,"deletions":11,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"6576738","url":"https://github.com/wing/hk-tax-helper/commit/6576738","date":"2026-05-29","title":"refactor: tax band table to config","level":"L2","method":"label","additions":46,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"f354cac","url":"https://github.com/wing/abci/commit/f354cac","date":"2026-05-28","title":"refactor: extract pricing service","level":"L2","method":"rule","additions":30,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"daa1689","url":"https://github.com/wing/abci/commit/daa1689","date":"2026-05-28","title":"fix: csv encoding for TC chars","level":"L1","method":"label","additions":27,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"254","url":"https://github.com/wing/abci/pull/254","date":"2026-05-27","title":"fix: timezone bug in scheduler","level":"L1","method":"trailer","additions":13,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"a9cf237","url":"https://github.com/wing/abci/commit/a9cf237","date":"2026-05-27","title":"feat: audit log middleware","level":"L2","method":"trailer","additions":38,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"255","url":"https://github.com/wing/abci/pull/255","date":"2026-05-26","title":"fix: timezone bug in scheduler","level":null,"method":null,"additions":30,"deletions":5,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"257","url":"https://github.com/wing/abci/pull/257","date":"2026-05-26","title":"feat: audit log middleware","level":"L2","method":"label","additions":35,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"259","url":"https://github.com/wing/abci/pull/259","date":"2026-05-26","title":"feat: audit log middleware","level":"L3","method":"label","additions":86,"deletions":10,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"55","url":"https://github.com/wing/hk-tax-helper/pull/55","date":"2026-05-26","title":"feat: export to PDF summary","level":null,"method":null,"additions":34,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"251","url":"https://github.com/wing/abci/pull/251","date":"2026-05-25","title":"feat: idempotency keys for POST /orders","level":"L4","method":"label","additions":137,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"256","url":"https://github.com/wing/abci/pull/256","date":"2026-05-25","title":"chore: bump spring-boot","level":"L3","method":"label","additions":65,"deletions":20,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"258","url":"https://github.com/wing/abci/pull/258","date":"2026-05-25","title":"fix: timezone bug in scheduler","level":"L3","method":"label","additions":65,"deletions":13,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"f8327a7","url":"https://github.com/wing/abci/commit/f8327a7","date":"2026-05-22","title":"fix: n+1 query on invoice list","level":null,"method":null,"additions":39,"deletions":5,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"249","url":"https://github.com/wing/abci/pull/249","date":"2026-05-22","title":"refactor: extract pricing service","level":"L3","method":"rule","additions":86,"deletions":12,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"79a88a5","url":"https://github.com/wing/abci/commit/79a88a5","date":"2026-05-22","title":"feat: order reconciliation job","level":"L3","method":"label","additions":86,"deletions":27,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"5b4a0c1","url":"https://github.com/wing/hk-tax-helper/commit/5b4a0c1","date":"2026-05-22","title":"feat: joint assessment calculator","level":"L2","method":"label","additions":47,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"245","url":"https://github.com/wing/abci/pull/245","date":"2026-05-21","title":"feat: webhook retry queue","level":"L4","method":"trailer","additions":125,"deletions":11,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"250","url":"https://github.com/wing/abci/pull/250","date":"2026-05-21","title":"fix: n+1 query on invoice list","level":"L1","method":"label","additions":14,"deletions":4,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"9b70b03","url":"https://github.com/wing/hk-tax-helper/commit/9b70b03","date":"2026-05-21","title":"feat: joint assessment calculator","level":null,"method":null,"additions":26,"deletions":3,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"54","url":"https://github.com/wing/hk-tax-helper/pull/54","date":"2026-05-21","title":"feat: export to PDF summary","level":"L3","method":"rule","additions":68,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"244","url":"https://github.com/wing/abci/pull/244","date":"2026-05-20","title":"test: importer edge cases","level":"L3","method":"label","additions":68,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"c044755","url":"https://github.com/wing/abci/commit/c044755","date":"2026-05-19","title":"chore: bump spring-boot","level":"L2","method":"trailer","additions":37,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"248","url":"https://github.com/wing/abci/pull/248","date":"2026-05-19","title":"refactor: extract pricing service","level":"L2","method":"trailer","additions":49,"deletions":14,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"9f9b152","url":"https://github.com/wing/abci/commit/9f9b152","date":"2026-05-19","title":"chore: bump spring-boot","level":"L2","method":"label","additions":38,"deletions":8,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"53","url":"https://github.com/wing/hk-tax-helper/pull/53","date":"2026-05-19","title":"fix: dependent parent allowance rounding","level":"L4","method":"label","additions":120,"deletions":30,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"246","url":"https://github.com/wing/abci/pull/246","date":"2026-05-18","title":"feat: auto-merge label pipeline","level":null,"method":null,"additions":48,"deletions":15,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"247","url":"https://github.com/wing/abci/pull/247","date":"2026-05-18","title":"refactor: extract pricing service","level":"L3","method":"label","additions":72,"deletions":18,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"c51ba57","url":"https://github.com/wing/abci/commit/c51ba57","date":"2026-05-18","title":"fix: csv encoding for TC chars","level":"L2","method":"rule","additions":36,"deletions":12,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"9f70e4c","url":"https://github.com/wing/hk-tax-helper/commit/9f70e4c","date":"2026-05-18","title":"docs: 2025/26 rates","level":"L3","method":"label","additions":79,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"235","url":"https://github.com/wing/abci/pull/235","date":"2026-05-15","title":"fix: race in job scheduler","level":"L3","method":"label","additions":64,"deletions":21,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"237","url":"https://github.com/wing/abci/pull/237","date":"2026-05-15","title":"feat: idempotency keys for POST /orders","level":"L1","method":"trailer","additions":5,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"243","url":"https://github.com/wing/abci/pull/243","date":"2026-05-15","title":"fix: race in job scheduler","level":"L2","method":"trailer","additions":41,"deletions":9,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"d872096","url":"https://github.com/wing/hk-tax-helper/commit/d872096","date":"2026-05-15","title":"fix: dependent parent allowance rounding","level":"L3","method":"rule","additions":71,"deletions":18,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"52","url":"https://github.com/wing/hk-tax-helper/pull/52","date":"2026-05-15","title":"fix: dependent parent allowance rounding","level":"L3","method":"trailer","additions":71,"deletions":8,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"17acdbd","url":"https://github.com/wing/hk-tax-helper/commit/17acdbd","date":"2026-05-15","title":"fix: TC locale formatting","level":"L1","method":"label","additions":26,"deletions":5,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"236","url":"https://github.com/wing/abci/pull/236","date":"2026-05-14","title":"test: importer edge cases","level":"L2","method":"rule","additions":39,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"240","url":"https://github.com/wing/abci/pull/240","date":"2026-05-14","title":"feat: batch report exporter","level":"L3","method":"rule","additions":78,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"241","url":"https://github.com/wing/abci/pull/241","date":"2026-05-14","title":"feat: batch report exporter","level":"L2","method":"rule","additions":53,"deletions":11,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"fa5f5d2","url":"https://github.com/wing/hk-tax-helper/commit/fa5f5d2","date":"2026-05-14","title":"docs: 2025/26 rates","level":null,"method":null,"additions":31,"deletions":7,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"45ff939","url":"https://github.com/wing/hk-tax-helper/commit/45ff939","date":"2026-05-14","title":"feat: export to PDF summary","level":"L2","method":"label","additions":41,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"233","url":"https://github.com/wing/abci/pull/233","date":"2026-05-13","title":"chore: bump spring-boot","level":"L1","method":"rule","additions":15,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"5e23dd1","url":"https://github.com/wing/abci/commit/5e23dd1","date":"2026-05-13","title":"fix: n+1 query on invoice list","level":"L2","method":"label","additions":39,"deletions":10,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"234","url":"https://github.com/wing/abci/pull/234","date":"2026-05-13","title":"feat: batch report exporter","level":null,"method":null,"additions":42,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"238","url":"https://github.com/wing/abci/pull/238","date":"2026-05-13","title":"feat: batch report exporter","level":"L4","method":"label","additions":120,"deletions":23,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"6d23eae","url":"https://github.com/wing/abci/commit/6d23eae","date":"2026-05-11","title":"feat: audit log middleware","level":"L2","method":"label","additions":33,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"239","url":"https://github.com/wing/abci/pull/239","date":"2026-05-11","title":"chore: bump spring-boot","level":"L3","method":"trailer","additions":72,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"242","url":"https://github.com/wing/abci/pull/242","date":"2026-05-11","title":"feat: idempotency keys for POST /orders","level":"L3","method":"trailer","additions":73,"deletions":6,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"49aa5eb","url":"https://github.com/wing/hk-tax-helper/commit/49aa5eb","date":"2026-05-11","title":"fix: dependent parent allowance rounding","level":"L2","method":"label","additions":40,"deletions":11,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"225","url":"https://github.com/wing/abci/pull/225","date":"2026-05-08","title":"feat: audit log middleware","level":"L3","method":"rule","additions":80,"deletions":25,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"232","url":"https://github.com/wing/abci/pull/232","date":"2026-05-08","title":"feat: audit log middleware","level":"L1","method":"label","additions":25,"deletions":1,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"51","url":"https://github.com/wing/hk-tax-helper/pull/51","date":"2026-05-08","title":"feat: IR56B parser","level":"L2","method":"label","additions":38,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"1df9a71","url":"https://github.com/wing/abci/commit/1df9a71","date":"2026-05-07","title":"fix: n+1 query on invoice list","level":"L1","method":"rule","additions":18,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"226","url":"https://github.com/wing/abci/pull/226","date":"2026-05-07","title":"feat: batch report exporter","level":"L2","method":"label","additions":39,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"229","url":"https://github.com/wing/abci/pull/229","date":"2026-05-07","title":"feat: batch report exporter","level":"L3","method":"trailer","additions":86,"deletions":23,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"230","url":"https://github.com/wing/abci/pull/230","date":"2026-05-07","title":"docs: playbook update","level":null,"method":null,"additions":25,"deletions":5,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"d6ccdfe","url":"https://github.com/wing/hk-tax-helper/commit/d6ccdfe","date":"2026-05-07","title":"docs: 2025/26 rates","level":"L1","method":"label","additions":22,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"227","url":"https://github.com/wing/abci/pull/227","date":"2026-05-06","title":"test: importer edge cases","level":"L2","method":"trailer","additions":45,"deletions":9,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"9e01198","url":"https://github.com/wing/hk-tax-helper/commit/9e01198","date":"2026-05-06","title":"docs: 2025/26 rates","level":"L3","method":"label","additions":85,"deletions":8,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"614ae8d","url":"https://github.com/wing/hk-tax-helper/commit/614ae8d","date":"2026-05-06","title":"test: separate assessment scenarios","level":null,"method":null,"additions":43,"deletions":12,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"645732d","url":"https://github.com/wing/hk-tax-helper/commit/645732d","date":"2026-05-05","title":"feat: joint assessment calculator","level":"L2","method":"rule","additions":36,"deletions":10,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"171921e","url":"https://github.com/wing/abci/commit/171921e","date":"2026-05-04","title":"fix: n+1 query on invoice list","level":"L4","method":"trailer","additions":133,"deletions":10,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"228","url":"https://github.com/wing/abci/pull/228","date":"2026-05-04","title":"chore: bump spring-boot","level":"L2","method":"trailer","additions":30,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"231","url":"https://github.com/wing/abci/pull/231","date":"2026-05-04","title":"feat: idempotency keys for POST /orders","level":"L3","method":"label","additions":69,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"efcb9e3","url":"https://github.com/wing/abci/commit/efcb9e3","date":"2026-05-04","title":"feat: webhook retry queue","level":"L2","method":"label","additions":46,"deletions":7,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"137aa92","url":"https://github.com/wing/hk-tax-helper/commit/137aa92","date":"2026-05-04","title":"fix: dependent parent allowance rounding","level":"L3","method":"label","additions":62,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"220","url":"https://github.com/wing/abci/pull/220","date":"2026-05-01","title":"fix: timezone bug in scheduler","level":"L1","method":"label","additions":4,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"6689eaa","url":"https://github.com/wing/abci/commit/6689eaa","date":"2026-05-01","title":"feat: webhook retry queue","level":"L3","method":"label","additions":73,"deletions":13,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"224","url":"https://github.com/wing/abci/pull/224","date":"2026-05-01","title":"fix: n+1 query on invoice list","level":null,"method":null,"additions":46,"deletions":5,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"ca6e86f","url":"https://github.com/wing/hk-tax-helper/commit/ca6e86f","date":"2026-05-01","title":"feat: joint assessment calculator","level":"L2","method":"trailer","additions":45,"deletions":3,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"50","url":"https://github.com/wing/hk-tax-helper/pull/50","date":"2026-05-01","title":"fix: TC locale formatting","level":"L3","method":"trailer","additions":65,"deletions":16,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"218","url":"https://github.com/wing/abci/pull/218","date":"2026-04-30","title":"fix: n+1 query on invoice list","level":"L2","method":"trailer","additions":47,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"f669edb","url":"https://github.com/wing/abci/commit/f669edb","date":"2026-04-30","title":"feat: webhook retry queue","level":"L3","method":"label","additions":65,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"cf83c17","url":"https://github.com/wing/abci/commit/cf83c17","date":"2026-04-30","title":"refactor: extract pricing service","level":null,"method":null,"additions":35,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"223","url":"https://github.com/wing/abci/pull/223","date":"2026-04-30","title":"feat: batch report exporter","level":"L1","method":"trailer","additions":21,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"221","url":"https://github.com/wing/abci/pull/221","date":"2026-04-29","title":"fix: n+1 query on invoice list","level":"L2","method":"label","additions":42,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"cfaf9be","url":"https://github.com/wing/abci/commit/cfaf9be","date":"2026-04-29","title":"feat: webhook retry queue","level":"L2","method":"trailer","additions":33,"deletions":5,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"5d2a0a0","url":"https://github.com/wing/hk-tax-helper/commit/5d2a0a0","date":"2026-04-29","title":"fix: dependent parent allowance rounding","level":"L2","method":"label","additions":40,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"90f1c15","url":"https://github.com/wing/abci/commit/90f1c15","date":"2026-04-28","title":"chore: bump spring-boot","level":"L3","method":"label","additions":65,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"222","url":"https://github.com/wing/abci/pull/222","date":"2026-04-28","title":"fix: timezone bug in scheduler","level":"L2","method":"label","additions":33,"deletions":11,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"219","url":"https://github.com/wing/abci/pull/219","date":"2026-04-27","title":"fix: race in job scheduler","level":"L4","method":"trailer","additions":122,"deletions":23,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"60c5903","url":"https://github.com/wing/abci/commit/60c5903","date":"2026-04-27","title":"feat: idempotency keys for POST /orders","level":"L2","method":"label","additions":52,"deletions":2,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"196136f","url":"https://github.com/wing/hk-tax-helper/commit/196136f","date":"2026-04-27","title":"refactor: tax band table to config","level":null,"method":null,"additions":35,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"213","url":"https://github.com/wing/abci/pull/213","date":"2026-04-24","title":"fix: csv encoding for TC chars","level":"L1","method":"label","additions":9,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"214","url":"https://github.com/wing/abci/pull/214","date":"2026-04-24","title":"fix: csv encoding for TC chars","level":"L2","method":"label","additions":45,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"cd19567","url":"https://github.com/wing/abci/commit/cd19567","date":"2026-04-24","title":"fix: csv encoding for TC chars","level":"L2","method":"label","additions":42,"deletions":12,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"215","url":"https://github.com/wing/abci/pull/215","date":"2026-04-24","title":"fix: timezone bug in scheduler","level":"L2","method":"label","additions":33,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"217","url":"https://github.com/wing/abci/pull/217","date":"2026-04-24","title":"feat: order reconciliation job","level":"L2","method":"label","additions":40,"deletions":4,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"8048913","url":"https://github.com/wing/hk-tax-helper/commit/8048913","date":"2026-04-24","title":"refactor: tax band table to config","level":null,"method":null,"additions":27,"deletions":8,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"48","url":"https://github.com/wing/hk-tax-helper/pull/48","date":"2026-04-24","title":"feat: IR56B parser","level":"L1","method":"label","additions":23,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"e15d130","url":"https://github.com/wing/abci/commit/e15d130","date":"2026-04-23","title":"feat: audit log middleware","level":"L4","method":"rule","additions":120,"deletions":37,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"ceedfa6","url":"https://github.com/wing/abci/commit/ceedfa6","date":"2026-04-23","title":"test: importer edge cases","level":"L1","method":"rule","additions":16,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"216","url":"https://github.com/wing/abci/pull/216","date":"2026-04-23","title":"fix: race in job scheduler","level":"L2","method":"label","additions":45,"deletions":15,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"51c7ef2","url":"https://github.com/wing/hk-tax-helper/commit/51c7ef2","date":"2026-04-23","title":"refactor: tax band table to config","level":"L2","method":"label","additions":30,"deletions":10,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"35b38db","url":"https://github.com/wing/hk-tax-helper/commit/35b38db","date":"2026-04-22","title":"feat: export to PDF summary","level":"L3","method":"label","additions":85,"deletions":23,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"49","url":"https://github.com/wing/hk-tax-helper/pull/49","date":"2026-04-22","title":"refactor: tax band table to config","level":"L2","method":"label","additions":35,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"211","url":"https://github.com/wing/abci/pull/211","date":"2026-04-21","title":"feat: idempotency keys for POST /orders","level":null,"method":null,"additions":41,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"8355b91","url":"https://github.com/wing/abci/commit/8355b91","date":"2026-04-21","title":"test: importer edge cases","level":"L2","method":"label","additions":46,"deletions":12,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"209","url":"https://github.com/wing/abci/pull/209","date":"2026-04-20","title":"test: importer edge cases","level":"L3","method":"label","additions":76,"deletions":15,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"210","url":"https://github.com/wing/abci/pull/210","date":"2026-04-20","title":"feat: idempotency keys for POST /orders","level":"L3","method":"rule","additions":68,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"212","url":"https://github.com/wing/abci/pull/212","date":"2026-04-20","title":"test: importer edge cases","level":"L1","method":"label","additions":27,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"206","url":"https://github.com/wing/abci/pull/206","date":"2026-04-17","title":"fix: race in job scheduler","level":null,"method":null,"additions":38,"deletions":0,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"c0ec4ac","url":"https://github.com/wing/hk-tax-helper/commit/c0ec4ac","date":"2026-04-16","title":"docs: 2025/26 rates","level":"L3","method":"trailer","additions":68,"deletions":14,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"b55ba1a","url":"https://github.com/wing/abci/commit/b55ba1a","date":"2026-04-15","title":"test: importer edge cases","level":"L1","method":"label","additions":22,"deletions":0,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"5181a95","url":"https://github.com/wing/hk-tax-helper/commit/5181a95","date":"2026-04-15","title":"fix: TC locale formatting","level":"L2","method":"trailer","additions":47,"deletions":7,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"47","url":"https://github.com/wing/hk-tax-helper/pull/47","date":"2026-04-15","title":"fix: dependent parent allowance rounding","level":"L2","method":"rule","additions":50,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"200","url":"https://github.com/wing/abci/pull/200","date":"2026-04-14","title":"feat: audit log middleware","level":"L2","method":"rule","additions":54,"deletions":15,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"201","url":"https://github.com/wing/abci/pull/201","date":"2026-04-14","title":"chore: bump spring-boot","level":"L2","method":"label","additions":40,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"202","url":"https://github.com/wing/abci/pull/202","date":"2026-04-14","title":"feat: auto-merge label pipeline","level":null,"method":null,"additions":30,"deletions":5,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"203","url":"https://github.com/wing/abci/pull/203","date":"2026-04-14","title":"fix: race in job scheduler","level":"L2","method":"label","additions":34,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"205","url":"https://github.com/wing/abci/pull/205","date":"2026-04-14","title":"chore: bump spring-boot","level":"L1","method":"label","additions":16,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"207","url":"https://github.com/wing/abci/pull/207","date":"2026-04-14","title":"fix: race in job scheduler","level":"L3","method":"label","additions":74,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"208","url":"https://github.com/wing/abci/pull/208","date":"2026-04-14","title":"chore: bump spring-boot","level":"L3","method":"label","additions":86,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"198","url":"https://github.com/wing/abci/pull/198","date":"2026-04-13","title":"feat: audit log middleware","level":"L3","method":"trailer","additions":77,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"199","url":"https://github.com/wing/abci/pull/199","date":"2026-04-13","title":"refactor: extract pricing service","level":"L2","method":"label","additions":41,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"204","url":"https://github.com/wing/abci/pull/204","date":"2026-04-13","title":"feat: audit log middleware","level":"L2","method":"rule","additions":38,"deletions":4,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"5bb2d6c","url":"https://github.com/wing/hk-tax-helper/commit/5bb2d6c","date":"2026-04-13","title":"refactor: tax band table to config","level":"L3","method":"label","additions":86,"deletions":8,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"c6a44aa","url":"https://github.com/wing/hk-tax-helper/commit/c6a44aa","date":"2026-04-13","title":"feat: IR56B parser","level":null,"method":null,"additions":37,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"194","url":"https://github.com/wing/abci/pull/194","date":"2026-04-10","title":"refactor: extract pricing service","level":"L2","method":"label","additions":49,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"197","url":"https://github.com/wing/abci/pull/197","date":"2026-04-10","title":"feat: batch report exporter","level":"L1","method":"rule","additions":4,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"188","url":"https://github.com/wing/abci/pull/188","date":"2026-04-09","title":"refactor: extract pricing service","level":"L2","method":"trailer","additions":35,"deletions":9,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"190","url":"https://github.com/wing/abci/pull/190","date":"2026-04-09","title":"fix: timezone bug in scheduler","level":"L1","method":"trailer","additions":18,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"196","url":"https://github.com/wing/abci/pull/196","date":"2026-04-09","title":"feat: auto-merge label pipeline","level":"L4","method":"trailer","additions":126,"deletions":8,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"192","url":"https://github.com/wing/abci/pull/192","date":"2026-04-08","title":"test: importer edge cases","level":"L1","method":"rule","additions":16,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"2f33ce5","url":"https://github.com/wing/abci/commit/2f33ce5","date":"2026-04-08","title":"feat: batch report exporter","level":"L2","method":"label","additions":41,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"189","url":"https://github.com/wing/abci/pull/189","date":"2026-04-07","title":"docs: playbook update","level":null,"method":null,"additions":47,"deletions":6,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"193","url":"https://github.com/wing/abci/pull/193","date":"2026-04-07","title":"feat: audit log middleware","level":"L2","method":"rule","additions":53,"deletions":17,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"191","url":"https://github.com/wing/abci/pull/191","date":"2026-04-06","title":"docs: playbook update","level":"L3","method":"rule","additions":78,"deletions":12,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"195","url":"https://github.com/wing/abci/pull/195","date":"2026-04-06","title":"feat: order reconciliation job","level":"L3","method":"label","additions":70,"deletions":5,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"4253a67","url":"https://github.com/wing/hk-tax-helper/commit/4253a67","date":"2026-04-06","title":"docs: 2025/26 rates","level":"L2","method":"label","additions":44,"deletions":5,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"45","url":"https://github.com/wing/hk-tax-helper/pull/45","date":"2026-04-06","title":"fix: TC locale formatting","level":"L3","method":"label","additions":83,"deletions":25,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"c3c1385","url":"https://github.com/wing/hk-tax-helper/commit/c3c1385","date":"2026-04-06","title":"fix: TC locale formatting","level":"L1","method":"trailer","additions":18,"deletions":4,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"46","url":"https://github.com/wing/hk-tax-helper/pull/46","date":"2026-04-06","title":"fix: dependent parent allowance rounding","level":null,"method":null,"additions":43,"deletions":10,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"commit","id":"c6e1207","url":"https://github.com/wing/hk-tax-helper/commit/c6e1207","date":"2026-04-06","title":"feat: export to PDF summary","level":"L2","method":"rule","additions":38,"deletions":7,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"182","url":"https://github.com/wing/abci/pull/182","date":"2026-04-03","title":"refactor: extract pricing service","level":"L1","method":"label","additions":5,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"184","url":"https://github.com/wing/abci/pull/184","date":"2026-04-03","title":"fix: timezone bug in scheduler","level":"L1","method":"label","additions":12,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"181","url":"https://github.com/wing/abci/pull/181","date":"2026-04-02","title":"feat: auto-merge label pipeline","level":"L2","method":"trailer","additions":50,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"77a0668","url":"https://github.com/wing/abci/commit/77a0668","date":"2026-04-02","title":"chore: bump spring-boot","level":"L2","method":"label","additions":40,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"183","url":"https://github.com/wing/abci/pull/183","date":"2026-04-02","title":"feat: audit log middleware","level":null,"method":null,"additions":24,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"820b994","url":"https://github.com/wing/abci/commit/820b994","date":"2026-04-02","title":"feat: batch report exporter","level":"L2","method":"rule","additions":47,"deletions":7,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"44","url":"https://github.com/wing/hk-tax-helper/pull/44","date":"2026-04-02","title":"refactor: tax band table to config","level":null,"method":null,"additions":26,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"157156c","url":"https://github.com/wing/abci/commit/157156c","date":"2026-04-01","title":"feat: auto-merge label pipeline","level":"L1","method":"label","additions":7,"deletions":1,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"186","url":"https://github.com/wing/abci/pull/186","date":"2026-04-01","title":"fix: timezone bug in scheduler","level":"L3","method":"label","additions":72,"deletions":4,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"42","url":"https://github.com/wing/hk-tax-helper/pull/42","date":"2026-04-01","title":"fix: dependent parent allowance rounding","level":"L2","method":"label","additions":30,"deletions":0,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"185","url":"https://github.com/wing/abci/pull/185","date":"2026-03-31","title":"feat: batch report exporter","level":null,"method":null,"additions":48,"deletions":2,"author":"wing"},{"repo":"wing/abci","kind":"pr","id":"187","url":"https://github.com/wing/abci/pull/187","date":"2026-03-31","title":"feat: idempotency keys for POST /orders","level":"L2","method":"label","additions":52,"deletions":15,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"43","url":"https://github.com/wing/hk-tax-helper/pull/43","date":"2026-03-31","title":"docs: 2025/26 rates","level":"L2","method":"label","additions":36,"deletions":4,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"00476d0","url":"https://github.com/wing/abci/commit/00476d0","date":"2026-03-30","title":"refactor: extract pricing service","level":"L2","method":"label","additions":39,"deletions":3,"author":"wing"},{"repo":"wing/abci","kind":"commit","id":"d6eee61","url":"https://github.com/wing/abci/commit/d6eee61","date":"2026-03-30","title":"fix: timezone bug in scheduler","level":"L3","method":"label","additions":77,"deletions":18,"author":"wing"},{"repo":"wing/hk-tax-helper","kind":"pr","id":"41","url":"https://github.com/wing/hk-tax-helper/pull/41","date":"2026-03-30","title":"test: separate assessment scenarios","level":"L1","method":"label","additions":15,"deletions":4,"author":"wing"}],"errors":[]};
+
+const LEVELS = ['L1', 'L2', 'L3', 'L4', 'L5'];
+const AI_LOC_LEVELS = new Set(['L2', 'L3', 'L4', 'L5']);
+const META = {
+  L1: { name: '輔助', color: '#CBD2D9', dark: false },
+  L2: { name: '部分自動', color: '#9FB6D1', dark: false },
+  L3: { name: '有條件自動', color: '#5F8CC6', dark: true },
+  L4: { name: '高度自動', color: '#2E5EB8', dark: true },
+  L5: { name: '完全自動', color: '#0A2F9C', dark: true },
+};
+const UNTAGGED_COLOR = '#DFE1D8';
+const INK = '#191D1B';
+const TABLE_CAP = 80;
+
+const state = { data: null, demo: false, windowDays: 90, repo: 'all', chart: null, sort: { key: 'date', dir: -1 } };
+const $ = (id) => document.getElementById(id);
+const pct = (num, den, dp = 1) => (den > 0 ? ((num / den) * 100).toFixed(dp) : null);
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/* ---------------- data loading ---------------- */
+async function loadData() {
+  try {
+    const res = await fetch('./data/metrics.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    return { data: await res.json(), demo: false };
+  } catch {
+    return { data: DEMO_DATA, demo: true };
+  }
+}
+
+/* ---------------- task windows ---------------- */
+const toDate = (s) => new Date(s + 'T00:00:00Z');
+const refDate = () => toDate(state.data.generated_at.slice(0, 10));
+
+function tasksBetween(fromMs, toMs) {
+  return state.data.tasks.filter((t) => {
+    if (state.repo !== 'all' && t.repo !== state.repo) return false;
+    const ms = toDate(t.date).getTime();
+    return ms >= fromMs && ms < toMs;
+  });
+}
+function windowTasks() {
+  const end = refDate().getTime() + 864e5;
+  return tasksBetween(end - state.windowDays * 864e5, end);
+}
+function precedingTasks() {
+  const end = refDate().getTime() + 864e5 - state.windowDays * 864e5;
+  return tasksBetween(end - state.windowDays * 864e5, end);
+}
+
+/* ---------------- aggregation ---------------- */
+function statsFromTasks(list) {
+  const s = {
+    byLevel: Object.fromEntries(LEVELS.map((l) => [l, 0])),
+    untagged: 0, insTotal: 0, insAi: 0,
+    methods: { label: 0, trailer: 0, author: 0, rule: 0 },
+  };
+  for (const t of list) {
+    s.insTotal += t.additions || 0;
+    if (t.level) {
+      s.byLevel[t.level]++;
+      if (t.method && s.methods[t.method] != null) s.methods[t.method]++;
+      if (AI_LOC_LEVELS.has(t.level)) s.insAi += t.additions || 0;
+    } else {
+      s.untagged++;
+    }
+  }
+  s.tagged = LEVELS.reduce((a, l) => a + s.byLevel[l], 0);
+  s.total = s.tagged + s.untagged;
+  s.l3plus = s.byLevel.L3 + s.byLevel.L4 + s.byLevel.L5;
+  return s;
+}
+
+function weekStartOf(dateStr) {
+  const d = toDate(dateStr);
+  const back = (d.getUTCDay() + 6) % 7;
+  return new Date(d.getTime() - back * 864e5).toISOString().slice(0, 10);
+}
+function buildWeekly(list) {
+  const map = new Map();
+  for (const t of list) {
+    const ws = weekStartOf(t.date);
+    let row = map.get(ws);
+    if (!row) {
+      row = { week_start: ws, by_level: Object.fromEntries(LEVELS.map((l) => [l, 0])), untagged: 0, insertions_total: 0, insertions_ai: 0 };
+      map.set(ws, row);
+    }
+    row.insertions_total += t.additions || 0;
+    if (t.level) {
+      row.by_level[t.level]++;
+      if (AI_LOC_LEVELS.has(t.level)) row.insertions_ai += t.additions || 0;
+    } else {
+      row.untagged++;
+    }
+  }
+  return [...map.values()].sort((a, b) => (a.week_start < b.week_start ? -1 : 1));
+}
+const weekL3pct = (w) => {
+  const tagged = LEVELS.reduce((a, l) => a + (w.by_level[l] || 0), 0);
+  return tagged > 0 ? ((w.by_level.L3 + w.by_level.L4 + w.by_level.L5) / tagged) * 100 : null;
+};
+function fillGaps(weeks) {
+  if (weeks.length < 2) return weeks.slice();
+  const out = [];
+  const blank = () => ({ by_level: Object.fromEntries(LEVELS.map((l) => [l, 0])), untagged: 0, insertions_total: 0, insertions_ai: 0 });
+  let cursor = toDate(weeks[0].week_start).getTime();
+  const last = toDate(weeks[weeks.length - 1].week_start).getTime();
+  const byKey = Object.fromEntries(weeks.map((w) => [w.week_start, w]));
+  while (cursor <= last) {
+    const key = new Date(cursor).toISOString().slice(0, 10);
+    out.push(byKey[key] || { week_start: key, ...blank() });
+    cursor += 7 * 864e5;
+  }
+  return out;
+}
+
+/* ---------------- rendering ---------------- */
+function setDelta(el, curr, prev, unit) {
+  if (curr == null || prev == null) { el.textContent = ''; return; }
+  const d = curr - prev;
+  const cls = Math.abs(d) < 0.05 ? 'flat' : d > 0 ? 'up' : 'down';
+  el.className = 'delta ' + cls;
+  el.textContent = `${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(1)}${unit} vs 前一段`;
+}
+
+function renderKPIs(cur, prev) {
+  const l3 = pct(cur.l3plus, cur.tagged);
+  $('kpiL3').innerHTML = l3 == null ? '–' : `${l3}<span class="unit">%</span>`;
+  setDelta($('kpiL3d'), l3 && +l3, pct(prev.l3plus, prev.tagged) && +pct(prev.l3plus, prev.tagged), 'pt');
+
+  const loc = pct(cur.insAi, cur.insTotal);
+  $('kpiLoc').innerHTML = loc == null ? '–' : `${loc}<span class="unit">%</span>`;
+  setDelta($('kpiLocd'), loc && +loc, pct(prev.insAi, prev.insTotal) && +pct(prev.insAi, prev.insTotal), 'pt');
+
+  $('kpiTasks').textContent = cur.tagged.toLocaleString();
+  $('kpiTasksSub').textContent = `共 ${cur.total.toLocaleString()} tasks · mode: ${state.data.mode || '–'}`;
+  setDelta($('kpiTasksd'), cur.tagged, prev.total ? prev.tagged : null, ' 個');
+
+  const cov = pct(cur.tagged, cur.total);
+  const covEl = $('kpiCov');
+  covEl.innerHTML = cov == null ? '–' : `${cov}<span class="unit">%</span>`;
+  covEl.classList.toggle('warned', cov != null && +cov < 80);
+  $('kpiCovSub').textContent = `未分級 ${cur.untagged} 個 task`;
+  setDelta($('kpiCovd'), cov && +cov, pct(prev.tagged, prev.total) && +pct(prev.tagged, prev.total), 'pt');
+}
+
+function renderSpectrum(cur) {
+  const strip = $('strip');
+  const legend = $('legend');
+  strip.innerHTML = '';
+  legend.innerHTML = '';
+  const m = cur.methods;
+  const parts = [`label ${m.label}`, `trailer ${m.trailer}`, m.author ? `author ${m.author}` : '', `rule ${m.rule}`].filter(Boolean);
+  $('specNote').textContent = `已分級 ${cur.tagged} / ${cur.total} · ${parts.join(' · ')}`;
+
+  const total = cur.total || 1;
+  const segs = [{ key: 'untagged', n: cur.untagged }].concat(LEVELS.map((l) => ({ key: l, n: cur.byLevel[l] })));
+  for (const seg of segs) {
+    if (!seg.n) continue;
+    const div = document.createElement('div');
+    const share = (seg.n / total) * 100;
+    div.className = 'seg' + (seg.key === 'untagged' ? ' untagged' : META[seg.key].dark ? ' dark' : '');
+    div.style.flex = `0 0 ${share}%`;
+    if (seg.key !== 'untagged') div.style.background = META[seg.key].color;
+    div.innerHTML = `<span>${share >= 7 ? (seg.key === 'untagged' ? '—' : seg.key) : ''}</span>`;
+    div.title = `${seg.key === 'untagged' ? '未分級' : seg.key + ' ' + META[seg.key].name}: ${seg.n} (${share.toFixed(1)}%)`;
+    strip.appendChild(div);
+  }
+  const below = cur.untagged + cur.byLevel.L1 + cur.byLevel.L2;
+  $('threshold').style.left = `${(below / total) * 100}%`;
+  $('threshold').style.display = cur.total ? 'block' : 'none';
+
+  const rows = LEVELS.map((l) => ({ key: l, n: cur.byLevel[l] })).concat([{ key: 'untagged', n: cur.untagged }]);
+  for (const r of rows) {
+    const isU = r.key === 'untagged';
+    const share = cur.tagged && !isU ? (r.n / cur.tagged) * 100 : cur.total && isU ? (r.n / cur.total) * 100 : 0;
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <span class="lv"><span class="dot" style="background:${isU ? UNTAGGED_COLOR : META[r.key].color}"></span>${isU ? '—' : r.key}</span>
+      <span class="lv-name">${isU ? '未分級' : META[r.key].name}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${share}%;background:${isU ? UNTAGGED_COLOR : META[r.key].color}"></span></span>
+      <span class="n">${r.n}</span>
+      <span class="p">${share.toFixed(1)}%${isU ? '*' : ''}</span>`;
+    legend.appendChild(row);
+  }
+}
+
+function renderChart(weeklyRows) {
+  if (typeof Chart === 'undefined') return; // CDN 未 load 到,唔好阻住其他區塊
+  const filled = fillGaps(weeklyRows);
+  const labels = filled.map((w) => w.week_start.slice(5));
+  const dataFor = (l) => filled.map((w) => w.by_level[l] || 0);
+  const line = filled.map((w) => { const v = weekL3pct(w); return v == null ? null : +v.toFixed(1); });
+
+  if (state.chart) state.chart.destroy();
+  Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+  Chart.defaults.font.size = 10.5;
+  Chart.defaults.color = '#6A7370';
+
+  state.chart = new Chart($('weeklyChart'), {
+    data: {
+      labels,
+      datasets: [
+        ...LEVELS.map((l) => ({ type: 'bar', label: l, data: dataFor(l), backgroundColor: META[l].color, stack: 's', borderRadius: 2 })),
+        { type: 'bar', label: '未分級', data: filled.map((w) => w.untagged || 0), backgroundColor: UNTAGGED_COLOR, stack: 's', borderRadius: 2 },
+        { type: 'line', label: 'L3+ %', data: line, borderColor: INK, backgroundColor: INK, yAxisID: 'y2', tension: 0.25, pointRadius: 3, borderWidth: 2, spanGaps: true },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10, padding: 12 } } },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'tasks' } },
+        y2: { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: (v) => v + '%' } },
+      },
+    },
+  });
+}
+
+function renderAlerts(weeklyRows, cur, prev) {
+  const list = $('alertList');
+  list.innerHTML = '';
+  const alerts = [];
+  const active = weeklyRows.filter((w) => weekL3pct(w) != null);
+
+  if (active.length >= 2) {
+    const a = weekL3pct(active[active.length - 2]);
+    const b = weekL3pct(active[active.length - 1]);
+    const d = b - a;
+    if (d <= -10) alerts.push({ sig: 'red', t: `L3+ 佔比週環比下跌 ${Math.abs(d).toFixed(0)}pt`, d: `${a.toFixed(0)}% → ${b.toFixed(0)}%。檢查 task 類型有無轉變,或者 harness / 工具鏈出咗問題。` });
+    else if (d >= 10) alerts.push({ sig: 'ink', t: `L3+ 佔比週環比上升 ${d.toFixed(0)}pt`, d: `${a.toFixed(0)}% → ${b.toFixed(0)}%。` });
+  }
+  const cov = cur.total ? (cur.tagged / cur.total) * 100 : null;
+  if (cov != null && cov < 80) alerts.push({ sig: 'amber', t: `分級覆蓋率偏低(${cov.toFixed(0)}%)`, d: '為 PR 加 ai-level label 或喺 commit / PR body 加 AI-Level trailer,否則指標會失真。' });
+
+  const curPct = cur.tagged ? (cur.l3plus / cur.tagged) * 100 : null;
+  const prevPct = prev.tagged ? (prev.l3plus / prev.tagged) * 100 : null;
+  if (curPct != null && prevPct != null && curPct >= 30 && prevPct < 30) {
+    alerts.push({ sig: 'ink', t: 'L3+ 佔比突破 30% 里程碑', d: `本段 ${curPct.toFixed(1)}%,對上一段 ${prevPct.toFixed(1)}%。` });
+  }
+  const lastTwo = active.slice(-2);
+  const hi = (w) => (w.by_level.L4 || 0) + (w.by_level.L5 || 0);
+  if (lastTwo.length === 2 && lastTwo.every((w) => hi(w) === 0) && (cur.byLevel.L4 + cur.byLevel.L5) > 0) {
+    alerts.push({ sig: 'amber', t: '近兩週無 L4+ task', d: '高自動化流程(end-to-end + auto verification)可能停咗用。' });
+  }
+  if (state.data.errors && state.data.errors.length) {
+    alerts.push({ sig: 'amber', t: `${state.data.errors.length} 個 repo 收集失敗`, d: esc(state.data.errors[0]) });
+  }
+
+  if (!alerts.length) {
+    list.innerHTML = '<li><span></span><span class="empty">暫無異常,指標喺正常範圍。</span></li>';
+    return;
+  }
+  for (const a of alerts.slice(0, 4)) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="sig ${a.sig}"></span><span><div class="t">${a.t}</div><div class="d">${a.d}</div></span>`;
+    list.appendChild(li);
+  }
+}
+
+function renderTable() {
+  const rows = windowTasks().slice();
+  const order = { null: 0, L1: 1, L2: 2, L3: 3, L4: 4, L5: 5 };
+  const { key, dir } = state.sort;
+  rows.sort((a, b) => {
+    const va = key === 'level' ? order[a.level] : a[key];
+    const vb = key === 'level' ? order[b.level] : b[key];
+    return (va > vb ? 1 : va < vb ? -1 : 0) * dir;
+  });
+
+  document.querySelectorAll('thead th.sortable').forEach((th) => {
+    th.querySelector('.arrow').textContent = th.dataset.key === key ? (dir === 1 ? '▲' : '▼') : '';
+  });
+
+  const shown = rows.slice(0, TABLE_CAP);
+  $('taskRows').innerHTML = shown.map((r) => `
+    <tr>
+      <td class="mono">${r.date}</td>
+      <td class="repo">${esc(r.repo.split('/').pop())}</td>
+      <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.kind === 'pr' ? '#' + esc(r.id) : esc(r.id)}</a></td>
+      <td class="subject" title="${esc(r.title)}">${esc(r.title)}</td>
+      <td>${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}</td>
+      <td class="lines">+${r.additions}<span class="del">−${r.deletions}</span></td>
+    </tr>`).join('') || '<tr><td colspan="6" class="mono" style="color:var(--muted)">此範圍內無 tasks</td></tr>';
+  $('tableCap').textContent = rows.length > TABLE_CAP ? `顯示 ${TABLE_CAP} / ${rows.length} 個 tasks` : '';
+}
+
+/* ---------------- boot ---------------- */
+function render() {
+  const wt = windowTasks();
+  const cur = statsFromTasks(wt);
+  const prev = statsFromTasks(precedingTasks());
+  const weeklyRows = buildWeekly(wt);
+  renderKPIs(cur, prev);
+  renderSpectrum(cur);
+  renderChart(weeklyRows);
+  renderAlerts(weeklyRows, cur, prev);
+  renderTable();
+}
+
+(async function init() {
+  const { data, demo } = await loadData();
+  state.data = data;
+  state.demo = demo;
+  $('demoBadge').classList.toggle('on', demo);
+
+  const repos = data.repos || [];
+  $('eyebrow').textContent = (repos.length === 1 ? repos[0].toUpperCase() : `${repos.length} REPOS`) + ' · GITHUB TELEMETRY';
+  $('repoSel').innerHTML = `<option value="all">全部 repos</option>` +
+    repos.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+
+  const ts = data.generated_at.replace('T', ' ').slice(0, 16) + ' UTC';
+  $('stamp').textContent = ts;
+  $('footStamp').textContent = 'generated ' + ts;
+
+  $('repoSel').addEventListener('change', (e) => { state.repo = e.target.value; render(); });
+  $('windowSel').addEventListener('change', (e) => { state.windowDays = +e.target.value; render(); });
+  document.querySelectorAll('thead th.sortable').forEach((th) => th.addEventListener('click', () => {
+    const k = th.dataset.key;
+    state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : -1 };
+    renderTable();
+  }));
+  render();
+})();
+</script>
+</body>
+</html>

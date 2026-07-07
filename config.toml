@@ -1,0 +1,39 @@
+# ManagementDashboard 設定
+
+# 統計範圍(日)
+window_days = 180
+
+# task 單位:
+#   auto    = merged PRs + 冇 associated PR 嘅 commits(唔會重複計)
+#   pr      = 只計 merged PRs
+#   commits = 只計 branch 上嘅 non-merge commits
+mode = "auto"
+
+# ---- 要追蹤嘅 repos(逐個加)----
+
+[[repos]]
+name = "your-org/your-repo"
+# branch = "main"          # 唔填就自動用 default branch(只影響 commits)
+
+# [[repos]]
+# name = "your-org/another-repo"
+
+# ---- 分級規則(priority:label → trailer → author → rules)----
+
+[classify]
+label_prefix = "ai-level/"   # PR label,例:ai-level/L3
+trailer_key = "AI-Level"     # commit message / PR body 嘅 trailer,例:AI-Level: L3
+exclude_authors = ["dependabot[bot]", "renovate[bot]", "github-actions[bot]"]
+
+# agent bot 帳號直接對應 level(啱用於 auto-merge pipeline)
+[classify.author_levels]
+# "my-agent[bot]" = "L5"
+
+# 冇 label / trailer 時嘅 fallback heuristics(由上至下 first match)
+[[classify.rules]]
+contains = "generated with [claude code]"
+level = "L3"
+
+[[classify.rules]]
+contains = "co-authored-by: claude"
+level = "L3"
