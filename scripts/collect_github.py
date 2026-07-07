@@ -91,7 +91,7 @@ query($owner:String!,$name:String!,$cursor:String){
     pullRequests(states:MERGED, first:50, orderBy:{field:UPDATED_AT, direction:DESC}, after:$cursor){
       pageInfo{ hasNextPage endCursor }
       nodes{
-        number title body mergedAt updatedAt additions deletions url
+        number title body mergedAt updatedAt additions deletions url headRefName
         author{ login __typename }
         mergedBy{ login __typename }
         autoMergeRequest{ enabledBy{ login } }
@@ -128,6 +128,7 @@ class Task:
     deletions: int
     author: str
     check: str | None = None  # claim verification: "ok" | "suspect:*" | None (unverifiable)
+    branch: str = ""  # PR head branch, or the scanned branch for commits
 
 
 class GitHubClient:
@@ -376,6 +377,7 @@ def collect_commits(
                     additions=node["additions"],
                     deletions=node["deletions"],
                     author=author,
+                    branch=branch,
                 )
             )
         if not history["pageInfo"]["hasNextPage"]:
@@ -430,6 +432,7 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> l
                     deletions=node["deletions"],
                     author=author,
                     check=check,
+                    branch=node.get("headRefName") or "",
                 )
             )
         # UPDATED_AT desc + (mergedAt <= updatedAt) => once a whole page is

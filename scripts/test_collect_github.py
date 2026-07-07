@@ -62,9 +62,10 @@ def commits_page(nodes, has_next=False, cursor=None):
 def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
             author_type="User", merged="2026-05-02T10:00:00Z", updated=None, add=50,
             commits=(), merged_by=("wing", "User"), auto_merge=False, reviews=(),
-            threads=0, files=()):
+            threads=0, files=(), branch="feature/demo"):
     return {
         "number": number,
+        "headRefName": branch,
         "title": title,
         "body": body,
         "mergedAt": merged,
@@ -155,6 +156,7 @@ def test_collect_commits_paginates_and_filters():
     assert [t.id for t in tasks] == ["aaa1111", "eee5555"]
     assert tasks[0].level == "L3" and tasks[0].method == "trailer"
     assert tasks[1].level is None
+    assert tasks[0].branch == "main"  # commits carry the scanned branch
     assert client.calls[1]["cursor"] == "C1"  # second page requested with cursor
 
 
@@ -180,6 +182,7 @@ def test_collect_prs_label_and_window_filter():
     tasks = collect_prs(client, "wing/abci", SINCE, CFG)
     assert [t.id for t in tasks] == ["10"]
     assert tasks[0].level == "L4" and tasks[0].method == "label" and tasks[0].kind == "pr"
+    assert tasks[0].branch == "feature/demo"
 
 
 def test_collect_prs_stops_when_page_is_stale():
