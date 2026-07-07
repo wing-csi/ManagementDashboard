@@ -58,6 +58,19 @@ Plan 本身唔會落 repo(SOP 話 plan 係 session 內俾你 approve),所以用 
 
 驗證方面 SOP 模式加多一條:聲稱 L3+ 但 diff 冇 SOP artifact → `suspect:sop-artifacts-missing` — 呢個就係「聲稱行咗流程,但 plan / test case 記錄喺邊?」嘅自動化版本。
 
+### 直接 commit 到 main(冇 PR)嘅判級
+
+Direct commit 冇 PR 行為信號,判級階梯係:
+
+| 證據 | 判定 |
+|---|---|
+| `AI-Level` trailer / author 對應 | 照聲稱(explicit 永遠優先) |
+| Claude footer(SOP 模式) | L2 — 有 agent 證據,但繞過咗 PR/SOP flow,當 ad-hoc |
+| message 似 AI 寫(stylometry) | L2 `inference:ai-style-message` |
+| message 似人手快打 | `no_evidence_level`(L1) |
+
+Stylometry 用 4 個結構特徵計分(conventional prefix、body ≥80 字、subject ≥40 字、有 bullet points),中 2 個當 AI 寫。「fix typo」一句嘢 = 0 分 → 人手;典型 Claude Code message = 3–4 分。呢層係全套最弱嘅證據 — 可以呃、會有誤判 — 所以排喺最後做兜底,亦唔參與 claim verification。
+
 **準確度 caveat**:L2/L3/L4 嘅真正分別在 coding session 入面(幾多次人工介入、邊個跑 verification),git/GitHub 只記錄結果,所以 inference 係推斷唔係觀測。最準嘅做法始終係喺 CLAUDE.md 叫 Claude Code commit 時自動寫 `AI-Level` trailer — agent 自己最清楚個 session 發生咗咩,而且完全唔使你人手做嘢。兩樣並存冇衝突:trailer 永遠優先,inference 做 safety net。
 
 ### 分級真確性(claim vs behaviour)

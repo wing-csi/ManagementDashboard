@@ -384,6 +384,58 @@ def test_verify_l3_claim_with_sop_artifact_is_ok():
     assert t.level == "L3" and t.check == "ok"
 
 
+# ------------------------------------------------- direct-to-main commits
+
+AI_STYLE_MSG = (
+    "feat: restore qa_signoff package and release sign-off workflow\n\n"
+    "PR merged the spec but not its implementation. This restores the\n"
+    "package onto the main line and rewires the release workflow.\n\n"
+    "- add qa_signoff package with regression runner\n"
+    "- wire sign-off gate into release workflow"
+)
+
+
+def commit_one(message, cfg=CFG):
+    client = FakeClient([commits_page([commit_node(sha="abc0001", message=message)])])
+    return collect_commits(client, "wing/abci", "main", SINCE, cfg, skip_pr_commits=True)[0]
+
+
+@pytest.mark.parametrize("message,expected", [
+    (AI_STYLE_MSG, True),                       # prefix + long body + bullets
+    ("fix typo", False),                        # bare human quickie
+    ("feat: add x", False),                     # prefix alone isn't enough
+    ("update stuff\n\nchanged some things", False),
+])
+def test_looks_ai_written(message, expected):
+    from collect_github import looks_ai_written
+    assert looks_ai_written(message) is expected
+
+
+def test_direct_commit_ai_style_message_is_l2():
+    t = commit_one(AI_STYLE_MSG, cfg={**CFG, "sop_paths": ["testcases/"]})
+    assert t.level == "L2" and t.method == "inference:ai-style-message"
+
+
+def test_direct_commit_footer_capped_at_l2_in_sop_mode():
+    t = commit_one(CLAUDE_FOOTER, cfg={**CFG, "sop_paths": ["testcases/"]})
+    assert t.level == "L2" and t.method == "inference:ai-without-sop-flow"
+
+
+def test_direct_commit_footer_stays_rule_l3_in_generic_mode():
+    t = commit_one(CLAUDE_FOOTER)
+    assert t.level == "L3" and t.method == "rule"
+
+
+def test_direct_commit_human_style_falls_back_to_l1():
+    t = commit_one("fix typo", cfg={**CFG, "sop_paths": ["testcases/"], "no_evidence_level": "L1"})
+    assert t.level == "L1" and t.method == "inference:no-ai-evidence-default"
+
+
+def test_direct_commit_trailer_still_wins():
+    t = commit_one("fix typo\n\nAI-Level: L4", cfg={**CFG, "sop_paths": ["testcases/"]})
+    assert t.level == "L4" and t.method == "trailer"
+
+
 # ---------------------------------------------------------------- config
 
 def test_load_config_merges_defaults(tmp_path):

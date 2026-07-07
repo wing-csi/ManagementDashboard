@@ -109,6 +109,32 @@ TEST_PATH_RE = re.compile(
     r"(^|/)tests?/|(^|/)test_|_test\.|\.test\.|\.spec\.|Test\.java$|Tests\.java$|Spec\."
 )
 
+CONVENTIONAL_RE = re.compile(
+    r"^(feat|fix|chore|docs|refactor|test|style|perf|ci|build|revert)(\(.+\))?!?:", re.IGNORECASE
+)
+
+
+def looks_ai_written(message: str) -> bool:
+    """Stylometric guess: does this commit message read like agent output?
+
+    Weakest evidence tier — structural features only (conventional prefix,
+    detailed body, descriptive subject, bullet structure). Score >= 2 of 4.
+    A one-line "fix typo" scores 0; typical Claude Code messages score 3-4.
+    """
+    lines = message.strip().splitlines()
+    subject = lines[0] if lines else ""
+    body = "\n".join(lines[1:]).strip()
+    score = 0
+    if CONVENTIONAL_RE.match(subject):
+        score += 1
+    if len(body) >= 80:
+        score += 1
+    if len(subject) >= 40:
+        score += 1
+    if re.search(r"^\s*[-*] ", body, re.MULTILINE):
+        score += 1
+    return score >= 2
+
 
 class CollectError(Exception):
     """Raised when collection for a repo cannot proceed."""
@@ -204,6 +230,31 @@ def classify(
     if level:
         return level, method
     return classify_rules(cfg, text)
+
+
+def classify_commit(cfg: dict, message: str, author: str) -> tuple[str | None, str | None]:
+    """Ladder for a direct-to-main commit (no PR, so no behavioural signals).
+
+    trailer/author → footer rules (capped at L2 in SOP mode: a direct commit
+    bypassed the PR/SOP flow, so it is ad-hoc by definition) → message
+    stylometry (AI-looking → L2) → no_evidence_level fallback (human-typed).
+    """
+    level, method = classify_explicit(cfg, text=message, author=author)
+    if level:
+        return level, method
+    if not cfg.get("smart_inference", True):
+        return classify_rules(cfg, message)
+    rule_level, rule_method = classify_rules(cfg, message)
+    if rule_level:
+        if cfg["sop_paths"]:
+            return "L2", "inference:ai-without-sop-flow"
+        return rule_level, rule_method
+    if looks_ai_written(message):
+        return "L2", "inference:ai-style-message"
+    fallback = normalize_level(cfg.get("no_evidence_level") or "")
+    if fallback:
+        return fallback, "inference:no-ai-evidence-default"
+    return None, None
 
 
 @dataclass
@@ -363,7 +414,7 @@ def collect_commits(
             author = user.get("login") or node["author"].get("name") or ""
             if author in cfg["exclude_authors"]:
                 continue
-            level, method = classify(cfg, text=node["message"], author=author)
+            level, method = classify_commit(cfg, node["message"], author)
             tasks.append(
                 Task(
                     repo=repo,
