@@ -231,9 +231,9 @@ CLAUDE_FOOTER = (
 )
 
 
-def infer_one(**kwargs):
+def infer_one(cfg=CFG, **kwargs):
     client = FakeClient([prs_page([pr_node(number=99, **kwargs)])])
-    return collect_prs(client, "wing/abci", SINCE, CFG)[0]
+    return collect_prs(client, "wing/abci", SINCE, cfg)[0]
 
 
 def test_infer_l5_auto_merged_agent_pr():
@@ -296,6 +296,89 @@ def test_inference_disabled_falls_back_to_rules():
     ])])
     tasks = collect_prs(client, "wing/abci", SINCE, cfg)
     assert tasks[0].level == "L3" and tasks[0].method == "rule"
+
+
+# ------------------------------------------------------- claim verification
+
+def test_verify_l5_claim_on_human_pr_is_suspect():
+    t = infer_one(body="AI-Level: L5")  # human-opened PR claiming full autonomy
+    assert t.level == "L5" and t.method == "trailer"
+    assert t.check == "suspect:l5-claim-on-human-pipeline"
+
+
+def test_verify_l4_claim_with_review_churn_is_suspect():
+    t = infer_one(labels=("ai-level/L4",), commits=(CLAUDE_FOOTER,),
+                  reviews=(("CHANGES_REQUESTED", "bob", "User"),),
+                  files=("tests/test_app.py",))
+    assert t.level == "L4" and t.check == "suspect:human-gates-observed"
+
+
+def test_verify_l4_claim_without_tests_is_suspect():
+    t = infer_one(body="AI-Level: L4", commits=(CLAUDE_FOOTER,),
+                  files=("src/app.py",), add=200)
+    assert t.level == "L4" and t.check == "suspect:no-tests-in-diff"
+
+
+def test_verify_clean_l4_claim_is_ok():
+    t = infer_one(body="AI-Level: L4", commits=(CLAUDE_FOOTER,),
+                  files=("src/app.py", "tests/test_app.py"))
+    assert t.level == "L4" and t.check == "ok"
+
+
+def test_verify_l3_claim_with_churn_is_ok():
+    t = infer_one(labels=("ai-level/L3",), threads=3, commits=(CLAUDE_FOOTER,))
+    assert t.level == "L3" and t.check == "ok"  # churn is consistent with L3
+
+
+def test_inferred_and_commit_tasks_have_no_check():
+    inferred = infer_one(commits=(CLAUDE_FOOTER,))
+    assert inferred.method.startswith("inference:") and inferred.check is None
+    client = FakeClient([commits_page([
+        commit_node(sha="fff9999", message="feat: x\n\nAI-Level: L4"),
+    ])])
+    commit_task = collect_commits(client, "wing/abci", "main", SINCE, CFG, skip_pr_commits=True)[0]
+    assert commit_task.level == "L4" and commit_task.check is None  # unverifiable
+
+
+# ------------------------------------------------------------- SOP mode
+
+SOP_CFG = {**CFG, "sop_paths": ["testcases/"]}
+
+
+def test_sop_mode_testcase_artifact_implies_l3_without_footers():
+    t = infer_one(cfg=SOP_CFG, commits=("feat: discount codes",),
+                  files=("src/app.py", "testcases/feature-discount/testcases_20260612.md"))
+    assert t.level == "L3" and t.method == "inference:sop-testcase-flow"
+
+
+def test_sop_mode_ai_footer_without_artifact_is_l2():
+    t = infer_one(cfg=SOP_CFG, commits=(CLAUDE_FOOTER,), files=("src/app.py",))
+    assert t.level == "L2" and t.method == "inference:ai-without-sop-flow"
+
+
+def test_sop_mode_no_evidence_falls_back_to_configured_level():
+    cfg = {**SOP_CFG, "no_evidence_level": "L1"}
+    t = infer_one(cfg=cfg, commits=("fix: plain human commit",), files=("src/app.py",))
+    assert t.level == "L1" and t.method == "inference:no-ai-evidence-default"
+
+
+def test_sop_mode_bot_pipeline_still_l5():
+    t = infer_one(cfg=SOP_CFG, author="claude[bot]", author_type="Bot",
+                  merged_by=("claude[bot]", "Bot"), commits=(CLAUDE_FOOTER,),
+                  files=("testcases/x/log.md",))
+    assert t.level == "L5"
+
+
+def test_verify_l3_claim_without_sop_artifact_is_suspect():
+    t = infer_one(cfg=SOP_CFG, body="AI-Level: L3",
+                  commits=(CLAUDE_FOOTER,), files=("src/app.py",))
+    assert t.level == "L3" and t.check == "suspect:sop-artifacts-missing"
+
+
+def test_verify_l3_claim_with_sop_artifact_is_ok():
+    t = infer_one(cfg=SOP_CFG, labels=("ai-level/L3",),
+                  files=("testcases/f/log.md", "src/app.py"))
+    assert t.level == "L3" and t.check == "ok"
 
 
 # ---------------------------------------------------------------- config

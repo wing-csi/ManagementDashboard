@@ -42,9 +42,41 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 | 全部 AI commits 但冇 test | L3 |
 | AI / 人手 commits 混雜,或者有中途 review 把關 | L3 |
 | AI commits 只佔少數(< 50%),冇 review 來回 | L2 |
-| 完全冇 AI 痕跡(冇 footer、唔係 bot 開) | 未分級 |
+| 完全冇 AI 痕跡(冇 footer、唔係 bot 開) | `no_evidence_level`(預設未分級) |
+
+### SOP 模式(設定 `sop_paths` 後啟用)
+
+如果 project 有正式 SOP(例:AIFlowTesting 嘅 plan → approval → tests-first → reviews → commit 流程),`testcases/` 記錄就係成條流程嘅指紋 — 有呢個 artifact 即係行咗流程,唔使靠 AI footer:
+
+| diff 觸及 `sop_paths`(例:testcases/) | L3 — 行咗 SOP 流程(流程含 plan checkpoint,所以係 L3 唔係 L4)|
+|---|---|
+| 有 AI footer 但冇 SOP artifact | L2 — ad-hoc prompting,冇跟流程 |
+| 乜證據都冇 | `no_evidence_level`(設 "L1" = 假設有 inline assist)|
+| agent bot pipeline | 照舊 L4 / L5(bot 判級優先過 SOP 判級)|
+
+Plan 本身唔會落 repo(SOP 話 plan 係 session 內俾你 approve),所以用 testcase log 做流程證據。想 plan 都留底,可以叫 planner 將 plan 寫入 `docs/plans/` 再加落 `sop_paths`。
+
+驗證方面 SOP 模式加多一條:聲稱 L3+ 但 diff 冇 SOP artifact → `suspect:sop-artifacts-missing` — 呢個就係「聲稱行咗流程,但 plan / test case 記錄喺邊?」嘅自動化版本。
 
 **準確度 caveat**:L2/L3/L4 嘅真正分別在 coding session 入面(幾多次人工介入、邊個跑 verification),git/GitHub 只記錄結果,所以 inference 係推斷唔係觀測。最準嘅做法始終係喺 CLAUDE.md 叫 Claude Code commit 時自動寫 `AI-Level` trailer — agent 自己最清楚個 session 發生咗咩,而且完全唔使你人手做嘢。兩樣並存冇衝突:trailer 永遠優先,inference 做 safety net。
+
+### 分級真確性(claim vs behaviour)
+
+Trailer / label 係「聲稱」,唔係證明 — 任何人都打到 `AI-Level: L4`。所以 collector 會用 GitHub 記錄咗、冇得抵賴嘅人工活動去交叉驗證每個聲稱:
+
+| 聲稱 | 但觀察到 | 判定 |
+|---|---|---|
+| L5 | PR 由人開 / 有人 review / 人手 merge | `suspect:l5-claim-on-human-pipeline` |
+| L4 / L5 | 有 `CHANGES_REQUESTED` 或 review threads | `suspect:human-gates-observed` |
+| L4 / L5 | AI footer commits 同無 footer commits 混雜 | `suspect:mixed-authorship` |
+| L4 | diff 冇 test files(改動 >50 行) | `suspect:no-tests-in-diff` |
+
+Suspect **唔會自動降級** — dashboard 表格會有 ⚠ 標記 + 異常提醒,由你覆核。方向係單向嘅:GitHub 見到嘅人工介入可以推翻誇大聲稱,但推翻唔到低報(session 入面嘅介入 GitHub 睇唔到)。Standalone commit 嘅 trailer 冇 PR 行為可以對,計 unverifiable。
+
+Solo 自用,對手係自己嘅懶散,交叉驗證已經夠。如果將來變成團隊指標、有 gaming 誘因,按次序升級:
+1. Agent 用獨立 GitHub App / bot 帳號 commit + 開 PR — GitHub 層面證明來源,人冒認唔到
+2. Commit signing 分兩條 key(人一條、agent 環境一條),collector 可以查 signature
+3. Claude Code hook 喺 commit 時寫 session attestation(turn 數、sha)俾 collector 對數
 
 | Level | 定義 |
 |---|---|
@@ -67,6 +99,8 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 | `classify.exclude_authors` | 3 個常見 bot | 完全唔計呢啲 author |
 | `classify.smart_inference` | `true` | 用 PR 行為信號推斷 level(見上表) |
 | `classify.agent_authors` | `[]` | 呢啲 login 當 coding agent(`*[bot]` 自動當 agent) |
+| `classify.sop_paths` | `[]` | SOP artifact 路徑 prefix,設定後啟用 SOP 模式(見上) |
+| `classify.no_evidence_level` | `""` | 零證據時嘅預設 level(`"L1"` 或留空 = 未分級) |
 | `classify.author_levels` | `{}` | author login → level |
 | `classify.rules` | Claude Code 兩條 | 子字串 match → level,由上至下 |
 

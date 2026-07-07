@@ -32,6 +32,14 @@ smart_inference = true
 # 當係 coding agent 處理嘅 GitHub 帳號(*[bot] 會自動當 agent,呢度加人型帳號)
 agent_authors = []
 
+# SOP 證據路徑:diff 觸及呢啲 prefix = 行咗 plan → approval → tests-first 流程 → L3
+# 有 AI 痕跡但冇 SOP artifact → L2(ad-hoc prompting,冇跟流程)
+sop_paths = ["testcases/"]
+
+# 完全冇任何 AI / SOP 痕跡時嘅預設 level
+# "L1" = 假設日常有 inline assist;"" = 老實計「未分級」
+no_evidence_level = "L1"
+
 # agent bot 帳號直接對應 level(啱用於 auto-merge pipeline)
 [classify.author_levels]
 # "my-agent[bot]" = "L5"

@@ -53,6 +53,8 @@ DEFAULT_CLASSIFY = {
     "author_levels": {},
     "agent_authors": [],  # logins treated as coding agents for inference
     "smart_inference": True,  # infer level from PR review/merge behaviour
+    "sop_paths": [],  # diff touching these prefixes = SOP flow fingerprint → L3
+    "no_evidence_level": "",  # level to assign with zero AI evidence ("" = unclassified)
     "rules": [
         {"contains": "generated with [claude code]", "level": "L3"},
         {"contains": "co-authored-by: claude", "level": "L3"},
@@ -121,10 +123,11 @@ class Task:
     date: str  # YYYY-MM-DD
     title: str
     level: str | None
-    method: str | None  # "label" | "trailer" | "author" | "rule" | None
+    method: str | None  # "label" | "trailer" | "author" | "inference:*" | "rule" | None
     additions: int
     deletions: int
     author: str
+    check: str | None = None  # claim verification: "ok" | "suspect:*" | None (unverifiable)
 
 
 class GitHubClient:
@@ -215,6 +218,7 @@ class PrSignals:
     total_commits: int
     ai_commits: int  # commits whose message matches an AI rule (e.g. Claude footer)
     touches_tests: bool  # diff includes test-looking file paths
+    touches_sop: bool = False  # diff includes SOP artifact paths (e.g. testcases/)
 
 
 def _is_bot(actor: dict | None, cfg: dict) -> bool:
@@ -249,19 +253,24 @@ def extract_signals(node: dict, cfg: dict) -> PrSignals:
         total_commits=len(messages),
         ai_commits=ai_commits,
         touches_tests=any(TEST_PATH_RE.search(p) for p in paths),
+        touches_sop=any(
+            p.startswith(prefix) for p in paths for prefix in cfg["sop_paths"]
+        ),
     )
 
 
-def infer_level(s: PrSignals) -> tuple[str | None, str | None]:
-    """Infer L2–L5 from PR behaviour. Returns (None, None) without AI evidence.
+def infer_level(s: PrSignals, cfg: dict) -> tuple[str | None, str | None]:
+    """Infer L1–L5 from PR behaviour. Returns (None, None) without evidence.
 
     The level ladder is defined by what happened *during the session*
     (human turns, who verified) — GitHub only records the residue, so this
     is an approximation. Explicit label/trailer always wins upstream.
-    """
-    if s.ai_commits == 0 and not s.author_is_bot:
-        return None, None  # no AI evidence — stay unclassified
 
+    With `sop_paths` configured, the SOP artifact (e.g. testcases/) is the
+    fingerprint of the orchestrated flow (plan → approval → tests-first →
+    reviews → commit), so touching it implies L3 — even without AI footers,
+    since the artifact itself is produced by the agent workflow.
+    """
     checkpoints = s.changes_requested > 0 or s.review_threads > 0
 
     if s.author_is_bot:
@@ -271,17 +280,52 @@ def infer_level(s: PrSignals) -> tuple[str | None, str | None]:
             return "L3", "inference:agent-pr-with-checkpoints"
         return "L4", "inference:agent-pr-final-review-only"
 
-    # human-opened PR carrying AI-marked commits
-    mixed = 0 < s.ai_commits < s.total_commits
-    if checkpoints or mixed:
-        if mixed and not checkpoints and s.ai_commits * 2 < s.total_commits:
-            return "L2", "inference:human-led-ai-assist"
-        return "L3", "inference:checkpoints-or-mixed-commits"
+    if cfg["sop_paths"]:
+        # SOP mode: testcase log present ⇒ the full flow ran ⇒ L3;
+        # AI-marked commits without the artifact ⇒ ad-hoc prompting ⇒ L2.
+        if s.touches_sop:
+            return "L3", "inference:sop-testcase-flow"
+        if s.ai_commits > 0:
+            return "L2", "inference:ai-without-sop-flow"
+    elif s.ai_commits > 0:
+        # generic mode: human-opened PR carrying AI-marked commits
+        mixed = s.ai_commits < s.total_commits
+        if checkpoints or mixed:
+            if mixed and not checkpoints and s.ai_commits * 2 < s.total_commits:
+                return "L2", "inference:human-led-ai-assist"
+            return "L3", "inference:checkpoints-or-mixed-commits"
+        if s.touches_tests:
+            return "L4", "inference:ai-end-to-end-with-tests"
+        return "L3", "inference:ai-authored-no-tests"
 
-    # every commit AI-marked, no review churn
-    if s.touches_tests:
-        return "L4", "inference:ai-end-to-end-with-tests"
-    return "L3", "inference:ai-authored-no-tests"
+    fallback = normalize_level(cfg.get("no_evidence_level") or "")
+    if fallback:
+        return fallback, "inference:no-ai-evidence-default"
+    return None, None  # no evidence — stay unclassified
+
+
+def verify_claim(level: str, s: PrSignals, additions: int, sop_configured: bool) -> str:
+    """Cross-check a *claimed* level (label/trailer/author) against PR behaviour.
+
+    GitHub-recorded human activity (reviews, threads, who opened/merged) cannot be
+    faked away, so it can falsify inflated claims. The reverse is not checkable:
+    in-session human steering leaves no GitHub trace, so under-claims pass silently.
+    A "suspect" result never demotes the level — it flags the row for human review.
+    """
+    if level == "L5" and (
+        not s.author_is_bot or s.human_reviews > 0 or not (s.merged_by_bot or s.auto_merge)
+    ):
+        return "suspect:l5-claim-on-human-pipeline"
+    if level in ("L4", "L5"):
+        if s.changes_requested > 0 or s.review_threads > 0:
+            return "suspect:human-gates-observed"
+        if 0 < s.ai_commits < s.total_commits:
+            return "suspect:mixed-authorship"
+        if level == "L4" and not s.touches_tests and additions > 50:
+            return "suspect:no-tests-in-diff"
+    if sop_configured and level in ("L3", "L4", "L5") and not s.touches_sop:
+        return "suspect:sop-artifacts-missing"
+    return "ok"
 
 
 def resolve_branch(client: GitHubClient, owner: str, name: str, branch: str | None) -> str:
@@ -361,10 +405,15 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> l
                 for c in (node.get("commits") or {}).get("nodes", [])
             )
             text = f"{node['title']}\n{node.get('body') or ''}\n{commit_msgs}"
+            sig = extract_signals(node, cfg)
             # ladder: label → trailer → author → inference → substring rules
             level, method = classify_explicit(cfg, labels=labels, text=text, author=author)
+            check = (
+                verify_claim(level, sig, node["additions"], bool(cfg["sop_paths"]))
+                if level else None
+            )
             if level is None and cfg.get("smart_inference", True):
-                level, method = infer_level(extract_signals(node, cfg))
+                level, method = infer_level(sig, cfg)
             if level is None:
                 level, method = classify_rules(cfg, text)
             tasks.append(
@@ -380,6 +429,7 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> l
                     additions=node["additions"],
                     deletions=node["deletions"],
                     author=author,
+                    check=check,
                 )
             )
         # UPDATED_AT desc + (mergedAt <= updatedAt) => once a whole page is
