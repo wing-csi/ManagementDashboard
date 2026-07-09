@@ -163,6 +163,7 @@ class Task:
     author: str
     check: str | None = None  # claim verification: "ok" | "suspect:*" | None (unverifiable)
     branch: str = ""  # PR head branch, or the scanned branch for commits
+    rework: int = 0  # human CHANGES_REQUESTED reviews on the PR (被打回次數)
 
 
 class GitHubClient:
@@ -492,6 +493,7 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> l
                     author=author,
                     check=check,
                     branch=node.get("headRefName") or "",
+                    rework=sig.changes_requested,
                 )
             )
         # UPDATED_AT desc + (mergedAt <= updatedAt) => once a whole page is
