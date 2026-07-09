@@ -314,6 +314,15 @@ def test_verify_l4_claim_with_review_churn_is_suspect():
                   reviews=(("CHANGES_REQUESTED", "bob", "User"),),
                   files=("tests/test_app.py",))
     assert t.level == "L4" and t.check == "suspect:human-gates-observed"
+    assert t.rework == 1  # 被打回次數傳到 task
+
+
+def test_pr_rework_counts_multiple_changes_requested():
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  reviews=(("CHANGES_REQUESTED", "bob", "User"),
+                           ("CHANGES_REQUESTED", "amy", "User"),
+                           ("APPROVED", "bob", "User")))
+    assert t.rework == 2
 
 
 def test_verify_l4_claim_without_tests_is_suspect():
