@@ -15,6 +15,9 @@ mode = "auto"
 name = "wing-csi/AIFlowTesting"
 # branch = "main"          # 唔填就自動用 default branch(只影響 commits)
 
+[[repos]]
+name = "Tony-Liu-1248/abci-crm"
+
 # [[repos]]
 # name = "wing-csi/another-repo"
 
