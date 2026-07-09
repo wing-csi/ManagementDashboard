@@ -436,6 +436,39 @@ def test_direct_commit_trailer_still_wins():
     assert t.level == "L4" and t.method == "trailer"
 
 
+# ------------------------------------------- CJK 加權 + per-repo override
+
+CJK_DETAILED_MSG = (
+    "feat: 完成权限系统重构\n\n"
+    "将原有的角色权限表迁移到基于 oauth 的记录方式,统一权限校验入口,"
+    "同时清理旧的权限中间件并补充迁移脚本。"
+)
+
+
+def test_cjk_detailed_body_counts_as_ai_style():
+    from collect_github import _weighted_len, looks_ai_written
+    body = CJK_DETAILED_MSG.split("\n\n", 1)[1]
+    assert len(body) < 80 <= _weighted_len(body)  # 冇加權會漏判
+    assert looks_ai_written(CJK_DETAILED_MSG) is True
+
+
+def test_cjk_one_liner_still_human_style():
+    from collect_github import looks_ai_written
+    assert looks_ai_written("feat: 完成知识库功能") is False
+
+
+def test_per_repo_no_evidence_override():
+    from collect_github import collect_repo
+    client = FakeClient([commits_page([
+        commit_node(sha="c000001", message="feat: 完成知识库功能"),
+    ])])
+    repo_cfg = {"name": "tony/abci-crm", "branch": "master",
+                "no_evidence_level": "L2", "sop_paths": []}
+    tasks = collect_repo(client, repo_cfg, SINCE, "commits",
+                         {**CFG, "sop_paths": ["testcases/"], "no_evidence_level": "L1"})
+    assert tasks[0].level == "L2" and tasks[0].method == "inference:no-ai-evidence-default"
+
+
 # ---------------------------------------------------------------- config
 
 def test_load_config_merges_defaults(tmp_path):

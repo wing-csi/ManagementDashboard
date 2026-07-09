@@ -17,6 +17,10 @@ name = "wing-csi/AIFlowTesting"
 
 [[repos]]
 name = "Tony-Liu-1248/abci-crm"
+# 已知全程 AI 輔助嘅 project,但冇 footer / SOP convention:
+# 冇證據時預設 L2(override 全局嘅 L1),另外呢個 repo 冇 testcases/ 規範
+no_evidence_level = "L2"
+sop_paths = []
 
 # [[repos]]
 # name = "wing-csi/another-repo"

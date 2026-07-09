@@ -112,6 +112,14 @@ TEST_PATH_RE = re.compile(
 CONVENTIONAL_RE = re.compile(
     r"^(feat|fix|chore|docs|refactor|test|style|perf|ci|build|revert)(\(.+\))?!?:", re.IGNORECASE
 )
+CJK_RE = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]")
+
+
+def _weighted_len(text: str) -> int:
+    """Length with CJK characters counted double — one CJK char carries roughly
+    the information of 2-3 Latin characters, so Latin-calibrated thresholds
+    would systematically under-score Chinese/Japanese/Korean messages."""
+    return len(text) + len(CJK_RE.findall(text))
 
 
 def looks_ai_written(message: str) -> bool:
@@ -127,9 +135,9 @@ def looks_ai_written(message: str) -> bool:
     score = 0
     if CONVENTIONAL_RE.match(subject):
         score += 1
-    if len(body) >= 80:
+    if _weighted_len(body) >= 80:
         score += 1
-    if len(subject) >= 40:
+    if _weighted_len(subject) >= 40:
         score += 1
     if re.search(r"^\s*[-*] ", body, re.MULTILINE):
         score += 1
@@ -500,13 +508,21 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     repo = repo_cfg["name"]
     if "/" not in repo:
         raise CollectError(f"repo name must be 'owner/name', got '{repo}'")
+    # per-repo overrides: a repo entry may carry its own classification knobs
+    # (e.g. a known AI-assisted repo without SOP conventions)
+    overrides = {
+        k: repo_cfg[k]
+        for k in ("no_evidence_level", "sop_paths", "rules", "agent_authors")
+        if k in repo_cfg
+    }
+    repo_classify = {**cfg, **overrides}
     tasks: list[Task] = []
     if mode in ("pr", "auto"):
-        tasks += collect_prs(client, repo, since_iso, cfg)
+        tasks += collect_prs(client, repo, since_iso, repo_classify)
     if mode in ("commits", "auto"):
         branch = resolve_branch(client, *repo.split("/", 1), repo_cfg.get("branch"))
         tasks += collect_commits(
-            client, repo, branch, since_iso, cfg, skip_pr_commits=(mode == "auto")
+            client, repo, branch, since_iso, repo_classify, skip_pr_commits=(mode == "auto")
         )
     return tasks
 
