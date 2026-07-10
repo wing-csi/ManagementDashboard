@@ -62,13 +62,16 @@ def commits_page(nodes, has_next=False, cursor=None):
 def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
             author_type="User", merged="2026-05-02T10:00:00Z", updated=None, add=50,
             commits=(), merged_by=("wing", "User"), auto_merge=False, reviews=(),
-            threads=0, files=(), branch="feature/demo"):
+            threads=0, files=(), branch="feature/demo",
+            created="2026-05-01T10:00:00Z", closed=None, ci=None):
     return {
         "number": number,
         "headRefName": branch,
         "title": title,
         "body": body,
         "mergedAt": merged,
+        "createdAt": created,
+        "closedAt": closed or merged or updated,
         "updatedAt": updated or merged,
         "additions": add,
         "deletions": 5,
@@ -83,6 +86,7 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
         "reviewThreads": {"totalCount": threads},
         "labels": {"nodes": [{"name": l} for l in labels]},
         "commits": {"nodes": [{"commit": {"message": m}} for m in commits]},
+        "lastCommit": {"nodes": [{"commit": {"statusCheckRollup": {"state": ci} if ci else None}}]},
         "files": {"nodes": [{"path": p} for p in files]},
     }
 
@@ -179,7 +183,7 @@ def test_collect_prs_label_and_window_filter():
         pr_node(number=10, labels=("ai-level/L4",), merged="2026-05-02T10:00:00Z"),
         pr_node(number=9, merged="2026-03-01T10:00:00Z", updated="2026-05-01T10:00:00Z"),  # merged pre-window
     ])])
-    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    tasks, _ = collect_prs(client, "wing/abci", SINCE, CFG)
     assert [t.id for t in tasks] == ["10"]
     assert tasks[0].level == "L4" and tasks[0].method == "label" and tasks[0].kind == "pr"
     assert tasks[0].branch == "feature/demo"
@@ -191,14 +195,14 @@ def test_collect_prs_stops_when_page_is_stale():
                           updated="2026-02-02T00:00:00Z")], has_next=True, cursor="P1"),
         prs_page([pr_node(number=2)]),  # must never be requested
     ])
-    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    tasks, _ = collect_prs(client, "wing/abci", SINCE, CFG)
     assert tasks == []
     assert len(client.calls) == 1  # early stop — no second page fetch
 
 
 def test_collect_prs_trailer_in_body():
     client = FakeClient([prs_page([pr_node(number=7, body="details...\n\nAI-Level: 5")])])
-    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    tasks, _ = collect_prs(client, "wing/abci", SINCE, CFG)
     assert tasks[0].level == "L5" and tasks[0].method == "trailer"
 
 
@@ -206,14 +210,14 @@ def test_collect_prs_trailer_in_inner_commit():
     client = FakeClient([prs_page([
         pr_node(number=8, commits=("feat: x\n\nAI-Level: L4",)),
     ])])
-    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    tasks, _ = collect_prs(client, "wing/abci", SINCE, CFG)
     assert tasks[0].level == "L4" and tasks[0].method == "trailer"
 
 
 def test_collect_prs_claude_footer_classified_by_inference():
     footer = "feat: z\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\nCo-Authored-By: Claude <noreply@anthropic.com>"
     client = FakeClient([prs_page([pr_node(number=9, commits=(footer,))])])
-    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    tasks, _ = collect_prs(client, "wing/abci", SINCE, CFG)
     assert tasks[0].level == "L3" and tasks[0].method.startswith("inference:")
 
 
@@ -222,7 +226,7 @@ def test_collect_prs_label_beats_inner_commit_signals():
         pr_node(number=10, labels=("ai-level/L2",),
                 commits=("feat: y\n\nAI-Level: L4\nCo-Authored-By: Claude",)),
     ])])
-    tasks = collect_prs(client, "wing/abci", SINCE, CFG)
+    tasks, _ = collect_prs(client, "wing/abci", SINCE, CFG)
     assert tasks[0].level == "L2" and tasks[0].method == "label"
 
 
@@ -236,7 +240,7 @@ CLAUDE_FOOTER = (
 
 def infer_one(cfg=CFG, **kwargs):
     client = FakeClient([prs_page([pr_node(number=99, **kwargs)])])
-    return collect_prs(client, "wing/abci", SINCE, cfg)[0]
+    return collect_prs(client, "wing/abci", SINCE, cfg)[0][0]
 
 
 def test_infer_l5_auto_merged_agent_pr():
@@ -297,7 +301,7 @@ def test_inference_disabled_falls_back_to_rules():
     client = FakeClient([prs_page([
         pr_node(number=11, commits=(CLAUDE_FOOTER,), files=("tests/test_app.py",)),
     ])])
-    tasks = collect_prs(client, "wing/abci", SINCE, cfg)
+    tasks, _ = collect_prs(client, "wing/abci", SINCE, cfg)
     assert tasks[0].level == "L3" and tasks[0].method == "rule"
 
 
@@ -473,8 +477,9 @@ def test_per_repo_no_evidence_override():
     ])])
     repo_cfg = {"name": "tony/abci-crm", "branch": "master",
                 "no_evidence_level": "L2", "sop_paths": []}
-    tasks = collect_repo(client, repo_cfg, SINCE, "commits",
-                         {**CFG, "sop_paths": ["testcases/"], "no_evidence_level": "L1"})
+    client.responses.append(META_EMPTY)
+    tasks, _meta = collect_repo(client, repo_cfg, SINCE, "commits",
+                                {**CFG, "sop_paths": ["testcases/"], "no_evidence_level": "L1"})
     assert tasks[0].level == "L2" and tasks[0].method == "inference:no-ai-evidence-default"
 
 
@@ -498,3 +503,59 @@ def test_load_config_requires_repos(tmp_path):
     cfg_file.write_text("window_days = 90\n")
     with pytest.raises(CollectError, match="no \\[\\[repos\\]\\]"):
         load_config(cfg_file)
+
+
+# --------------------------------------------------- DORA / meta / quality
+
+META_EMPTY = {"repository": {"releases": {"nodes": []}, "deployments": {"nodes": []}}}
+
+
+def test_closed_unmerged_pr_counted_not_tasked():
+    client = FakeClient([prs_page([
+        pr_node(number=20, merged=None, closed="2026-05-03T10:00:00Z",
+                updated="2026-05-03T10:00:00Z"),
+        pr_node(number=21),
+    ])])
+    tasks, closed = collect_prs(client, "wing/abci", SINCE, CFG)
+    assert [t.id for t in tasks] == ["21"]
+    assert closed == ["2026-05-03"]
+
+
+def test_lead_hours_and_ci_state():
+    client = FakeClient([prs_page([
+        pr_node(number=22, created="2026-05-01T10:00:00Z",
+                merged="2026-05-02T12:00:00Z", ci="SUCCESS"),
+        pr_node(number=23, ci="FAILURE"),
+    ])])
+    tasks, _ = collect_prs(client, "wing/abci", SINCE, CFG)
+    assert tasks[0].lead_hours == 26.0 and tasks[0].ci == "pass"
+    assert tasks[1].ci == "fail"
+
+
+def test_fetch_repo_meta_filters_window():
+    from collect_github import fetch_repo_meta
+    client = FakeClient([{"repository": {
+        "releases": {"nodes": [{"publishedAt": "2026-05-10T00:00:00Z"},
+                               {"publishedAt": "2026-01-01T00:00:00Z"}]},
+        "deployments": {"nodes": [{"createdAt": "2026-06-01T00:00:00Z"}]},
+    }}])
+    meta = fetch_repo_meta(client, "wing/abci", SINCE)
+    assert meta == {"releases": ["2026-05-10"], "deployments": ["2026-06-01"]}
+
+
+def test_fetch_quality_file_parses_and_tolerates_failure():
+    from collect_github import CollectError, fetch_quality_file
+
+    class RawClient:
+        def rest_raw(self, path):
+            assert path == "/repos/wing/abci/contents/quality/metrics.json"
+            return '{"coverage": 82.4, "security": {"critical": 0, "high": 1, "medium": 4}}'
+
+    q = fetch_quality_file(RawClient(), "wing/abci", "quality/metrics.json")
+    assert q["coverage"] == 82.4 and q["security"]["high"] == 1
+
+    class FailClient:
+        def rest_raw(self, path):
+            raise CollectError("404")
+
+    assert fetch_quality_file(FailClient(), "wing/abci", "x.json") is None

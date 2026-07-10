@@ -14,6 +14,7 @@ mode = "auto"
 [[repos]]
 name = "wing-csi/AIFlowTesting"
 # branch = "main"          # 唔填就自動用 default branch(只影響 commits)
+# quality_file = "quality/metrics.json"  # target repo CI 維護嘅品質 JSON(coverage / security 數字)
 
 [[repos]]
 name = "Tony-Liu-1248/abci-crm"

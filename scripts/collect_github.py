@@ -88,10 +88,10 @@ query($owner:String!,$name:String!,$expr:String!,$since:GitTimestamp!,$cursor:St
 PRS_QUERY = """
 query($owner:String!,$name:String!,$cursor:String){
   repository(owner:$owner,name:$name){
-    pullRequests(states:MERGED, first:50, orderBy:{field:UPDATED_AT, direction:DESC}, after:$cursor){
+    pullRequests(states:[MERGED, CLOSED], first:50, orderBy:{field:UPDATED_AT, direction:DESC}, after:$cursor){
       pageInfo{ hasNextPage endCursor }
       nodes{
-        number title body mergedAt updatedAt additions deletions url headRefName
+        number title body mergedAt createdAt closedAt updatedAt additions deletions url headRefName
         author{ login __typename }
         mergedBy{ login __typename }
         autoMergeRequest{ enabledBy{ login } }
@@ -99,9 +99,18 @@ query($owner:String!,$name:String!,$cursor:String){
         reviewThreads(first:1){ totalCount }
         labels(first:20){ nodes{ name } }
         commits(first:50){ nodes{ commit{ message } } }
+        lastCommit: commits(last:1){ nodes{ commit{ statusCheckRollup{ state } } } }
         files(first:100){ nodes{ path } }
       }
     }
+  }
+}"""
+
+REPO_META_QUERY = """
+query($owner:String!,$name:String!){
+  repository(owner:$owner,name:$name){
+    releases(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ publishedAt } }
+    deployments(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ createdAt } }
   }
 }"""
 
@@ -164,6 +173,8 @@ class Task:
     check: str | None = None  # claim verification: "ok" | "suspect:*" | None (unverifiable)
     branch: str = ""  # PR head branch, or the scanned branch for commits
     rework: int = 0  # human CHANGES_REQUESTED reviews on the PR (被打回次數)
+    lead_hours: float | None = None  # PR createdAt → mergedAt (lead time to merge)
+    ci: str | None = None  # last-commit check rollup: "pass" | "fail" | None
 
 
 class GitHubClient:
@@ -189,6 +200,18 @@ class GitHubClient:
         if body.get("errors"):
             raise CollectError(f"GraphQL error: {body['errors'][0].get('message', body['errors'])}")
         return body["data"]
+
+    def rest_raw(self, path: str) -> str:
+        """GET a REST path returning the raw payload (e.g. file contents)."""
+        req = urllib.request.Request(
+            "https://api.github.com" + path,
+            headers={**self._headers, "Accept": "application/vnd.github.raw+json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return resp.read().decode()
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            raise CollectError(f"REST fetch {path} failed: {e}") from e
 
 
 def normalize_level(raw: str) -> str | None:
@@ -446,9 +469,23 @@ def collect_commits(
     return tasks
 
 
-def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> list[Task]:
+def _lead_hours(created: str | None, merged: str) -> float | None:
+    if not created:
+        return None
+    delta = datetime.fromisoformat(merged) - datetime.fromisoformat(created)
+    return round(delta.total_seconds() / 3600, 1)
+
+
+def _ci_state(node: dict) -> str | None:
+    nodes = (node.get("lastCommit") or {}).get("nodes") or [{}]
+    rollup = (nodes[0].get("commit") or {}).get("statusCheckRollup") or {}
+    return {"SUCCESS": "pass", "FAILURE": "fail", "ERROR": "fail"}.get(rollup.get("state"))
+
+
+def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> tuple[list[Task], list[str]]:
     owner, name = repo.split("/", 1)
     tasks: list[Task] = []
+    closed_unmerged: list[str] = []  # closed-without-merge dates (accept rate 分母)
     cursor: str | None = None
     for _ in range(MAX_PAGES):
         data = client.graphql(PRS_QUERY, {"owner": owner, "name": name, "cursor": cursor})
@@ -456,6 +493,11 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> l
         if conn is None:
             raise CollectError(f"{repo}: repo not found (check token access)")
         for node in conn["nodes"]:
+            if not node["mergedAt"]:
+                closed_at = node.get("closedAt") or ""
+                if closed_at >= since_iso:
+                    closed_unmerged.append(closed_at[:10])
+                continue
             if node["mergedAt"] < since_iso:
                 continue
             author = (node.get("author") or {}).get("login") or ""
@@ -494,6 +536,8 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> l
                     check=check,
                     branch=node.get("headRefName") or "",
                     rework=sig.changes_requested,
+                    lead_hours=_lead_hours(node.get("createdAt"), node["mergedAt"]),
+                    ci=_ci_state(node),
                 )
             )
         # UPDATED_AT desc + (mergedAt <= updatedAt) => once a whole page is
@@ -503,10 +547,34 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> l
         ):
             break
         cursor = conn["pageInfo"]["endCursor"]
-    return tasks
+    return tasks, closed_unmerged
 
 
-def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str, cfg: dict) -> list[Task]:
+def fetch_repo_meta(client: GitHubClient, repo: str, since_iso: str) -> dict:
+    """Window-filtered release / deployment dates (empty on any failure)."""
+    owner, name = repo.split("/", 1)
+    try:
+        data = client.graphql(REPO_META_QUERY, {"owner": owner, "name": name})
+        r = (data.get("repository") or {})
+        releases = [n["publishedAt"][:10] for n in (r.get("releases") or {}).get("nodes", [])
+                    if n.get("publishedAt") and n["publishedAt"] >= since_iso]
+        deployments = [n["createdAt"][:10] for n in (r.get("deployments") or {}).get("nodes", [])
+                       if n.get("createdAt") and n["createdAt"] >= since_iso]
+        return {"releases": releases, "deployments": deployments}
+    except CollectError:
+        return {"releases": [], "deployments": []}
+
+
+def fetch_quality_file(client: GitHubClient, repo: str, path: str) -> dict | None:
+    """Optional per-repo quality JSON maintained by the target repo's CI
+    (coverage %, security finding counts, ...). None if missing/invalid."""
+    try:
+        return json.loads(client.rest_raw(f"/repos/{repo}/contents/{path}"))
+    except (CollectError, json.JSONDecodeError):
+        return None
+
+
+def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str, cfg: dict) -> tuple[list[Task], dict]:
     repo = repo_cfg["name"]
     if "/" not in repo:
         raise CollectError(f"repo name must be 'owner/name', got '{repo}'")
@@ -519,14 +587,19 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     }
     repo_classify = {**cfg, **overrides}
     tasks: list[Task] = []
+    meta: dict = {"closed_unmerged": [], "quality": None}
     if mode in ("pr", "auto"):
-        tasks += collect_prs(client, repo, since_iso, repo_classify)
+        prs, meta["closed_unmerged"] = collect_prs(client, repo, since_iso, repo_classify)
+        tasks += prs
     if mode in ("commits", "auto"):
         branch = resolve_branch(client, *repo.split("/", 1), repo_cfg.get("branch"))
         tasks += collect_commits(
             client, repo, branch, since_iso, repo_classify, skip_pr_commits=(mode == "auto")
         )
-    return tasks
+    meta.update(fetch_repo_meta(client, repo, since_iso))
+    if repo_cfg.get("quality_file"):
+        meta["quality"] = fetch_quality_file(client, repo, repo_cfg["quality_file"])
+    return tasks, meta
 
 
 def load_config(path: Path) -> dict:
@@ -566,10 +639,12 @@ def main(argv: list[str] | None = None) -> int:
 
     tasks: list[Task] = []
     errors: list[str] = []
+    repo_meta: dict = {}
     for repo_cfg in cfg["repos"]:
         try:
-            got = collect_repo(client, repo_cfg, since_iso, cfg["mode"], cfg["classify"])
+            got, meta = collect_repo(client, repo_cfg, since_iso, cfg["mode"], cfg["classify"])
             tasks += got
+            repo_meta[repo_cfg["name"]] = meta
             print(f"  {repo_cfg['name']}: {len(got)} tasks")
         except CollectError as e:
             errors.append(str(e))
@@ -587,6 +662,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": cfg["mode"],
         "repos": [r["name"] for r in cfg["repos"]],
         "tasks": [asdict(t) for t in tasks],
+        "repo_meta": repo_meta,
         "errors": errors,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -113,6 +113,28 @@ Dashboard 有一欄量度「自動化程度同輸出質量嘅關係」:
 
 Attribution caveat:修復佔比量度嘅係**工作構成**,唔係「AI 寫錯率」— 一個 fix task 修嘅可能係任何 level 引入嘅問題,fix 本身嘅 level 唔代表邊個惹禍。打回率就冇呢個問題,打回打嘅係嗰個 PR 自己。冇 PR flow 嘅 repo(全 direct commit)打回率會顯示「無 PR」,本身就係一個發現。
 
+## DORA + RAG(擴展指標)
+
+| 指標 | 計法 | 性質 |
+|---|---|---|
+| 部署頻率 | window 內 Deployments(冇就用 Releases)÷ 週數 | 直接 |
+| Lead Time | PR `createdAt → mergedAt` 中位數 | 直接(**至 merge**,唔係至 production)|
+| 變更失敗率 | `revert:` / `hotfix:` tasks ÷ 部署次數 | **proxy** — 冇 incident 數據 |
+| MTTR | 修復類 task 嘅 lead time 中位數 | **proxy** — 「幾快落到修復」|
+| PR 接受率 | merged ÷ (merged + closed 未 merge) | 直接 |
+| 有效 tasks / 週 | 改動 ≥10 行嘅 tasks ÷ 週數 | 直接 |
+| CI gate pass rate | PR 最後 commit 嘅 `statusCheckRollup` | 直接(要 repo 有 CI checks)|
+
+**Per-repo RAG**:品質卡頂部每個 repo 一粒燈,hover 見明細。規則:security critical >0 或 CI pass <75% → **RED**;high >0 或 CI pass <90% → **AMBER**;否則 **GREEN**;無 CI 又無 quality file → 灰色「資料不足」。
+
+**Coverage % / security 數字唔喺 GitHub API** — 要 target repo 嘅 CI 寫一個 JSON,config 用 `quality_file` 指住:
+
+```json
+{ "coverage": 82.4, "security": { "critical": 0, "high": 1, "medium": 4 } }
+```
+
+AIFlowTesting 本身已經跑緊 coverage + bandit(SOP Phase 5),加一個 step 將結果寫入呢個 file commit 返 repo 就接通。冇呢個 file,RAG 淨用 CI pass rate 判,coverage / security 明細留空。
+
 ## Private 模式
 
 兩個層面,setup 唔同:
