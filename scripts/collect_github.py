@@ -111,6 +111,12 @@ query($owner:String!,$name:String!){
   repository(owner:$owner,name:$name){
     releases(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ publishedAt } }
     deployments(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ createdAt } }
+    refs(refPrefix:"refs/tags/", first:100, orderBy:{field:TAG_COMMIT_DATE, direction:DESC}){
+      nodes{
+        name
+        target{ ... on Commit { committedDate } ... on Tag { tagger { date } } }
+      }
+    }
   }
 }"""
 
@@ -550,8 +556,20 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> t
     return tasks, closed_unmerged
 
 
-def fetch_repo_meta(client: GitHubClient, repo: str, since_iso: str) -> dict:
-    """Window-filtered release / deployment dates (empty on any failure)."""
+DEFAULT_TAG_PATTERN = r"^v?\d"  # v1.2.3 / 1.0 / 2026.01 之類嘅版本 tag
+
+
+def _tag_date(node: dict) -> str | None:
+    """Tag date: annotated tag → tagger.date; lightweight tag → commit date."""
+    target = node.get("target") or {}
+    tagger = target.get("tagger") or {}
+    return tagger.get("date") or target.get("committedDate")
+
+
+def fetch_repo_meta(
+    client: GitHubClient, repo: str, since_iso: str, tag_pattern: str = DEFAULT_TAG_PATTERN
+) -> dict:
+    """Window-filtered release / deployment / version-tag dates (empty on failure)."""
     owner, name = repo.split("/", 1)
     try:
         data = client.graphql(REPO_META_QUERY, {"owner": owner, "name": name})
@@ -560,9 +578,15 @@ def fetch_repo_meta(client: GitHubClient, repo: str, since_iso: str) -> dict:
                     if n.get("publishedAt") and n["publishedAt"] >= since_iso]
         deployments = [n["createdAt"][:10] for n in (r.get("deployments") or {}).get("nodes", [])
                        if n.get("createdAt") and n["createdAt"] >= since_iso]
-        return {"releases": releases, "deployments": deployments}
+        tag_re = re.compile(tag_pattern)
+        tags = []
+        for n in (r.get("refs") or {}).get("nodes", []):
+            date = _tag_date(n)
+            if date and tag_re.search(n.get("name") or "") and date[:10] >= since_iso[:10]:
+                tags.append(date[:10])
+        return {"releases": releases, "deployments": deployments, "tags": tags}
     except CollectError:
-        return {"releases": [], "deployments": []}
+        return {"releases": [], "deployments": [], "tags": []}
 
 
 def fetch_quality_file(client: GitHubClient, repo: str, path: str) -> dict | None:
@@ -596,7 +620,9 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
         tasks += collect_commits(
             client, repo, branch, since_iso, repo_classify, skip_pr_commits=(mode == "auto")
         )
-    meta.update(fetch_repo_meta(client, repo, since_iso))
+    meta.update(fetch_repo_meta(
+        client, repo, since_iso, repo_cfg.get("tag_pattern", DEFAULT_TAG_PATTERN)
+    ))
     if repo_cfg.get("quality_file"):
         meta["quality"] = fetch_quality_file(client, repo, repo_cfg["quality_file"])
     return tasks, meta
