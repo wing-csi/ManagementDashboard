@@ -464,7 +464,7 @@ footer {
   <section class="card projects">
     <div class="card-head">
       <h2>項目進度</h2>
-      <span class="card-note">source: GitHub Issues / Milestones</span>
+      <span class="card-note">source: GitHub Issues / Milestones · 完成度以已開 issues 計</span>
     </div>
     <div class="rag" id="projChips"></div>
     <div id="projMilestones"></div>
@@ -1004,7 +1004,7 @@ function renderProjects() {
       const overdueN = (iss.open || []).filter((i) => i.due && i.due < today).length;
       const staleN = (iss.open || []).filter((i) => (toDate(today) - toDate(i.updated)) / 864e5 > 14).length;
       const risk = overdueN > 0 ? ['var(--alert)', '高風險'] : (iss.open_total && staleN / iss.open_total >= 0.3) ? ['var(--warn)', '中風險'] : ['#2E7D4F', '正常'];
-      el.title = `完成 ${done} / 剩餘 ${iss.open_total} · 延誤 ${overdueN} · 呆滯 ${staleN}`;
+      el.title = `完成 ${done} / 剩餘 ${iss.open_total} · 延誤 ${overdueN} · 呆滯 ${staleN} · 分母=已開 issues,未拆 issue 嘅 scope 睇唔到`;
       el.innerHTML = `<span class="dotg" style="background:${risk[0]}"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">完成度 ${((done / total) * 100).toFixed(0)}%(${done}/${total})· ${risk[1]}</span>`;
     }
     chips.appendChild(el);
