@@ -729,3 +729,26 @@ def test_plan_file_none_when_missing_or_not_a_plan():
 
     plan = fetch_plan_file(Ok(), "w/r", "docs/plan.md")
     assert plan["total"] == 6 and plan["path"] == "docs/plan.md"
+
+
+PLAN_MD2 = """## Phase 2 報稅核心 due:2026-07-31
+- [ ] feat: IR56B parser !P1
+- [ ] fix: rounding 錯數 !P0 #bug due:2026-07-18
+- [x] 合併評稅計算 !P2
+
+## Backlog
+- [ ] docs: runbook
+"""
+
+
+def test_plan_markers_due_priority_bug_and_inheritance():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown(PLAN_MD2)
+    t1, t2, t3 = plan["open_tasks"]
+    assert t1 == {"title": "feat: IR56B parser", "due": "2026-07-31",
+                  "priority": "P1", "bug": False, "section": "Phase 2 報稅核心"}
+    assert t2["due"] == "2026-07-18" and t2["priority"] == "P0" and t2["bug"] is True
+    assert t2["title"] == "fix: rounding 錯數"  # 標記已清走
+    assert t3 == {"title": "docs: runbook", "due": None, "priority": None,
+                  "bug": False, "section": "Backlog"}
+    assert plan["sections"][0]["title"] == "Phase 2 報稅核心"  # heading 唔帶 due 標記

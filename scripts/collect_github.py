@@ -659,20 +659,35 @@ def fetch_quality_file(client: GitHubClient, repo: str, path: str) -> dict | Non
         return None
 
 
-CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[( |x|X)\]\s+\S")
+CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[( |x|X)\]\s+(\S.*)$")
 HEADING_RE = re.compile(r"^#{1,6}\s+(.+)$")
+PLAN_DUE_RE = re.compile(r"\bdue:(\d{4}-\d{2}-\d{2})\b")
+PLAN_PRIO_RE = re.compile(r"!(P[0-3])\b", re.IGNORECASE)
+PLAN_BUG_RE = re.compile(r"#bug\b", re.IGNORECASE)
+
+
+def _clean_plan_title(text: str) -> str:
+    text = PLAN_DUE_RE.sub("", text)
+    text = PLAN_PRIO_RE.sub("", text)
+    text = PLAN_BUG_RE.sub("", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
 
 
 def parse_plan_markdown(text: str) -> dict | None:
     """GitHub-flavored task-list plan: `- [ ]` open, `- [x]` done; headings = sections.
-    None if the file has no checkboxes (not a plan)."""
+    Inline markers on tasks/headings: due:YYYY-MM-DD, !P0/!P1/!P2, #bug —
+    task-level due overrides the section's. None if no checkboxes (not a plan)."""
     sections: list[dict] = []
+    open_tasks: list[dict] = []
     cur: dict | None = None
+    cur_due: str | None = None
     done = total = 0
     for line in text.splitlines():
         h = HEADING_RE.match(line)
         if h:
-            cur = {"title": h.group(1).strip(), "done": 0, "total": 0}
+            m_due = PLAN_DUE_RE.search(h.group(1))
+            cur_due = m_due.group(1) if m_due else None
+            cur = {"title": _clean_plan_title(h.group(1)), "done": 0, "total": 0}
             sections.append(cur)
             continue
         m = CHECKBOX_RE.match(line)
@@ -683,9 +698,20 @@ def parse_plan_markdown(text: str) -> dict | None:
             if cur is not None:
                 cur["total"] += 1
                 cur["done"] += checked
+            if not checked and len(open_tasks) < 50:
+                raw = m.group(2)
+                m_due = PLAN_DUE_RE.search(raw)
+                m_pri = PLAN_PRIO_RE.search(raw)
+                open_tasks.append({
+                    "title": _clean_plan_title(raw),
+                    "due": m_due.group(1) if m_due else cur_due,
+                    "priority": m_pri.group(1).upper() if m_pri else None,
+                    "bug": bool(PLAN_BUG_RE.search(raw)),
+                    "section": cur["title"] if cur else None,
+                })
     if total == 0:
         return None
-    return {"done": done, "total": total,
+    return {"done": done, "total": total, "open_tasks": open_tasks,
             "sections": [s for s in sections if s["total"]][:12]}
 
 
