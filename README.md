@@ -19,6 +19,95 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 5. Settings → **Pages → Source = GitHub Actions**
 6. Actions tab → 手動 run 一次 `collect`,之後每日自動更新
 
+## 指標字典 — 每個數點計、代表咩
+
+**通用機制**:「今日」= 數據 `generated_at` 嗰日;window(近 30/60/90/180 日)以佢倒數;「前一段」= 緊接之前、同樣長度嘅 window;「週」= ISO 週(星期一開始);repo 下拉 filter 影響所有數字。Task = merged PR,或者冇 associated PR 嘅 direct commit(auto mode,唔會重複計)。
+
+### 主 KPI 行
+
+| 數字 | 公式 | 代表咩 | 留意 |
+|---|---|---|---|
+| L3+ 自動化佔比 | (L3+L4+L5) ÷ **已分級** tasks × 100 | task 由 agent 主導完成嘅比例 — 成個 dashboard 嘅北極星 | 分母唔包未分級,覆蓋率低時呢個數會失真 |
+| 出碼率(近似) | L2–L5 tasks 嘅 additions ÷ 全部 additions × 100 | 代碼產出中 AI 參與嘅行數佔比 | task 級近似:L1 同未分級成個 task 當人手,唔係字面「AI 打咗幾多行」 |
+| 已分級 Tasks | window 內有 level 嘅 task 數 | 產出量(已量度部分) | sub 顯示總數 + mode |
+| 分級覆蓋率 | 已分級 ÷ 全部 × 100 | 指標可信度 | < 80% 變黃 + 出 alert |
+| ▲▼ vs 前一段 | 今段數值 − 前一段數值 | 趨勢方向 | pt = percentage point;前一段冇數就唔顯示 |
+
+### DORA 行
+
+| 數字 | 公式 | 代表咩 | 留意 |
+|---|---|---|---|
+| 部署頻率 | 部署事件 ÷ 週數。事件來源 fallback:Deployments API → version tags(名 match `tag_pattern`,預設 `^v?\d`)→ Releases | 交付節奏 | < 1 次/週改顯示整數次數 +「平均每 X 週 1 次」;sub 註明來源 |
+| Lead Time(至 merge) | merged PR 嘅 (mergedAt − createdAt) 中位數,小時;≥48h 轉日 | 由開 PR 到落 main 嘅速度 | **唔係到 production**;solo self-merge 會好細,有真 review flow 先有比較意義 |
+| 變更失敗率(proxy) | `revert` / `hotfix` 前綴 tasks ÷ 部署事件 × 100 | 部署後要回滾嘅比例 | proxy — 冇 incident 系統下嘅近似;冇部署記錄顯示 – |
+| MTTR(proxy) | fix / hotfix / revert 前綴 **PR** 嘅 lead time 中位數 | 幾快落到修復 | 只計 PR;direct commit 嘅 fix 冇 lead time |
+
+### 自動化水平分佈
+
+光譜條按**全部** task 比例(未分級 = 斜紋);L3 門檻線位置 = (未分級+L1+L2) ÷ 全部。下面每行:L1–L5 嘅 % 以**已分級**做分母,未分級嗰行以全部做分母(所以有 \*)。右上「分級來源」= label / trailer / author / rule / inference 各判咗幾多個 — 代表可信度層級:label/trailer 係明確聲稱,inference 係行為推斷。
+
+### 每週圖
+
+Bar = 該週 task 數(按 level 疊,週一起計,冇數嘅週補零);黑線 = 該週 L3+ ÷ 該週已分級 × 100(右軸)。
+
+### 異常提醒(全部閾值)
+
+| 條件 | 顏色 |
+|---|---|
+| 最後兩個有數嘅週,L3+ 佔比環比跌 ≥10pt / 升 ≥10pt | 紅 / 藍 |
+| 分級覆蓋率 < 80% | 黃 |
+| 本段 L3+ ≥30% 而前一段 <30%(突破里程碑) | 藍 |
+| 近兩週 L4+L5 = 0,而 window 內曾經有 | 黃 |
+| 修復佔比較前一段升 ≥15pt 且本段 ≥30% | 黃 |
+| 每類治理 violation 一條(見治理 section) | 紅線紅 / 警告黃 |
+| N 個 task 嘅 level 聲稱同 PR 行為矛盾(suspect) | 黃 |
+| 有 repo 收集失敗 | 黃 |
+
+最多顯示 6 條,紅線排先。週環比喺 task 量少時會好跳 — 睇趨勢線好過睇單週。
+
+### 品質 × 自動化
+
+| 數字 | 公式 | 代表咩 | 留意 |
+|---|---|---|---|
+| RAG 燈 | 紅:security critical>0 或 CI pass<75%;黃:high>0 或 CI pass<90%;綠:其餘;灰:無 CI checks 又無 quality file | repo 健康一眼睇 | CI pass rate = rollup SUCCESS 嘅 PR ÷ 有 rollup 嘅 PR;coverage / security 數字嚟自 `quality_file` |
+| 修復佔比 | title match `^(fix|hotfix|revert)\b` 嘅 tasks ÷ 全部 × 100 | 工作有幾多係執手尾 | 量度**工作構成**,唔係「AI 錯誤率」— fix 修嘅可能係任何 level 引入嘅問題 |
+| PR 打回率 | 收過 ≥1 個 human `CHANGES_REQUESTED` 嘅 PR ÷ merged PRs × 100 | 字面意義嘅「被打回重做」 | 直接嚟自 GitHub review 記錄,冇得靠估;冇 PR flow 顯示「無 PR」 |
+| PR 接受率 | merged ÷ (merged + window 內 close 咗冇 merge) × 100 | 提出嘅改動有幾多被接納 | |
+| 有效 tasks / 週 | additions ≥10 行嘅 tasks ÷ 週數 | 撇除 typo 級改動嘅真實產出節奏 | 閾值 10 行寫死喺 dashboard,想改就改 `meaningful` 嗰行 |
+| 各 Level 修復佔比 | 該 level 入面 fix tasks ÷ 該 level tasks | 「自動化越高係咪越多手尾」嘅切面 | 樣本細時波動大 |
+
+### 項目進度(Issues / Milestones)
+
+| 數字 | 公式 | 代表咩 | 留意 |
+|---|---|---|---|
+| 完成度 | closed issues ÷ (open + closed) × 100 | project 推進程度 | **現時 snapshot,唔受 window selector 影響**(issues 冇時間切片) |
+| 風險燈 | 紅:有 issue 嘅 milestone due 已過;黃:呆滯(>14 日冇 update)÷ open ≥30%;綠:其餘;灰:未用 Issues | 交付風險 | |
+| Milestone bar | closed ÷ (open + closed);due 過咗變紅 + ⚠ | 每階段進度 | |
+| 異常 tasks | 延誤 = milestone due < 今日(顯示遲咗 N 日);呆滯 = updated 距今 >14 日 | 要跟進嘅嘢 | 最多 6 個,延誤排先 |
+| 今日建議 | score = 過期日數×3 + priority label(P0/urgent/critical=40;P1/high=25;P2/medium=10)+ `bug` label +15 + min(60, 年齡日數)×0.3,取 top 5 | deterministic 優先排序,唔係 AI 估 | priority 用 issue label 表達;想改權重就改 dashboard `PRIORITY_RE` / `issueScore` |
+
+### 最近 Tasks 表格標記
+
+| 標記 | 意思 |
+|---|---|
+| `#N` / hex | PR 號 / commit sha,click 去 GitHub |
+| `↩N` | 呢個 PR 被打回(CHANGES_REQUESTED)N 次 |
+| ⚠(黃) | level 聲稱同 PR 行為矛盾,hover 見原因(唔會自動降級) |
+| ⛔(紅) | 中咗治理紅線,hover 見邊條 |
+
+表格最多顯示 80 rows,下面註明總數。
+
+## 使用注意(點樣用得其所)
+
+1. **樣本細,統計會跳** — 十幾個 task 嘅情況下,中位數、週環比一兩個 task 就擺動好大。睇趨勢線,唔好睇單點;異常提醒當「提你去睇」,唔好當結論。
+2. **量度嘅係流程 metadata,唔係 code 質量** — dashboard 見到「點樣做」同「聲稱咩」,見唔到 code 本身好唔好。要接埋 CI 嘅 coverage / security(`quality_file`)先算完整畫面。
+3. **指標一變 target 就會被玩(Goodhart)** — 為衝 L3+ 亂加 trailer、為部署頻率狂打 tag,呢啲都做得到。`verify_claim` 捉到部分聲稱同行為嘅矛盾,但最好嘅防線係 norm:**指標用嚟了解同改善,唔用嚟考核人**。同其他人(例如 Tony)分享前講明呢點。
+4. **Proxy 就係 proxy** — CFR / MTTR 係近似;Lead Time 係「至 merge」唔係「至 production」;solo self-merge 之下 lead time 極短係 flow 嘅反映,唔係效率奇蹟。卡面標明 proxy 嘅數,唔好攞去同業界 benchmark 硬比。
+5. **兩套時間邏輯** — tasks / DORA / 品質跟 window selector 郁;項目進度(Issues)係**現時 snapshot**,轉 30/90 日佢唔會變。
+6. **分級靠 convention 同 assumption** — trailer / label 要紀律先準;abci-crm 嘅 L2 係 config 寫明嘅先驗假設(`no_evidence_level`),如果嗰邊工作方式變咗,assumption 要跟住更新。所有 assumption 都喺 config 度,可以 audit。
+7. **公開性** — hub public 嘅話,所有 tracked repo 嘅 commit titles / branch 名 / issue titles 都公開。追 private repo 前先諗清楚(見 Private 模式)。
+8. **數據新鮮度** — 每日跑一次,以 header 嘅 generated_at 為準;Pages 有 cache,唔對數先 hard refresh(Ctrl+Shift+R)。
+
 ## 分級規則(priority 由高至低)
 
 | 優先 | 來源 | 例子 | 適合 |
@@ -112,6 +201,20 @@ Dashboard 有一欄量度「自動化程度同輸出質量嘅關係」:
 表格 Task 欄嘅 `↩N` badge = 呢個 PR 被打回 N 次;修復佔比較上一段升 ≥15pt 且 ≥30% 會出異常提醒。
 
 Attribution caveat:修復佔比量度嘅係**工作構成**,唔係「AI 寫錯率」— 一個 fix task 修嘅可能係任何 level 引入嘅問題,fix 本身嘅 level 唔代表邊個惹禍。打回率就冇呢個問題,打回打嘅係嗰個 PR 自己。冇 PR flow 嘅 repo(全 direct commit)打回率會顯示「無 PR」,本身就係一個發現。
+
+## 項目進度(Issues + Milestones)
+
+呢部分嘅數據來源係 **backlog 唔係 git history** — 要喺 target repo 用 GitHub Issues 做 task、Milestone 設 due date 先有數(per-repo `track_issues = false` 可關):
+
+| 顯示 | 計法 |
+|---|---|
+| 完成度 | 最近到期 milestone 嘅 closed ÷ (open + closed);冇 milestone 就冇分母,如實顯示提示 |
+| 剩餘 / 完成 | open issues 總數;本段 close 咗幾多(同埋開咗幾多,睇 backlog 淨流向)|
+| 風險度 | RED = 有 issue 掛住逾期 milestone;AMBER = 停滯 ≥3 個或者本段開多過關;GREEN = 其餘 |
+| 延誤・停滯 | open issue 嘅 milestone 過咗期,或者 ≥14 日冇 update |
+| 今日建議 | rule-based 排序:**逾期 → priority label(P0/P1/urgent...)→ 停滯 → 最舊**,取頭 5 個 |
+
+「今日建議」係規則排序,唔係 AI 判斷 — 規則明文喺 dashboard 標題度,可預測、可 audit。
 
 ## 治理紅線偵測(規範四 / 4.3 高風險檔)
 
