@@ -63,10 +63,11 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
             author_type="User", merged="2026-05-02T10:00:00Z", updated=None, add=50,
             commits=(), merged_by=("wing", "User"), auto_merge=False, reviews=(),
             threads=0, files=(), branch="feature/demo",
-            created="2026-05-01T10:00:00Z", closed=None, ci=None):
+            created="2026-05-01T10:00:00Z", closed=None, ci=None, base="main"):
     return {
         "number": number,
         "headRefName": branch,
+        "baseRefName": base,
         "title": title,
         "body": body,
         "mergedAt": merged,
@@ -87,7 +88,10 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
         "labels": {"nodes": [{"name": l} for l in labels]},
         "commits": {"nodes": [{"commit": {"message": m}} for m in commits]},
         "lastCommit": {"nodes": [{"commit": {"statusCheckRollup": {"state": ci} if ci else None}}]},
-        "files": {"nodes": [{"path": p} for p in files]},
+        "files": {"nodes": [
+            {"path": f, "changeType": "MODIFIED"} if isinstance(f, str)
+            else {"path": f[0], "changeType": f[1]} for f in files
+        ]},
     }
 
 
@@ -476,8 +480,13 @@ def test_per_repo_no_evidence_override():
         commit_node(sha="c000001", message="feat: 完成知识库功能"),
     ])])
     repo_cfg = {"name": "tony/abci-crm", "branch": "master",
-                "no_evidence_level": "L2", "sop_paths": []}
+                "no_evidence_level": "L2", "sop_paths": [], "track_issues": False}
     client.responses.append(META_EMPTY)
+    client.responses += [
+        {"repository": {"issues": {"pageInfo": {"hasNextPage": False}, "nodes": []}}},
+        {"repository": {"issues": {"pageInfo": {"hasNextPage": False}, "nodes": []}}},
+        {"repository": {"milestones": {"nodes": []}}},
+    ]
     tasks, _meta = collect_repo(client, repo_cfg, SINCE, "commits",
                                 {**CFG, "sop_paths": ["testcases/"], "no_evidence_level": "L1"})
     assert tasks[0].level == "L2" and tasks[0].method == "inference:no-ai-evidence-default"
@@ -584,3 +593,94 @@ def test_fetch_quality_file_parses_and_tolerates_failure():
             raise CollectError("404")
 
     assert fetch_quality_file(FailClient(), "wing/abci", "x.json") is None
+
+
+# ---------------------------------------------------- governance red lines
+
+def test_violation_forbidden_files_and_workflow_delete():
+    t = infer_one(commits=(CLAUDE_FOOTER,),
+                  files=("src/app.py", "node_modules/x/index.js",
+                         (".github/workflows/ci.yml", "DELETED")),
+                  reviews=(("APPROVED", "bob", "User"),))
+    assert "forbidden-files" in t.violations
+    assert "workflow-deleted" in t.violations
+
+
+def test_violation_cross_branch_merge():
+    t = infer_one(commits=(CLAUDE_FOOTER,), base="feature/other",
+                  reviews=(("APPROVED", "bob", "User"),))
+    assert t.violations == ["cross-branch-merge"]
+
+
+def test_violation_merged_without_review():
+    t = infer_one(commits=(CLAUDE_FOOTER,))
+    assert "merged-without-review" in t.violations
+
+
+def test_violation_oversized_pr_threshold():
+    t = infer_one(commits=(CLAUDE_FOOTER,), add=900,
+                  reviews=(("APPROVED", "bob", "User"),))
+    assert "oversized-pr" in t.violations
+    cfg = {**CFG, "max_pr_additions": 0}
+    t2 = infer_one(cfg=cfg, commits=(CLAUDE_FOOTER,), add=900,
+                   reviews=(("APPROVED", "bob", "User"),))
+    assert "oversized-pr" not in t2.violations
+
+
+def test_violation_core_paths_need_double_review():
+    cfg = {**CFG, "core_paths": ["src/core/"]}
+    t = infer_one(cfg=cfg, commits=(CLAUDE_FOOTER,), files=("src/core/pricing.py",),
+                  reviews=(("APPROVED", "bob", "User"),))
+    assert "core-without-double-review" in t.violations
+    t2 = infer_one(cfg=cfg, commits=(CLAUDE_FOOTER,), files=("src/core/pricing.py",),
+                   reviews=(("APPROVED", "bob", "User"), ("APPROVED", "amy", "User")))
+    assert "core-without-double-review" not in t2.violations
+
+
+def test_violation_direct_push_and_per_repo_off():
+    t = commit_one("feat: x")
+    assert t.violations == ["direct-push-main"]
+    t2 = commit_one("feat: x", cfg={**CFG, "flag_direct_push": False})
+    assert t2.violations == []
+
+
+def test_clean_pr_has_no_violations():
+    t = infer_one(commits=(CLAUDE_FOOTER,), files=("src/app.py",),
+                  reviews=(("APPROVED", "bob", "User"),))
+    assert t.violations == []
+
+
+# ------------------------------------------------------------- planning
+
+
+
+def test_collect_issues_parses_progress_and_milestones():
+    from collect_github import collect_issues
+    client = FakeClient([{"repository": {
+        "openIssues": {"totalCount": 5},
+        "closedIssues": {"totalCount": 15},
+        "issues": {"nodes": [{
+            "number": 42, "title": "feat: export PDF", "url": "https://github.com/w/r/issues/42",
+            "createdAt": "2026-06-01T00:00:00Z", "updatedAt": "2026-06-20T00:00:00Z",
+            "labels": {"nodes": [{"name": "P1"}, {"name": "bug"}]},
+            "milestone": {"title": "v0.2", "dueOn": "2026-07-01T00:00:00Z"},
+        }]},
+        "milestones": {"nodes": [{
+            "title": "v0.2", "dueOn": "2026-07-01T00:00:00Z",
+            "open": {"totalCount": 3}, "closed": {"totalCount": 7},
+        }]},
+    }}])
+    d = collect_issues(client, "w/r")
+    assert d["open_total"] == 5 and d["closed_total"] == 15
+    assert d["open"][0]["labels"] == ["P1", "bug"] and d["open"][0]["due"] == "2026-07-01"
+    assert d["milestones"][0] == {"title": "v0.2", "due": "2026-07-01", "open": 3, "closed": 7}
+
+
+def test_collect_issues_returns_none_on_failure():
+    from collect_github import CollectError, collect_issues
+
+    class Boom:
+        def graphql(self, q, v):
+            raise CollectError("403")
+
+    assert collect_issues(Boom(), "w/r") is None

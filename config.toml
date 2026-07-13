@@ -49,6 +49,12 @@ sop_paths = ["testcases/"]
 # "L1" = 假設日常有 inline assist;"" = 老實計「未分級」
 no_evidence_level = "L1"
 
+# ---- 治理紅線(規範四 / 4.3 高風險檔;可 per-repo override)----
+flag_direct_push = true       # 直接 push main = 紅線
+flag_unreviewed_merge = true  # merge 咗但 0 人工 review = 警告
+max_pr_additions = 800        # 「分階段提 PR」proxy;0 = 關
+# core_paths = ["src/core/"]  # 高風險路徑:掂到但 approvals < 2 → 紅線
+
 # agent bot 帳號直接對應 level(啱用於 auto-merge pipeline)
 [classify.author_levels]
 # "my-agent[bot]" = "L5"

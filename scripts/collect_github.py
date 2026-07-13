@@ -38,7 +38,7 @@ import sys
 import tomllib
 import urllib.error
 import urllib.request
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -55,6 +55,12 @@ DEFAULT_CLASSIFY = {
     "smart_inference": True,  # infer level from PR review/merge behaviour
     "sop_paths": [],  # diff touching these prefixes = SOP flow fingerprint → L3
     "no_evidence_level": "",  # level to assign with zero AI evidence ("" = unclassified)
+    # ---- governance red lines (規範四 / 4.3 高風險檔) ----
+    "flag_direct_push": True,  # direct commit to the scanned branch = violation
+    "flag_unreviewed_merge": True,  # merged PR with zero human reviews
+    "max_pr_additions": 800,  # 「分階段提 PR」proxy;0 = off
+    "core_paths": [],  # 高風險路徑:掂到但 approvals < 2 → violation
+    "track_issues": True,  # 收集 Issues / Milestones 做項目進度
     "rules": [
         {"contains": "generated with [claude code]", "level": "L3"},
         {"contains": "co-authored-by: claude", "level": "L3"},
@@ -91,7 +97,7 @@ query($owner:String!,$name:String!,$cursor:String){
     pullRequests(states:[MERGED, CLOSED], first:50, orderBy:{field:UPDATED_AT, direction:DESC}, after:$cursor){
       pageInfo{ hasNextPage endCursor }
       nodes{
-        number title body mergedAt createdAt closedAt updatedAt additions deletions url headRefName
+        number title body mergedAt createdAt closedAt updatedAt additions deletions url headRefName baseRefName
         author{ login __typename }
         mergedBy{ login __typename }
         autoMergeRequest{ enabledBy{ login } }
@@ -100,7 +106,7 @@ query($owner:String!,$name:String!,$cursor:String){
         labels(first:20){ nodes{ name } }
         commits(first:50){ nodes{ commit{ message } } }
         lastCommit: commits(last:1){ nodes{ commit{ statusCheckRollup{ state } } } }
-        files(first:100){ nodes{ path } }
+        files(first:100){ nodes{ path changeType } }
       }
     }
   }
@@ -115,6 +121,28 @@ query($owner:String!,$name:String!){
       nodes{
         name
         target{ ... on Commit { committedDate } ... on Tag { tagger { date } } }
+      }
+    }
+  }
+}"""
+
+ISSUES_QUERY = """
+query($owner:String!,$name:String!){
+  repository(owner:$owner,name:$name){
+    openIssues: issues(states:[OPEN]){ totalCount }
+    closedIssues: issues(states:[CLOSED]){ totalCount }
+    issues(first:100, states:[OPEN], orderBy:{field:UPDATED_AT, direction:DESC}){
+      nodes{
+        number title url createdAt updatedAt
+        labels(first:10){ nodes{ name } }
+        milestone{ title dueOn }
+      }
+    }
+    milestones(first:20, states:[OPEN], orderBy:{field:DUE_DATE, direction:ASC}){
+      nodes{
+        title dueOn
+        open: issues(states:[OPEN]){ totalCount }
+        closed: issues(states:[CLOSED]){ totalCount }
       }
     }
   }
@@ -179,6 +207,7 @@ class Task:
     check: str | None = None  # claim verification: "ok" | "suspect:*" | None (unverifiable)
     branch: str = ""  # PR head branch, or the scanned branch for commits
     rework: int = 0  # human CHANGES_REQUESTED reviews on the PR (被打回次數)
+    violations: list[str] = field(default_factory=list)  # governance red-line hits
     lead_hours: float | None = None  # PR createdAt → mergedAt (lead time to merge)
     ci: str | None = None  # last-commit check rollup: "pass" | "fail" | None
 
@@ -309,6 +338,7 @@ class PrSignals:
     ai_commits: int  # commits whose message matches an AI rule (e.g. Claude footer)
     touches_tests: bool  # diff includes test-looking file paths
     touches_sop: bool = False  # diff includes SOP artifact paths (e.g. testcases/)
+    approvals: int = 0  # human APPROVED reviews
 
 
 def _is_bot(actor: dict | None, cfg: dict) -> bool:
@@ -339,6 +369,7 @@ def extract_signals(node: dict, cfg: dict) -> PrSignals:
         auto_merge=node.get("autoMergeRequest") is not None,
         human_reviews=len(reviews),
         changes_requested=sum(1 for r in reviews if r.get("state") == "CHANGES_REQUESTED"),
+        approvals=sum(1 for r in reviews if r.get("state") == "APPROVED"),
         review_threads=(node.get("reviewThreads") or {}).get("totalCount", 0),
         total_commits=len(messages),
         ai_commits=ai_commits,
@@ -453,6 +484,7 @@ def collect_commits(
             if author in cfg["exclude_authors"]:
                 continue
             level, method = classify_commit(cfg, node["message"], author)
+            violations = ["direct-push-main"] if cfg.get("flag_direct_push", True) else []
             tasks.append(
                 Task(
                     repo=repo,
@@ -467,12 +499,40 @@ def collect_commits(
                     deletions=node["deletions"],
                     author=author,
                     branch=branch,
+                    violations=violations,
                 )
             )
         if not history["pageInfo"]["hasNextPage"]:
             break
         cursor = history["pageInfo"]["endCursor"]
     return tasks
+
+
+FORBIDDEN_PATH_RE = re.compile(r"(^|/)\.env$|(^|/)node_modules/|(^|/)__pycache__/")
+
+
+def detect_violations(node: dict, s: PrSignals, cfg: dict, default_branch: str) -> list[str]:
+    """Governance red-line checks on a merged PR (規範四 / 4.3 高風險檔)."""
+    v: list[str] = []
+    files = (node.get("files") or {}).get("nodes", [])
+    paths = [f["path"] for f in files]
+    if any(FORBIDDEN_PATH_RE.search(p) for p in paths):
+        v.append("forbidden-files")
+    if any(f.get("changeType") == "DELETED" and f["path"].startswith(".github/workflows/")
+           for f in files):
+        v.append("workflow-deleted")
+    base = node.get("baseRefName")
+    if base and base != default_branch:
+        v.append("cross-branch-merge")
+    if cfg.get("flag_unreviewed_merge", True) and s.human_reviews == 0 and not s.author_is_bot:
+        v.append("merged-without-review")
+    limit = cfg.get("max_pr_additions", 0)
+    if limit and (node.get("additions") or 0) > limit:
+        v.append("oversized-pr")
+    core = cfg.get("core_paths") or []
+    if core and any(p.startswith(prefix) for p in paths for prefix in core) and s.approvals < 2:
+        v.append("core-without-double-review")
+    return v
 
 
 def _lead_hours(created: str | None, merged: str) -> float | None:
@@ -488,7 +548,7 @@ def _ci_state(node: dict) -> str | None:
     return {"SUCCESS": "pass", "FAILURE": "fail", "ERROR": "fail"}.get(rollup.get("state"))
 
 
-def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> tuple[list[Task], list[str]]:
+def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, default_branch: str = "main") -> tuple[list[Task], list[str]]:
     owner, name = repo.split("/", 1)
     tasks: list[Task] = []
     closed_unmerged: list[str] = []  # closed-without-merge dates (accept rate 分母)
@@ -544,6 +604,7 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict) -> t
                     rework=sig.changes_requested,
                     lead_hours=_lead_hours(node.get("createdAt"), node["mergedAt"]),
                     ci=_ci_state(node),
+                    violations=detect_violations(node, sig, cfg, default_branch),
                 )
             )
         # UPDATED_AT desc + (mergedAt <= updatedAt) => once a whole page is
@@ -598,6 +659,42 @@ def fetch_quality_file(client: GitHubClient, repo: str, path: str) -> dict | Non
         return None
 
 
+def collect_issues(client: GitHubClient, repo: str) -> dict | None:
+    """Open issues + milestone progress for the planning-side view (None on failure)."""
+    owner, name = repo.split("/", 1)
+    try:
+        data = client.graphql(ISSUES_QUERY, {"owner": owner, "name": name})
+    except CollectError:
+        return None
+    r = data.get("repository") or {}
+    return {
+        "open_total": (r.get("openIssues") or {}).get("totalCount", 0),
+        "closed_total": (r.get("closedIssues") or {}).get("totalCount", 0),
+        "open": [
+            {
+                "number": n["number"],
+                "title": n["title"],
+                "url": n["url"],
+                "created": n["createdAt"][:10],
+                "updated": n["updatedAt"][:10],
+                "labels": [l["name"] for l in n["labels"]["nodes"]],
+                "milestone": (n.get("milestone") or {}).get("title"),
+                "due": ((n.get("milestone") or {}).get("dueOn") or "")[:10] or None,
+            }
+            for n in (r.get("issues") or {}).get("nodes", [])
+        ],
+        "milestones": [
+            {
+                "title": m["title"],
+                "due": (m.get("dueOn") or "")[:10] or None,
+                "open": m["open"]["totalCount"],
+                "closed": m["closed"]["totalCount"],
+            }
+            for m in (r.get("milestones") or {}).get("nodes", [])
+        ],
+    }
+
+
 def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str, cfg: dict) -> tuple[list[Task], dict]:
     repo = repo_cfg["name"]
     if "/" not in repo:
@@ -606,17 +703,21 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     # (e.g. a known AI-assisted repo without SOP conventions)
     overrides = {
         k: repo_cfg[k]
-        for k in ("no_evidence_level", "sop_paths", "rules", "agent_authors")
+        for k in ("no_evidence_level", "sop_paths", "rules", "agent_authors",
+                  "flag_direct_push", "flag_unreviewed_merge", "max_pr_additions",
+                  "core_paths", "track_issues")
         if k in repo_cfg
     }
     repo_classify = {**cfg, **overrides}
     tasks: list[Task] = []
     meta: dict = {"closed_unmerged": [], "quality": None}
+    branch = resolve_branch(client, *repo.split("/", 1), repo_cfg.get("branch"))
     if mode in ("pr", "auto"):
-        prs, meta["closed_unmerged"] = collect_prs(client, repo, since_iso, repo_classify)
+        prs, meta["closed_unmerged"] = collect_prs(
+            client, repo, since_iso, repo_classify, default_branch=branch
+        )
         tasks += prs
     if mode in ("commits", "auto"):
-        branch = resolve_branch(client, *repo.split("/", 1), repo_cfg.get("branch"))
         tasks += collect_commits(
             client, repo, branch, since_iso, repo_classify, skip_pr_commits=(mode == "auto")
         )
@@ -625,6 +726,8 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     ))
     if repo_cfg.get("quality_file"):
         meta["quality"] = fetch_quality_file(client, repo, repo_cfg["quality_file"])
+    if repo_classify.get("track_issues", True):
+        meta["issues"] = collect_issues(client, repo)
     return tasks, meta
 
 

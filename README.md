@@ -113,6 +113,24 @@ Dashboard 有一欄量度「自動化程度同輸出質量嘅關係」:
 
 Attribution caveat:修復佔比量度嘅係**工作構成**,唔係「AI 寫錯率」— 一個 fix task 修嘅可能係任何 level 引入嘅問題,fix 本身嘅 level 唔代表邊個惹禍。打回率就冇呢個問題,打回打嘅係嗰個 PR 自己。冇 PR flow 嘅 repo(全 direct commit)打回率會顯示「無 PR」,本身就係一個發現。
 
+## 治理紅線偵測(規範四 / 4.3 高風險檔)
+
+Collector 會對每個 task 做紅線檢查,dashboard 異常提醒逐類匯總、表格 ⛔ 標記涉事 rows(hover 見原因):
+
+| 檢查 | 級別 | 方法 |
+|---|---|---|
+| 直接 push main | 紅線 | direct commit(冇 PR);per-repo `flag_direct_push = false` 可靜音 |
+| commit .env / node_modules / __pycache__ | 紅線 | PR file paths |
+| 刪除 GitHub Actions workflow | 紅線 | PR file `changeType: DELETED` 喺 `.github/workflows/` |
+| 跨 feature branch 合併 | 紅線 | PR base branch ≠ default branch |
+| 核心模組欠二次複核 | 紅線 | 設 `core_paths` 後:掂核心路徑但 approvals < 2 |
+| 未經 review 就 merge | 警告 | merged PR 零人工 review(「review 不可走過場」嘅底線 proxy;5 分鐘時長量唔到)|
+| 超大 PR | 警告 | additions > `max_pr_additions`(「分階段提 PR」proxy)|
+
+**偵測唔到、要另外做嘅**:硬編碼密鑰(要 content scanning — gitleaks / bandit 落 target repo CI,經 `quality_file` 上報);session_id 留存(要 commit / PR convention);分支保護有冇關(讀設定要 admin,但「有 direct push」已間接證明保護冇生效)。
+
+紅線唔會改變 task 嘅 level — 治理係另一條軸,violations 同分級分開報。
+
 ## DORA + RAG(擴展指標)
 
 | 指標 | 計法 | 性質 |
