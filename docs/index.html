@@ -775,8 +775,16 @@ function renderDora(cur, meta) {
   const deployEvents = meta.deployments || meta.tags || meta.releases;
   const src = meta.deployments ? 'deployments' : meta.tags ? 'version tags' : 'releases';
   const weeks = state.windowDays / 7;
-  $('dDeploy').innerHTML = deployEvents ? (deployEvents / weeks).toFixed(1) + '<span class="unit">次/週</span>' : '–';
-  $('dDeploySub').textContent = deployEvents ? `${deployEvents} 次(${src})` : '無 release / deployment 記錄';
+  if (!deployEvents) {
+    $('dDeploy').textContent = '–';
+    $('dDeploySub').textContent = '無 tag / release / deployment 記錄';
+  } else if (deployEvents / weeks >= 1) {
+    $('dDeploy').innerHTML = (deployEvents / weeks).toFixed(1) + '<span class="unit">次/週</span>';
+    $('dDeploySub').textContent = `${deployEvents} 次(${src})`;
+  } else {
+    $('dDeploy').innerHTML = deployEvents + '<span class="unit">次</span>';
+    $('dDeploySub').textContent = `${state.windowDays} 日內(${src})· 平均每 ${(weeks / deployEvents).toFixed(1)} 週 1 次`;
+  }
   $('dLead').innerHTML = fmtHours(median(cur.leads));
   const cfr = deployEvents ? (cur.failTasks / deployEvents) * 100 : null;
   $('dCfr').innerHTML = cfr == null ? '–' : Math.min(cfr, 100).toFixed(0) + '<span class="unit">%</span>';
