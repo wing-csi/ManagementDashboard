@@ -16,6 +16,8 @@ name = "wing-csi/AIFlowTesting"
 # branch = "main"          # 唔填就自動用 default branch(只影響 commits)
 # quality_file = "quality/metrics.json"  # target repo CI 維護嘅品質 JSON(coverage / security 數字)
 # tag_pattern = "^v?\\d"                # 部署頻率計邊啲 tags(預設版本號樣式)
+# plan_file = "docs/project-plan.md"     # project plan markdown(- [ ] checkboxes),做完成度嘅 scope 來源
+# track_issues = true                   # 收集 GitHub Issues 做項目進度(預設開)
 
 [[repos]]
 name = "Tony-Liu-1248/abci-crm"

@@ -659,6 +659,47 @@ def fetch_quality_file(client: GitHubClient, repo: str, path: str) -> dict | Non
         return None
 
 
+CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[( |x|X)\]\s+\S")
+HEADING_RE = re.compile(r"^#{1,6}\s+(.+)$")
+
+
+def parse_plan_markdown(text: str) -> dict | None:
+    """GitHub-flavored task-list plan: `- [ ]` open, `- [x]` done; headings = sections.
+    None if the file has no checkboxes (not a plan)."""
+    sections: list[dict] = []
+    cur: dict | None = None
+    done = total = 0
+    for line in text.splitlines():
+        h = HEADING_RE.match(line)
+        if h:
+            cur = {"title": h.group(1).strip(), "done": 0, "total": 0}
+            sections.append(cur)
+            continue
+        m = CHECKBOX_RE.match(line)
+        if m:
+            total += 1
+            checked = m.group(1) in "xX"
+            done += checked
+            if cur is not None:
+                cur["total"] += 1
+                cur["done"] += checked
+    if total == 0:
+        return None
+    return {"done": done, "total": total,
+            "sections": [s for s in sections if s["total"]][:12]}
+
+
+def fetch_plan_file(client: GitHubClient, repo: str, path: str) -> dict | None:
+    """Project plan markdown maintained in the target repo (None if missing/not a plan)."""
+    try:
+        plan = parse_plan_markdown(client.rest_raw(f"/repos/{repo}/contents/{path}"))
+    except CollectError:
+        return None
+    if plan:
+        plan["path"] = path
+    return plan
+
+
 def collect_issues(client: GitHubClient, repo: str) -> dict | None:
     """Open issues + milestone progress for the planning-side view (None on failure)."""
     owner, name = repo.split("/", 1)
@@ -728,6 +769,8 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
         meta["quality"] = fetch_quality_file(client, repo, repo_cfg["quality_file"])
     if repo_classify.get("track_issues", True):
         meta["issues"] = collect_issues(client, repo)
+    if repo_cfg.get("plan_file"):
+        meta["plan"] = fetch_plan_file(client, repo, repo_cfg["plan_file"])
     return tasks, meta
 
 

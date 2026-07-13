@@ -684,3 +684,48 @@ def test_collect_issues_returns_none_on_failure():
             raise CollectError("403")
 
     assert collect_issues(Boom(), "w/r") is None
+
+
+# ------------------------------------------------------------ plan file
+
+PLAN_MD = """# HK Tax Helper — Project Plan
+
+## Phase 1 基礎
+- [x] project scaffold
+- [x] 稅階 config
+- [X] 免稅額 model
+
+## Phase 2 報稅核心
+- [x] 合併評稅計算
+- [ ] 分開評稅比較
+- [ ] IR56B parser
+
+notes: 下面唔係 checkbox
+- 普通 bullet 唔計
+"""
+
+
+def test_parse_plan_markdown_counts_and_sections():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown(PLAN_MD)
+    assert plan["done"] == 4 and plan["total"] == 6
+    assert [s["title"] for s in plan["sections"]] == ["Phase 1 基礎", "Phase 2 報稅核心"]
+    assert plan["sections"][1] == {"title": "Phase 2 報稅核心", "done": 1, "total": 3}
+
+
+def test_plan_file_none_when_missing_or_not_a_plan():
+    from collect_github import CollectError, fetch_plan_file, parse_plan_markdown
+    assert parse_plan_markdown("# 冇 checkbox 嘅普通 README") is None
+
+    class Boom:
+        def rest_raw(self, path):
+            raise CollectError("404")
+
+    assert fetch_plan_file(Boom(), "w/r", "plan.md") is None
+
+    class Ok:
+        def rest_raw(self, path):
+            return PLAN_MD
+
+    plan = fetch_plan_file(Ok(), "w/r", "docs/plan.md")
+    assert plan["total"] == 6 and plan["path"] == "docs/plan.md"
