@@ -117,6 +117,11 @@ query($owner:String!,$name:String!){
   repository(owner:$owner,name:$name){
     releases(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ publishedAt } }
     deployments(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ createdAt } }
+    diskUsage
+    languages(first:8, orderBy:{field:SIZE, direction:DESC}){
+      totalSize
+      edges{ size node{ name } }
+    }
     refs(refPrefix:"refs/tags/", first:100, orderBy:{field:TAG_COMMIT_DATE, direction:DESC}){
       nodes{
         name
@@ -135,6 +140,15 @@ query($owner:String!,$name:String!){
       nodes{
         number title url createdAt updatedAt
         labels(first:10){ nodes{ name } }
+        assignees(first:2){ nodes{ login } }
+        milestone{ title dueOn }
+      }
+    }
+    closedRecent: issues(first:30, states:[CLOSED], orderBy:{field:UPDATED_AT, direction:DESC}){
+      nodes{
+        number title url closedAt
+        labels(first:10){ nodes{ name } }
+        assignees(first:2){ nodes{ login } }
         milestone{ title dueOn }
       }
     }
@@ -639,13 +653,21 @@ def fetch_repo_meta(
                     if n.get("publishedAt") and n["publishedAt"] >= since_iso]
         deployments = [n["createdAt"][:10] for n in (r.get("deployments") or {}).get("nodes", [])
                        if n.get("createdAt") and n["createdAt"] >= since_iso]
+        langs = r.get("languages") or {}
+        languages = {
+            "total_bytes": langs.get("totalSize", 0),
+            "items": [{"name": e["node"]["name"], "bytes": e["size"]}
+                      for e in langs.get("edges", [])],
+        }
+        disk_kb = r.get("diskUsage") or 0
         tag_re = re.compile(tag_pattern)
         tags = []
         for n in (r.get("refs") or {}).get("nodes", []):
             date = _tag_date(n)
             if date and tag_re.search(n.get("name") or "") and date[:10] >= since_iso[:10]:
                 tags.append(date[:10])
-        return {"releases": releases, "deployments": deployments, "tags": tags}
+        return {"releases": releases, "deployments": deployments, "tags": tags,
+                "languages": languages, "disk_kb": disk_kb}
     except CollectError:
         return {"releases": [], "deployments": [], "tags": []}
 
@@ -747,8 +769,21 @@ def collect_issues(client: GitHubClient, repo: str) -> dict | None:
                 "labels": [l["name"] for l in n["labels"]["nodes"]],
                 "milestone": (n.get("milestone") or {}).get("title"),
                 "due": ((n.get("milestone") or {}).get("dueOn") or "")[:10] or None,
+                "assignees": [a["login"] for a in ((n.get("assignees") or {}).get("nodes", []))],
             }
             for n in (r.get("issues") or {}).get("nodes", [])
+        ],
+        "closed_recent": [
+            {
+                "number": n["number"],
+                "title": n["title"],
+                "url": n["url"],
+                "closed": (n.get("closedAt") or "")[:10] or None,
+                "labels": [l["name"] for l in n["labels"]["nodes"]],
+                "due": ((n.get("milestone") or {}).get("dueOn") or "")[:10] or None,
+                "assignees": [a["login"] for a in ((n.get("assignees") or {}).get("nodes", []))],
+            }
+            for n in (r.get("closedRecent") or {}).get("nodes", [])
         ],
         "milestones": [
             {

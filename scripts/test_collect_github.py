@@ -663,7 +663,15 @@ def test_collect_issues_parses_progress_and_milestones():
             "number": 42, "title": "feat: export PDF", "url": "https://github.com/w/r/issues/42",
             "createdAt": "2026-06-01T00:00:00Z", "updatedAt": "2026-06-20T00:00:00Z",
             "labels": {"nodes": [{"name": "P1"}, {"name": "bug"}]},
+            "assignees": {"nodes": [{"login": "wing"}]},
             "milestone": {"title": "v0.2", "dueOn": "2026-07-01T00:00:00Z"},
+        }]},
+        "closedRecent": {"nodes": [{
+            "number": 40, "title": "fix: login 500", "url": "https://github.com/w/r/issues/40",
+            "closedAt": "2026-06-18T00:00:00Z",
+            "labels": {"nodes": [{"name": "bug"}, {"name": "high"}]},
+            "assignees": {"nodes": []},
+            "milestone": None,
         }]},
         "milestones": {"nodes": [{
             "title": "v0.2", "dueOn": "2026-07-01T00:00:00Z",
@@ -673,6 +681,8 @@ def test_collect_issues_parses_progress_and_milestones():
     d = collect_issues(client, "w/r")
     assert d["open_total"] == 5 and d["closed_total"] == 15
     assert d["open"][0]["labels"] == ["P1", "bug"] and d["open"][0]["due"] == "2026-07-01"
+    assert d["open"][0]["assignees"] == ["wing"]
+    assert d["closed_recent"][0]["number"] == 40 and d["closed_recent"][0]["closed"] == "2026-06-18"
     assert d["milestones"][0] == {"title": "v0.2", "due": "2026-07-01", "open": 3, "closed": 7}
 
 
@@ -752,3 +762,17 @@ def test_plan_markers_due_priority_bug_and_inheritance():
     assert t3 == {"title": "docs: runbook", "due": None, "priority": None,
                   "bug": False, "section": "Backlog"}
     assert plan["sections"][0]["title"] == "Phase 2 報稅核心"  # heading 唔帶 due 標記
+
+
+def test_fetch_repo_meta_languages_and_disk():
+    from collect_github import fetch_repo_meta
+    client = FakeClient([{"repository": {
+        "diskUsage": 2048,
+        "languages": {"totalSize": 1000,
+                      "edges": [{"size": 700, "node": {"name": "Java"}},
+                                {"size": 300, "node": {"name": "Vue"}}]},
+        "releases": {"nodes": []}, "deployments": {"nodes": []}, "refs": {"nodes": []},
+    }}])
+    meta = fetch_repo_meta(client, "w/r", SINCE)
+    assert meta["disk_kb"] == 2048
+    assert meta["languages"]["items"][0] == {"name": "Java", "bytes": 700}
