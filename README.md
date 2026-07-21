@@ -9,15 +9,20 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 
 ## Setup(一次過)
 
-1. 開一個新 repo(例:`ManagementDashboard`),放入呢度全部檔案
-2. 開 **fine-grained PAT**:Settings → Developer settings → Fine-grained tokens
+1. 開一個新 repo(例:`ManagementDashboard`),放入呢度全部檔案 → [github.com/new](https://github.com/new)
+2. 開 **fine-grained PAT** → [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)
+   (路徑:Settings → Developer settings → Personal access tokens → Fine-grained tokens)
    - Repository access:揀晒你要追蹤嘅 repos
-   - Permissions:**Contents: Read** + **Pull requests: Read**(Metadata 會自動包)
-3. Hub repo → Settings → Secrets → Actions → 新增 `GH_METRICS_TOKEN`
-   (如果只追 public repos,可以跳過 2–3,預設 token 已經夠)
-4. 改 `config.toml` 加返你嘅 repos
-5. Settings → **Pages → Source = GitHub Actions**
-6. Actions tab → 手動 run 一次 `collect`,之後每日自動更新
+   - Permissions → Repository permissions:**Contents: Read-only** + **Pull requests: Read-only**(Metadata 會自動包)
+   - 留意:fine-grained 只揀到你自己 / 你所屬 org 名下嘅 repos;追第三者個人帳號嘅 private repo 要改用 [classic token](https://github.com/settings/tokens/new)(`repo` scope)
+3. Hub repo 新增 secret `GH_METRICS_TOKEN` → [github.com/wing-csi/ManagementDashboard/settings/secrets/actions](https://github.com/wing-csi/ManagementDashboard/settings/secrets/actions)
+   (路徑:hub repo → Settings → Secrets and variables → Actions → New repository secret)
+   (如果只追 public repos,可以跳過 2–3,workflow 預設 token 已經夠)
+4. 改 [`config.toml`](https://github.com/wing-csi/ManagementDashboard/blob/main/config.toml) 加返你嘅 repos
+5. 開 Pages → [github.com/wing-csi/ManagementDashboard/settings/pages](https://github.com/wing-csi/ManagementDashboard/settings/pages) → **Source = GitHub Actions**
+6. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新
+
+> 步驟 3–6 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
 
 ## 指標字典 — 每個數點計、代表咩
 
