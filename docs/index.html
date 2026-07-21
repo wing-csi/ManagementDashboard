@@ -574,7 +574,7 @@ const TABLE_CAP = 80;
 const FIX_RE = /^(fix|hotfix|revert)\b/i;
 const FAIL_RE = /^(revert|hotfix)\b/i;
 const VIOLATION_META = {
-  'direct-push-main': { label: '直接 push 到 main', red: true },
+  'direct-push-main': { label: '直接 push 到受監察 branch(冇 PR)', red: true },
   'forbidden-files': { label: 'commit 咗 .env / node_modules / __pycache__', red: true },
   'workflow-deleted': { label: '刪除咗 GitHub Actions workflow', red: true },
   'cross-branch-merge': { label: '跨 feature branch 合併', red: true },

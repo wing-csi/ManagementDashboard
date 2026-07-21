@@ -13,7 +13,9 @@ mode = "auto"
 
 [[repos]]
 name = "wing-csi/AIFlowTesting"
-# branch = "main"          # 唔填就自動用 default branch(只影響 commits)
+# branch = "main"            # 單條:唔填就自動用 default branch(只影響 commits)
+# branches = ["main", "develop"]  # 多條:掃晒列表(共享 commit 去重,首名優先);
+#                                 # merge 入列表 + default branch 唔算「跨 branch 合併」紅線
 # quality_file = "quality/metrics.json"  # target repo CI 維護嘅品質 JSON(coverage / security 數字)
 # tag_pattern = "^v?\\d"                # 部署頻率計邊啲 tags(預設版本號樣式)
 # plan_file = "docs/project-plan.md"     # project plan markdown(- [ ] checkboxes),做完成度嘅 scope 來源

@@ -525,8 +525,9 @@ def collect_commits(
 FORBIDDEN_PATH_RE = re.compile(r"(^|/)\.env$|(^|/)node_modules/|(^|/)__pycache__/")
 
 
-def detect_violations(node: dict, s: PrSignals, cfg: dict, default_branch: str) -> list[str]:
-    """Governance red-line checks on a merged PR (規範四 / 4.3 高風險檔)."""
+def detect_violations(node: dict, s: PrSignals, cfg: dict, allowed_branches: tuple) -> list[str]:
+    """Governance red-line checks on a merged PR (規範四 / 4.3 高風險檔).
+    allowed_branches = 受監察 branches(+ default)— merge 入呢啲唔算跨 branch。"""
     v: list[str] = []
     files = (node.get("files") or {}).get("nodes", [])
     paths = [f["path"] for f in files]
@@ -536,7 +537,7 @@ def detect_violations(node: dict, s: PrSignals, cfg: dict, default_branch: str) 
            for f in files):
         v.append("workflow-deleted")
     base = node.get("baseRefName")
-    if base and base != default_branch:
+    if base and base not in allowed_branches:
         v.append("cross-branch-merge")
     if cfg.get("flag_unreviewed_merge", True) and s.human_reviews == 0 and not s.author_is_bot:
         v.append("merged-without-review")
@@ -562,7 +563,7 @@ def _ci_state(node: dict) -> str | None:
     return {"SUCCESS": "pass", "FAILURE": "fail", "ERROR": "fail"}.get(rollup.get("state"))
 
 
-def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, default_branch: str = "main") -> tuple[list[Task], list[str]]:
+def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allowed_branches: tuple = ("main",)) -> tuple[list[Task], list[str]]:
     owner, name = repo.split("/", 1)
     tasks: list[Task] = []
     closed_unmerged: list[str] = []  # closed-without-merge dates (accept rate 分母)
@@ -618,7 +619,7 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, defa
                     rework=sig.changes_requested,
                     lead_hours=_lead_hours(node.get("createdAt"), node["mergedAt"]),
                     ci=_ci_state(node),
-                    violations=detect_violations(node, sig, cfg, default_branch),
+                    violations=detect_violations(node, sig, cfg, allowed_branches),
                 )
             )
         # UPDATED_AT desc + (mergedAt <= updatedAt) => once a whole page is
@@ -813,16 +814,31 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     repo_classify = {**cfg, **overrides}
     tasks: list[Task] = []
     meta: dict = {"closed_unmerged": [], "quality": None}
-    branch = resolve_branch(client, *repo.split("/", 1), repo_cfg.get("branch"))
+    owner, name = repo.split("/", 1)
+    if repo_cfg.get("branches"):
+        # 多 branch 監察:掃晒列表;跨 branch 合併紅線放行(列表 + default branch)
+        branches = list(repo_cfg["branches"])
+        default = resolve_branch(client, owner, name, None)
+        allowed = tuple(dict.fromkeys(branches + [default]))
+    else:
+        b = resolve_branch(client, owner, name, repo_cfg.get("branch"))
+        branches = [b]
+        allowed = (b,)
     if mode in ("pr", "auto"):
         prs, meta["closed_unmerged"] = collect_prs(
-            client, repo, since_iso, repo_classify, default_branch=branch
+            client, repo, since_iso, repo_classify, allowed_branches=allowed
         )
         tasks += prs
     if mode in ("commits", "auto"):
-        tasks += collect_commits(
-            client, repo, branch, since_iso, repo_classify, skip_pr_commits=(mode == "auto")
-        )
+        seen = {t.id for t in tasks}
+        for br in branches:
+            # 共享歷史去重:同一 commit 出現喺多條 branch,首名 branch 優先
+            for t in collect_commits(client, repo, br, since_iso, repo_classify,
+                                     skip_pr_commits=(mode == "auto")):
+                if t.id in seen:
+                    continue
+                seen.add(t.id)
+                tasks.append(t)
     meta.update(fetch_repo_meta(
         client, repo, since_iso, repo_cfg.get("tag_pattern", DEFAULT_TAG_PATTERN)
     ))

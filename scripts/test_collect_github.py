@@ -776,3 +776,38 @@ def test_fetch_repo_meta_languages_and_disk():
     meta = fetch_repo_meta(client, "w/r", SINCE)
     assert meta["disk_kb"] == 2048
     assert meta["languages"]["items"][0] == {"name": "Java", "bytes": 700}
+
+
+# ------------------------------------------------------------ 多 branch
+
+DEFAULT_BRANCH_RESP = {"repository": {"defaultBranchRef": {"name": "main"}}}
+
+
+def test_multi_branch_commits_dedup_first_branch_wins():
+    from collect_github import collect_repo
+    client = FakeClient([
+        DEFAULT_BRANCH_RESP,
+        commits_page([commit_node(sha="aaa1111", message="feat: a"),
+                      commit_node(sha="bbb2222", message="feat: b")]),   # main
+        commits_page([commit_node(sha="bbb2222", message="feat: b"),
+                      commit_node(sha="ccc3333", message="feat: c")]),   # develop
+        META_EMPTY,
+    ])
+    repo_cfg = {"name": "w/r", "branches": ["main", "develop"], "track_issues": False}
+    tasks, _meta = collect_repo(client, repo_cfg, SINCE, "commits", CFG)
+    assert [t.id for t in tasks] == ["aaa1111", "bbb2222", "ccc3333"]
+    assert next(t for t in tasks if t.id == "bbb2222").branch == "main"
+    assert next(t for t in tasks if t.id == "ccc3333").branch == "develop"
+
+
+def test_cross_branch_ok_when_base_is_tracked():
+    client = FakeClient([prs_page([
+        pr_node(number=30, base="develop", commits=(CLAUDE_FOOTER,),
+                reviews=(("APPROVED", "bob", "User"),)),
+        pr_node(number=31, base="feature/other", commits=(CLAUDE_FOOTER,),
+                reviews=(("APPROVED", "bob", "User"),)),
+    ])])
+    tasks, _ = collect_prs(client, "w/r", SINCE, CFG, allowed_branches=("main", "develop"))
+    by = {t.id: t for t in tasks}
+    assert "cross-branch-merge" not in by["30"].violations
+    assert "cross-branch-merge" in by["31"].violations
