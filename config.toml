@@ -27,6 +27,8 @@ name = "Tony-Liu-1248/abci-crm"
 # 冇證據時預設 L2(override 全局嘅 L1),另外呢個 repo 冇 testcases/ 規範
 no_evidence_level = "L2"
 sop_paths = []
+# 監察 master + hotfix branch(共享 commits 歸 master;merge 入呢兩條唔算跨 branch 紅線)
+branches = ["master", "hotfix/v2.6.1"]
 
 # [[repos]]
 # name = "wing-csi/another-repo"
