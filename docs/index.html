@@ -846,7 +846,7 @@ function renderChart(weeklyRows) {
       datasets: [
         ...LEVELS.map((l) => ({ type: 'bar', label: l, data: dataFor(l), backgroundColor: META[l].color, stack: 's', borderRadius: 2 })),
         { type: 'bar', label: '未分級', data: filled.map((w) => w.untagged || 0), backgroundColor: UNTAGGED_COLOR, stack: 's', borderRadius: 2 },
-        { type: 'line', label: 'L3+ %', data: line, borderColor: INK, backgroundColor: INK, yAxisID: 'y2', tension: 0, pointRadius: 3, borderWidth: 2, spanGaps: false },
+        { type: 'line', label: 'L3+ %', data: line, borderColor: INK, backgroundColor: INK, yAxisID: 'y2', tension: 0, pointRadius: 4, pointBorderColor: '#FFFFFF', pointBorderWidth: 1.5, borderWidth: 2, spanGaps: false },
       ],
     },
     options: {
@@ -1294,14 +1294,24 @@ function render() {
   $('footStamp').textContent = 'generated ' + ts;
 
   const rebuildBranches = () => {
+    const sel = $('branchSel');
+    if (state.repo === 'all') {
+      // branch 名喺唔同 repo 之間冇比較意義 — 全部 repos 時鎖死
+      state.branch = 'all';
+      sel.innerHTML = `<option value="all">全部 branches</option>`;
+      sel.disabled = true;
+      sel.title = '揀咗單一 repo 先可以 filter branch';
+      return;
+    }
+    sel.disabled = false;
+    sel.title = '';
     const set = new Set();
     for (const t of state.data.tasks || []) {
-      if (state.repo !== 'all' && t.repo !== state.repo) continue;
-      if (t.branch) set.add(t.branch);
+      if (t.repo === state.repo && t.branch) set.add(t.branch);
     }
     const branches = [...set].sort();
     if (state.branch !== 'all' && !set.has(state.branch)) state.branch = 'all';
-    $('branchSel').innerHTML = `<option value="all">全部 branches</option>` +
+    sel.innerHTML = `<option value="all">全部 branches</option>` +
       branches.map((b) => `<option value="${esc(b)}"${b === state.branch ? ' selected' : ''}>${esc(b)}</option>`).join('');
   };
   rebuildBranches();
