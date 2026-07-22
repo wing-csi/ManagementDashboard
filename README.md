@@ -18,6 +18,12 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 3. Hub repo 新增 secret `GH_METRICS_TOKEN` → [github.com/wing-csi/ManagementDashboard/settings/secrets/actions](https://github.com/wing-csi/ManagementDashboard/settings/secrets/actions)
    (路徑:hub repo → Settings → Secrets and variables → Actions → New repository secret)
    (如果只追 public repos,可以跳過 2–3,workflow 預設 token 已經夠)
+
+   **要加多個 token?**(例:追第三者 private repo 要 classic PAT,唔想成個 collector 用闊權 token)
+   - 同一頁 New repository secret 再開一個,例:`GH_TOKEN_CRM`
+   - workflow(`collect.yml`)嘅 collect step `env:` 加一行:`GH_TOKEN_CRM: ${{ secrets.GH_TOKEN_CRM }}`
+   - `config.toml` 對應 repo 加:`token_env = "GH_TOKEN_CRM"` — 其他 repos 照用預設 token
+   - env 缺失會即刻報錯,唔會靜靜 fallback 用錯 token
 4. 改 [`config.toml`](https://github.com/wing-csi/ManagementDashboard/blob/main/config.toml) 加返你嘅 repos
 5. 開 Pages → [github.com/wing-csi/ManagementDashboard/settings/pages](https://github.com/wing-csi/ManagementDashboard/settings/pages) → **Source = GitHub Actions**
 6. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新
@@ -293,6 +299,7 @@ python3 -m http.server -d docs 8000   # http://localhost:8000
 | `repos[].branch` | default branch | 單條 branch(只影響 commits)|
 | `repos[].branches` | — | **多 branch 監察**:`["main", "develop"]` — 逐條掃,共享 commits 去重(首名 branch 優先);同時做「跨 branch 合併」紅線嘅放行名單(自動加埋 default branch)|
 | `repos[].plan_file` | — | project plan markdown 路徑,checkboxes 做完成度 scope |
+| `repos[].token_env` | `GH_METRICS_TOKEN` | 呢個 repo 改用另一個 env var 嘅 token(least privilege;workflow env 要傳入) |
 | `repos[].no_evidence_level` 等 | 跟全局 | 每個 repo 可獨立 override `no_evidence_level` / `sop_paths` / `rules` / `agent_authors`(例:已知 AI 輔助但冇 SOP convention 嘅 repo 設 `no_evidence_level = "L2"`、`sop_paths = []`) |
 | `classify.label_prefix` | `ai-level/` | PR label 前綴 |
 | `classify.trailer_key` | `AI-Level` | trailer key |

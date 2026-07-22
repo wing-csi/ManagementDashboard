@@ -811,3 +811,18 @@ def test_cross_branch_ok_when_base_is_tracked():
     by = {t.id: t for t in tasks}
     assert "cross-branch-merge" not in by["30"].violations
     assert "cross-branch-merge" in by["31"].violations
+
+
+def test_per_repo_token_env_missing_fails_loud(monkeypatch, tmp_path, capsys):
+    """token_env 指定嘅 env 唔存在 → 對應 repo 即刻報錯(唔會靜靜 fallback 用預設 token);
+    唯一 repo 失敗 → main 返 1。全程冇網絡接觸(token 檢查喺任何 API call 之前)。"""
+    import collect_github as cg
+    monkeypatch.setenv("GH_METRICS_TOKEN", "default-token")
+    monkeypatch.delenv("GH_TOKEN_CRM", raising=False)
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(
+        '[[repos]]\nname = "w/r"\ntoken_env = "GH_TOKEN_CRM"\n', encoding="utf-8")
+    rc = cg.main(["--config", str(cfg_file), "--out", str(tmp_path / "m.json")])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "GH_TOKEN_CRM" in err and "every repo failed" in err

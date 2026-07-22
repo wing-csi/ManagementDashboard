@@ -891,7 +891,16 @@ def main(argv: list[str] | None = None) -> int:
     repo_meta: dict = {}
     for repo_cfg in cfg["repos"]:
         try:
-            got, meta = collect_repo(client, repo_cfg, since_iso, cfg["mode"], cfg["classify"])
+            # per-repo token(least privilege):config `token_env` 指定另一個 env var
+            repo_client = client
+            if repo_cfg.get("token_env"):
+                repo_token = os.environ.get(repo_cfg["token_env"])
+                if not repo_token:
+                    raise CollectError(
+                        f"{repo_cfg['name']}: env {repo_cfg['token_env']} not set "
+                        "(check workflow env / repo secret)")
+                repo_client = GitHubClient(repo_token)
+            got, meta = collect_repo(repo_client, repo_cfg, since_iso, cfg["mode"], cfg["classify"])
             tasks += got
             repo_meta[repo_cfg["name"]] = meta
             print(f"  {repo_cfg['name']}: {len(got)} tasks")
