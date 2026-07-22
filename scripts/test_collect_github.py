@@ -552,7 +552,7 @@ def test_fetch_repo_meta_filters_window_and_tags():
             {"name": "v1.4.0", "target": {"tagger": {"date": "2026-05-20T08:00:00+08:00"}}},
             # lightweight tag → commit date
             {"name": "1.3.0", "target": {"committedDate": "2026-04-15T00:00:00Z"}},
-            # 唔似版本號 → 過濾
+            # 預設所有 tag 都計(改用 per-repo tag_pattern 先會過濾)
             {"name": "milestone-alpha", "target": {"committedDate": "2026-05-01T00:00:00Z"}},
             # window 之外 → 過濾
             {"name": "v1.0.0", "target": {"committedDate": "2025-12-01T00:00:00Z"}},
@@ -561,7 +561,7 @@ def test_fetch_repo_meta_filters_window_and_tags():
     meta = fetch_repo_meta(client, "wing/abci", SINCE)
     assert meta["releases"] == ["2026-05-10"]
     assert meta["deployments"] == ["2026-06-01"]
-    assert meta["tags"] == ["2026-05-20", "2026-04-15"]
+    assert meta["tags"] == ["2026-05-20", "2026-04-15", "2026-05-01"]
 
 
 def test_fetch_repo_meta_custom_tag_pattern():

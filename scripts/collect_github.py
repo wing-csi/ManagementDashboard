@@ -645,7 +645,7 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allo
     return tasks, closed_unmerged
 
 
-DEFAULT_TAG_PATTERN = r"^v?\d"  # v1.2.3 / 1.0 / 2026.01 之類嘅版本 tag
+DEFAULT_TAG_PATTERN = r""  # 預設:所有 tag 都當部署事件;有雜音(milestone 之類)先用 per-repo tag_pattern 收窄
 
 
 def _tag_date(node: dict) -> str | None:

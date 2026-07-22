@@ -17,7 +17,7 @@ name = "wing-csi/AIFlowTesting"
 # branches = ["main", "develop"]  # 多條:掃晒列表(共享 commit 去重,首名優先);
 #                                 # merge 入列表 + default branch 唔算「跨 branch 合併」紅線
 # quality_file = "quality/metrics.json"  # target repo CI 維護嘅品質 JSON(coverage / security 數字)
-# tag_pattern = "^v?\\d"                # 部署頻率計邊啲 tags(預設版本號樣式)
+# tag_pattern = "^release-"             # 部署頻率預設計所有 tags;有雜音先用 regex 收窄
 # plan_file = "docs/project-plan.md"     # project plan markdown(- [ ] checkboxes),做完成度嘅 scope 來源
 # token_env = "GH_TOKEN_CRM"            # 呢個 repo 用另一個 token(env var 名);唔設就用 GH_METRICS_TOKEN
 # track_issues = true                   # 收集 GitHub Issues 做項目進度(預設開)
@@ -78,11 +78,14 @@ token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 branches = ["feature/new-client-develop"]
 
-[[repos]]
-name = "benegg/BOCPT-GENERAL-WEB"
-token_env = "BEN_GH_METRICS_TOKEN"
-sop_paths = []
-branches = ["feature/new-client-develop"]
+# ⚠ 「general-web」實際 repo 名待確認(BOCPT-GENERAL-WEB 唔存在)—
+# 去 github.com/benegg?tab=repositories 搵返真名,填入下面再解 comment,
+# 同時確認 Ben 個 token 嘅 Repository access 有揀埋佢
+# [[repos]]
+# name = "benegg/???"
+# token_env = "BEN_GH_METRICS_TOKEN"
+# sop_paths = []
+# branches = ["feature/new-client-develop"]
 
 [[repos]]
 name = "benegg/SUNLIFE-EE-APP-ANDROID"
@@ -100,8 +103,7 @@ token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 # main 排首名:共享 commits 歸 main,兩條工作 branch 嘅獨有 commits 各自入帳
 branches = ["main", "Refactor", "product-selection-update"]
-# 呢個 repo 嘅 tag 格式係 #app1.2-#2.04,唔係預設嘅 v1.2.3 樣式
-tag_pattern = "^#app"
+
 
 # [[repos]]
 # name = "wing-csi/another-repo"

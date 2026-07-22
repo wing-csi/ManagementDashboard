@@ -40,7 +40,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.wrap { max-width: 1280px; margin: 0 auto; padding: 28px 24px 40px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 24px 40px; }
 
 /* ---------- header ---------- */
 .masthead {
@@ -230,7 +230,11 @@ thead th {
 thead th.sortable { cursor: pointer; user-select: none; }
 thead th.sortable:hover { color: var(--ink); }
 thead th .arrow { font-size: 9px; margin-left: 3px; }
-tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table { table-layout: fixed; width: 100%; }
+tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+thead th { overflow: hidden; text-overflow: ellipsis; }
+section.card:has(> table) { overflow-x: auto; }
 tbody tr:last-child td { border-bottom: none; }
 td.mono { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
 td.repo { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
@@ -519,6 +523,10 @@ footer {
       <span class="card-note">source: issues with bug label · 開放行先</span>
     </div>
     <table>
+      <colgroup>
+        <col style="width:64px"><col style="width:130px"><col style="width:104px"><col>
+        <col style="width:64px"><col style="width:120px"><col style="width:104px">
+      </colgroup>
       <thead><tr><th>ID</th><th>Repo</th><th>Severity</th><th>描述</th><th>狀態</th><th>Assignee</th><th>Due</th></tr></thead>
       <tbody id="defectRows"></tbody>
     </table>
@@ -531,6 +539,10 @@ footer {
     </div>
     <div class="table-scroll">
       <table>
+      <colgroup>
+        <col style="width:92px"><col style="width:172px"><col style="width:118px"><col style="width:86px">
+        <col style="width:132px"><col><col style="width:104px"><col style="width:92px">
+      </colgroup>
         <thead>
           <tr>
             <th class="sortable" data-key="date">日期<span class="arrow"></span></th>
@@ -926,7 +938,7 @@ function renderAlerts(weeklyRows, cur, prev) {
 
 function renderDora(cur, meta) {
   const deployEvents = meta.deployments || meta.tags || meta.releases;
-  const src = meta.deployments ? 'deployments' : meta.tags ? 'version tags' : 'releases';
+  const src = meta.deployments ? 'deployments' : meta.tags ? 'tags' : 'releases';
   const weeks = state.windowDays / 7;
   if (!deployEvents) {
     $('dDeploy').textContent = '–';
