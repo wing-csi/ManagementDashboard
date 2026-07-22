@@ -39,6 +39,7 @@ branches = ["master", "hotfix/v2.6.1"]
 name = "benegg/BOCPT-EE-Web"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
+branches = ["feature/new-client-develop"]
 
 [[repos]]
 name = "benegg/BOCPT-EE-APP-IOS"
@@ -59,6 +60,7 @@ sop_paths = []
 name = "benegg/BOCPT-CMS-API"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
+branches = ["feature/new-client-develop"]
 
 [[repos]]
 name = "benegg/BOCPT-ORSO-API"
@@ -74,6 +76,13 @@ sop_paths = []
 name = "benegg/BOCPT-CMS-WEB"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
+branches = ["feature/new-client-develop"]
+
+[[repos]]
+name = "benegg/BOCPT-GENERAL-WEB"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+branches = ["feature/new-client-develop"]
 
 [[repos]]
 name = "benegg/SUNLIFE-EE-APP-ANDROID"
