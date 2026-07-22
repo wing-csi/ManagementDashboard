@@ -1,6 +1,6 @@
 {
  "schema_version": 2,
- "generated_at": "2026-07-22T16:22:04+00:00",
+ "generated_at": "2026-07-22T18:08:38+00:00",
  "window_days": 180,
  "mode": "auto",
  "repos": [
@@ -42640,6 +42640,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-EE-Web": {
@@ -42648,6 +42653,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-EE-APP-IOS": {
@@ -42656,6 +42666,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-EE-APP-ANDROID": {
@@ -42664,6 +42679,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-ER-WEB": {
@@ -42672,6 +42692,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-CMS-API": {
@@ -42680,6 +42705,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-ORSO-API": {
@@ -42688,6 +42718,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-WEB-API": {
@@ -42696,6 +42731,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-CMS-WEB": {
@@ -42704,6 +42744,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/SUNLIFE-EE-APP-ANDROID": {
@@ -42712,6 +42757,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BOCPT-EE-APP-EMBED-WEB": {
@@ -42720,6 +42770,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   },
   "benegg/BoostBank-ReactNative-SMEApp": {
@@ -42728,6 +42783,11 @@
    "releases": [],
    "deployments": [],
    "tags": [],
+   "languages": {
+    "total_bytes": 0,
+    "items": []
+   },
+   "disk_kb": 0,
    "issues": null
   }
  },
