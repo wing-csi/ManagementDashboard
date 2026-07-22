@@ -98,6 +98,8 @@ sop_paths = []
 name = "benegg/BoostBank-ReactNative-SMEApp"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
+# main 排首名:共享 commits 歸 main,兩條工作 branch 嘅獨有 commits 各自入帳
+branches = ["main", "Refactor", "product-selection-update"]
 
 # [[repos]]
 # name = "wing-csi/another-repo"
