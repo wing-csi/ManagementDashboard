@@ -448,6 +448,7 @@ footer {
       <span class="card-note">fix / hotfix / revert 前綴 · PR CHANGES_REQUESTED</span>
     </div>
     <div class="rag" id="ragRow"></div>
+    <div class="ov-sub" id="ragHint" style="display:none;margin:-6px 0 14px">灰燈 = 無品質信號(要 PR 上有 CI checks,或 config 設 `quality_file`)— 詳見 README 品質指標</div>
     <div class="qgrid">
       <div class="kpi">
         <div class="label">修復佔比</div>
@@ -967,15 +968,19 @@ function repoRag(repo) {
 function renderRag() {
   const row = $('ragRow');
   row.innerHTML = '';
+  let grey = 0, shown = 0;
   for (const repo of (state.data.repos || [])) {
     if (state.repo !== 'all' && repo !== state.repo) continue;
     const r = repoRag(repo);
+    shown++;
+    if (r.label === '資料不足') grey++;
     const el = document.createElement('span');
     el.className = 'chip-rag';
     el.title = r.tip;
     el.innerHTML = `<span class="dotg" style="background:${r.color}"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">${r.label}</span>`;
     row.appendChild(el);
   }
+  $('ragHint').style.display = grey > 0 && grey >= shown / 2 ? 'block' : 'none';
 }
 
 function renderQuality(cur) {
