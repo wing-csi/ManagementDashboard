@@ -230,7 +230,7 @@ thead th {
 thead th.sortable { cursor: pointer; user-select: none; }
 thead th.sortable:hover { color: var(--ink); }
 thead th .arrow { font-size: 9px; margin-left: 3px; }
-tbody td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: none; }
 td.mono { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
 td.repo { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
@@ -257,8 +257,8 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .chip.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
 .flag { color: var(--warn); margin-left: 6px; font-size: 12px; cursor: help; }
 .vflag { color: var(--alert); margin-left: 6px; font-size: 11px; cursor: help; }
-.lvlcell { white-space: nowrap; }
-.lvlcell .flag, .lvlcell .vflag { vertical-align: middle; }
+.lvlcell { white-space: nowrap; min-width: 96px; }
+.lvlcell .flag, .lvlcell .vflag { vertical-align: middle; display: inline-block; }
 .projects { margin-bottom: 14px; }
 .proj-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 16px; }
 .proj-h { font-size: 12px; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
