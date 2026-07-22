@@ -32,7 +32,7 @@ class FakeClient:
         self.responses = list(responses)
         self.calls: list[dict] = []
 
-    def graphql(self, query: str, variables: dict) -> dict:
+    def graphql(self, query: str, variables: dict, **kw) -> dict:
         self.calls.append(variables)
         return self.responses.pop(0)
 
@@ -826,3 +826,18 @@ def test_per_repo_token_env_missing_fails_loud(monkeypatch, tmp_path, capsys):
     assert rc == 1
     err = capsys.readouterr().err
     assert "GH_TOKEN_CRM" in err and "every repo failed" in err
+
+
+def test_graphql_partial_data_tolerance():
+    from collect_github import CollectError, _graphql_data
+    import pytest as _pt
+    body = {"data": {"repository": {"refs": {"nodes": []}}},
+            "errors": [{"message": "Resource not accessible: deployments"}]}
+    # allow_partial → 攞得返 data
+    assert _graphql_data(body, allow_partial=True) == body["data"]
+    # strict → 照舊 raise
+    with _pt.raises(CollectError):
+        _graphql_data(body, allow_partial=False)
+    # 有 errors 冇 data → 點都 raise
+    with _pt.raises(CollectError):
+        _graphql_data({"data": None, "errors": [{"message": "bad"}]}, allow_partial=True)

@@ -226,6 +226,21 @@ class Task:
     ci: str | None = None  # last-commit check rollup: "pass" | "fail" | None
 
 
+def _graphql_data(body: dict, allow_partial: bool) -> dict:
+    """Unwrap a GraphQL response. Fine-grained tokens can lack permission for a
+    single field (e.g. deployments / issues) — GitHub then returns errors PLUS
+    partial data. With allow_partial we keep the data instead of losing tags,
+    languages, etc. to one forbidden field."""
+    errors = body.get("errors")
+    data = body.get("data")
+    if errors and not (allow_partial and data):
+        raise CollectError(f"GraphQL error: {errors[0].get('message', errors)}")
+    if errors:
+        print(f"  warn: partial GraphQL response — {errors[0].get('message', '')[:100]}",
+              file=sys.stderr)
+    return data
+
+
 class GitHubClient:
     """Minimal GraphQL client over urllib."""
 
@@ -236,7 +251,7 @@ class GitHubClient:
             "User-Agent": "ManagementDashboard",
         }
 
-    def graphql(self, query: str, variables: dict) -> dict:
+    def graphql(self, query: str, variables: dict, allow_partial: bool = False) -> dict:
         payload = json.dumps({"query": query, "variables": variables}).encode()
         req = urllib.request.Request(GRAPHQL_URL, data=payload, headers=self._headers)
         try:
@@ -246,9 +261,7 @@ class GitHubClient:
             raise CollectError(f"HTTP {e.code} from GitHub API: {e.read().decode()[:200]}") from e
         except urllib.error.URLError as e:
             raise CollectError(f"network error reaching GitHub API: {e.reason}") from e
-        if body.get("errors"):
-            raise CollectError(f"GraphQL error: {body['errors'][0].get('message', body['errors'])}")
-        return body["data"]
+        return _graphql_data(body, allow_partial)
 
     def rest_raw(self, path: str) -> str:
         """GET a REST path returning the raw payload (e.g. file contents)."""
@@ -648,7 +661,7 @@ def fetch_repo_meta(
     """Window-filtered release / deployment / version-tag dates (empty on failure)."""
     owner, name = repo.split("/", 1)
     try:
-        data = client.graphql(REPO_META_QUERY, {"owner": owner, "name": name})
+        data = client.graphql(REPO_META_QUERY, {"owner": owner, "name": name}, allow_partial=True)
         r = (data.get("repository") or {})
         releases = [n["publishedAt"][:10] for n in (r.get("releases") or {}).get("nodes", [])
                     if n.get("publishedAt") and n["publishedAt"] >= since_iso]
