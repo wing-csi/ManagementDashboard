@@ -36,6 +36,9 @@ jobs:
           # 讀其他 private repo 需要 PAT;冇設定 secret 就 fallback 用
           # 預設 token(只夠讀 public repos 同本 repo)
           GH_METRICS_TOKEN: ${{ secrets.GH_METRICS_TOKEN || github.token }}
+          # per-repo tokens(config token_env 對應):secrets 唔會自動變 env,
+          # 每加一個 token 都要喺度加一行
+          BEN_GH_METRICS_TOKEN: ${{ secrets.BEN_GH_METRICS_TOKEN }}
         run: python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.json
 
       - uses: actions/configure-pages@v5

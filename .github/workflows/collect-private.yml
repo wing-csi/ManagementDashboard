@@ -1,0 +1,40 @@
+name: collect
+
+on:
+  schedule:
+    - cron: '0 21 * * *' # 每日 05:00 HKT
+  push:
+    branches: [main]
+    # 特登唔包 docs/data/**,避免 bot commit 自己觸發自己
+    paths: ['config.toml', 'scripts/**', 'docs/index.html', '.github/workflows/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write # 要 commit metrics.json 返 repo
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tests
+        run: |
+          pip install pytest -q
+          python3 -m pytest scripts/ -q
+
+      - name: Collect metrics
+        env:
+          # private target repo 必須用 PAT(Contents:Read + Pull requests:Read)
+          GH_METRICS_TOKEN: ${{ secrets.GH_METRICS_TOKEN }}
+          # per-repo tokens(config token_env 對應):每加一個 token 加一行
+          BEN_GH_METRICS_TOKEN: ${{ secrets.BEN_GH_METRICS_TOKEN }}
+        run: python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.json
+
+      - name: Commit metrics back
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/metrics.json
+          git diff --cached --quiet || git commit -m "chore: update metrics [skip ci]"
+          git push
