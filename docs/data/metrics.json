@@ -1,6 +1,6 @@
 {
  "schema_version": 2,
- "generated_at": "2026-07-22T07:36:38+00:00",
+ "generated_at": "2026-07-22T09:55:23+00:00",
  "window_days": 180,
  "mode": "auto",
  "repos": [
@@ -14,11 +14,180 @@
   "benegg/BOCPT-ORSO-API",
   "benegg/BOCPT-WEB-API",
   "benegg/BOCPT-CMS-WEB",
+  "benegg/BOCPT-GENERAL-WEB",
   "benegg/SUNLIFE-EE-APP-ANDROID",
   "benegg/BOCPT-EE-APP-EMBED-WEB",
   "benegg/BoostBank-ReactNative-SMEApp"
  ],
  "tasks": [
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "3e070c0",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/3e070c0de09c84bde5d01ec1ebd1a2fc893a37a3",
+   "date": "2026-07-22",
+   "title": "fix: 允许匿名访问投资组合接口",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 2,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "6151c26",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/6151c26984988ebc1a6ece35a4d27267a4de2f95",
+   "date": "2026-07-22",
+   "title": "feat(model): 添加投资选择资产配置输入DTO",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 1,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "2e8f793",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/2e8f7932f0faf1f1570cb718418dd7de58152309",
+   "date": "2026-07-22",
+   "title": "refactor: 替换资产配置的 dynamic 类型为强类型输入",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 44,
+   "deletions": 14,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "9d73944",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/9d7394445b92f87d83bad395e0ccffaa5fc079ab",
+   "date": "2026-07-22",
+   "title": "feat: 添加投资选择DTO的JsonProperty特性",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 29,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "bceaacd",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/bceaacd4b3d35bd23ed29769b9c96b533db0fbb7",
+   "date": "2026-07-22",
+   "title": "fix(InvestmentChoices): 标记ID为自增列",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 2,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "4e73486",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/4e734860d02ed8c5dfee62eec6a99300019261df",
+   "date": "2026-07-22",
+   "title": "fix(InvestmentChoice): 修复查询方法返回类型错误",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 1,
+   "deletions": 1,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "f119544",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/f1195441917adfd22a3d9f63b2894664a536fff1",
+   "date": "2026-07-22",
+   "title": "feat(InvestmentChoices): 添加投资选择模块",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 9,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "f7b3164",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/f7b3164020a16166196d27723e64fea65305ff28",
+   "date": "2026-07-22",
+   "title": "feat: add InvestmentChoices module",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 551,
+   "deletions": 1,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
   {
    "repo": "Tony-Liu-1248/abci-crm",
    "kind": "commit",
@@ -96,6 +265,69 @@
    "author": "Tony-Liu-1248",
    "check": null,
    "branch": "hotfix/v2.6.1",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "23242d2",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/23242d2a2b45b964c26313ab51e1bf343396f29f",
+   "date": "2026-07-20",
+   "title": "chore: add build.bat to .gitignore",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 4,
+   "deletions": 1,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "8d9b86f",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/8d9b86f1b8bbd82f16518c1629e722f09b58d734",
+   "date": "2026-07-20",
+   "title": "feat(Document): 暴露创建时间字符串属性",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 9,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-WEB",
+   "kind": "commit",
+   "id": "28335d7",
+   "url": "https://github.com/benegg/BOCPT-CMS-WEB/commit/28335d72ab4e0b3f14fcd44c21aa1de4ef9fe2d7",
+   "date": "2026-07-20",
+   "title": "feat(usefulLink): 替换usefulLink模拟数据为真实API",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 13,
+   "deletions": 72,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
    "rework": 0,
    "violations": [
     "direct-push-main"
@@ -209,6 +441,27 @@
    "ci": null
   },
   {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "a6c2045",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/a6c204586bd198e9b87175790c54d1c13dc72dd5",
+   "date": "2026-07-17",
+   "title": "feat: 添加userful link模块",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 292,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
    "repo": "benegg/SUNLIFE-EE-APP-ANDROID",
    "kind": "commit",
    "id": "c73dbc9",
@@ -243,6 +496,258 @@
    "author": "Tony-Liu-1248",
    "check": null,
    "branch": "hotfix/v2.6.1",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "cadd99f",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/cadd99fa9e6969b9d3a5f799d25e3fd69c2e765f",
+   "date": "2026-07-16",
+   "title": "feat: 新增 HA 计算器功能",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 741,
+   "deletions": 3,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "b3c7177",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/b3c71778aacf598db2bbe46f549d56fc7ba52f10",
+   "date": "2026-07-16",
+   "title": "feat: 首页样式调整与GeneralSite菜单跳转",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 57,
+   "deletions": 9,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "e74d191",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/e74d1915d224bb744acefaaf602f6470a5bf07e2",
+   "date": "2026-07-16",
+   "title": "feat: EE wab Rolling Banner 与 Latest News 支持简中显示",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 42,
+   "deletions": 15,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "0e0fe07",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/0e0fe0725677a46693576f999d6ff4e00b7e32a7",
+   "date": "2026-07-16",
+   "title": "feat: 返回简体中文字段",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 10,
+   "deletions": 0,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "3609c69",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/3609c6916a9266c4e5ebda10ff1c3f88c9050483",
+   "date": "2026-07-15",
+   "title": "fix: 添加缺失的Document DTO引用",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 2,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "72810c8",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/72810c81cf26802964883e5d0ba35b2c77572dd4",
+   "date": "2026-07-15",
+   "title": "refactor(model): 将NameCn和PushType从Params JSON迁移为独立字段",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 18,
+   "deletions": 102,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "d83aba0",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/d83aba0fe754e56cc6d18afdaef212a8173721a6",
+   "date": "2026-07-15",
+   "title": "feat(cms): 将上线/下线日期应用到文档及重构参数存取",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 200,
+   "deletions": 193,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "66c0a17",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/66c0a1723f46a11a3faa241f88a3c1f8f056d3c4",
+   "date": "2026-07-15",
+   "title": "fix: ToWebResult NRE due to CN language iteration, add null guard in lambda",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 2,
+   "deletions": 2,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "1d2c6c7",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/1d2c6c73a6143a02e82a434738d226edaf067cd1",
+   "date": "2026-07-15",
+   "title": "fix(dto): 修复日期模型绑定失败问题",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 81,
+   "deletions": 104,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "0f7dc3e",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/0f7dc3e5bd8855841a32833bbd5e1ac3710d8879",
+   "date": "2026-07-15",
+   "title": "feat(dto): 支持Params JSON字段独立解析及中文语言枚举",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 309,
+   "deletions": 5,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-WEB",
+   "kind": "commit",
+   "id": "1395f0a",
+   "url": "https://github.com/benegg/BOCPT-CMS-WEB/commit/1395f0ad2a8c437230caf2a47a8a2cfa06fd57ab",
+   "date": "2026-07-15",
+   "title": "fix: 修复日期格式及校验回调逻辑",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 12,
+   "deletions": 8,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-WEB",
+   "kind": "commit",
+   "id": "ddc885c",
+   "url": "https://github.com/benegg/BOCPT-CMS-WEB/commit/ddc885cd81cfc21111b0275ef16235d4c918c68f",
+   "date": "2026-07-15",
+   "title": "feat: CMS Rolling Banner 与 Latest News 简中字段",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 219,
+   "deletions": 6,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
    "rework": 0,
    "violations": [
     "direct-push-main"
@@ -348,6 +853,132 @@
    "author": "Tony-Liu-1248",
    "check": null,
    "branch": "hotfix/v2.6.1",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "9fef413",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/9fef413369bf6df34dd717bf239c902355451d8e",
+   "date": "2026-07-14",
+   "title": "feat: Rolling Banner 与 Latest News 简中字段",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 170,
+   "deletions": 0,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "97cb2d0",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/97cb2d0dcc28182ddd776d074a817bb9899e658c",
+   "date": "2026-07-14",
+   "title": "fix:修复文档集合查询参数类型不匹配",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 18,
+   "deletions": 2,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "907d45d",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/907d45d4d2b82ab6825773b92ca80d8792ce8ed7",
+   "date": "2026-07-14",
+   "title": "feat: 添加公告与文献模块",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 26,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "6cefb6b",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/6cefb6b15061975db3d493a3edd3090800ee2c0e",
+   "date": "2026-07-14",
+   "title": "feat(model): 新增文献和公告枚举类型",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 1097,
+   "deletions": 1,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-WEB",
+   "kind": "commit",
+   "id": "123e607",
+   "url": "https://github.com/benegg/BOCPT-CMS-WEB/commit/123e607c575af65b56372bb835413a1690943771",
+   "date": "2026-07-14",
+   "title": "feat(api): 替换公告与文献模块模拟数据为真实接口",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 60,
+   "deletions": 272,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-WEB",
+   "kind": "commit",
+   "id": "4b1cca2",
+   "url": "https://github.com/benegg/BOCPT-CMS-WEB/commit/4b1cca26634d7620bc55484d6e383d96af8a8c6e",
+   "date": "2026-07-14",
+   "title": "feat: 新增常用链接页面及公告文献方案号选择",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 797,
+   "deletions": 0,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
    "rework": 0,
    "violations": [
     "direct-push-main"
@@ -650,6 +1281,132 @@
    "ci": null
   },
   {
+   "repo": "benegg/BOCPT-CMS-WEB",
+   "kind": "commit",
+   "id": "55dc539",
+   "url": "https://github.com/benegg/BOCPT-CMS-WEB/commit/55dc5394bc05cb249b6dd38136081193dcf88c1d",
+   "date": "2026-07-09",
+   "title": "feat(内容管理): 重构公告与文献为分类标签页模式",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 2358,
+   "deletions": 1190,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "14966e6",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/14966e6d50b7c77106fc88754b231fb16ef3ae30",
+   "date": "2026-07-08",
+   "title": "revert: package.json",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 5,
+   "deletions": 6,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "232365b",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/232365bd60bd298c618fa83fbf22b32c037b0606",
+   "date": "2026-07-08",
+   "title": "add config setting",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 82,
+   "deletions": 61,
+   "author": "wulinfeng003",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "3625dc8",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/3625dc8533edad28285f98c36a94b6a822e5cf11",
+   "date": "2026-07-08",
+   "title": "feat: add HA company config",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 20,
+   "deletions": 4,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "75f89a8",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/75f89a88f7c5203fc3258ee32a0462d35fea4554",
+   "date": "2026-07-06",
+   "title": "revert: package.json",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 6,
+   "deletions": 7,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-WEB",
+   "kind": "commit",
+   "id": "5a103ae",
+   "url": "https://github.com/benegg/BOCPT-CMS-WEB/commit/5a103ae260770a49264fc838646be2ce9a8f1c92",
+   "date": "2026-07-06",
+   "title": "feat: 添加公告与文献菜单及本地注入",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 1635,
+   "deletions": 3,
+   "author": "JinWong1",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
    "repo": "Tony-Liu-1248/abci-crm",
    "kind": "commit",
    "id": "be21e51",
@@ -663,6 +1420,90 @@
    "author": "Tony-Liu-1248",
    "check": null,
    "branch": "hotfix/v2.6.1",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "e5eb31c",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/e5eb31c5b4b442a67571b17b4928864276693dc0",
+   "date": "2026-06-25",
+   "title": "fix: TopNav logo less",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 14,
+   "deletions": 20,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "cd163eb",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/cd163ebfb12c22fcb1f0514dc578ce8ab482090e",
+   "date": "2026-06-25",
+   "title": "feat: TopNav add HA logo",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 13,
+   "deletions": 1,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "0ebd311",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/0ebd311f2c1240524f16e3401446873d5075c1a8",
+   "date": "2026-06-24",
+   "title": "style: Style adjustment",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 1963,
+   "deletions": 287,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "ad875c9",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/ad875c96cc4baff62853e8fd08e0d8dfce2642ce",
+   "date": "2026-06-24",
+   "title": "feat: Refresh the entire website when switching languages.",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 2,
+   "deletions": 2,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
    "rework": 0,
    "violations": [
     "direct-push-main"
@@ -734,6 +1575,27 @@
    "ci": null
   },
   {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "f80a664",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/f80a6643de1163e2de769c5b3c094a257d082c60",
+   "date": "2026-06-23",
+   "title": "feat: update logo",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 4,
+   "deletions": 24,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
    "repo": "benegg/BoostBank-ReactNative-SMEApp",
    "kind": "commit",
    "id": "a211280",
@@ -789,6 +1651,153 @@
    "author": "hamauls",
    "check": null,
    "branch": "hotfix/v2.6.1",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "b41297f",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/b41297fc52455d6e04edfffa9067912e39e2574c",
+   "date": "2026-06-18",
+   "title": "fix:The problem of overly long text on the login page",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 5,
+   "deletions": 0,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "15de6aa",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/15de6aa29b5135c655ba1a64418d5e418b710105",
+   "date": "2026-06-18",
+   "title": "fix: login page css",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 30,
+   "deletions": 16,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "0c8f899",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/0c8f899defc25cfa9fc9af7a4ea2bee489dc9eb4",
+   "date": "2026-06-18",
+   "title": "fix: Change the size of the navigation bar text",
+   "level": "L2",
+   "method": "inference:ai-style-message",
+   "additions": 49,
+   "deletions": 6,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "8b17599",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/8b175994bbd29ce2fca9586f340a59d61d3c583b",
+   "date": "2026-06-18",
+   "title": "fix:login page font size switch",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 49,
+   "deletions": 32,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "0ce5d51",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/0ce5d51a41620474464124d4d7a036d1715f4998",
+   "date": "2026-06-17",
+   "title": "feat: language switch",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 1717,
+   "deletions": 147,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "3b6ff5c",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/3b6ff5c3ae303d01601c3f9e241d35d75593efa8",
+   "date": "2026-06-17",
+   "title": "feat: HA logo",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 13092,
+   "deletions": 7618,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "9c2f29a",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/9c2f29ae402f824e91c0578aeb101b4f1e8e8b72",
+   "date": "2026-06-17",
+   "title": "feat: add HA build config",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 22,
+   "deletions": 11,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
    "rework": 0,
    "violations": [
     "direct-push-main"
@@ -873,6 +1882,111 @@
    "violations": [],
    "lead_hours": 24.3,
    "ci": "pass"
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "eded7a0",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/eded7a0c7a688d234e954d30e75f0e68d6e20b04",
+   "date": "2026-06-16",
+   "title": "update: .gitignore",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 11,
+   "deletions": 1,
+   "author": "NeroLee8",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "c584397",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/c584397890e56996dc747377b68738d2c13a45a3",
+   "date": "2026-06-15",
+   "title": "add HA Company",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 45,
+   "deletions": 34,
+   "author": "wulinfeng003",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "07e2461",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/07e24617f5b1cc9693ce18a9ada646e16a02cd38",
+   "date": "2026-06-15",
+   "title": "add agent md",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 663,
+   "deletions": 0,
+   "author": "wulinfeng003",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "09411fa",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/09411faf1e229d0e18584fea39e6e982f28472e5",
+   "date": "2026-06-15",
+   "title": "add agent 2",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 0,
+   "deletions": 5,
+   "author": "wulinfeng003",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-CMS-API",
+   "kind": "commit",
+   "id": "f9168b4",
+   "url": "https://github.com/benegg/BOCPT-CMS-API/commit/f9168b4e3b3b16ae7fadd70fcbc07df1113ff1b8",
+   "date": "2026-06-15",
+   "title": "add agents md",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 502,
+   "deletions": 0,
+   "author": "wulinfeng003",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
   },
   {
    "repo": "wing-csi/AIFlowTesting",
@@ -20636,6 +21750,27 @@
    "ci": null
   },
   {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "bbcb958",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/bbcb9587b594ff70f0d77426a4650483f1ecc23e",
+   "date": "2026-04-08",
+   "title": "还原CR046，网页版不用修改",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 69,
+   "deletions": 76,
+   "author": "fengbinbin-fbb",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
    "repo": "benegg/BoostBank-ReactNative-SMEApp",
    "kind": "commit",
    "id": "bd9f1f2",
@@ -22875,6 +24010,48 @@
    "author": "pie-csi",
    "check": null,
    "branch": "main",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "f4354f0",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/f4354f0db0b851744553c47e5dfa41d832e4787c",
+   "date": "2026-04-02",
+   "title": "替换aboutUs图标V2",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 17,
+   "deletions": 8,
+   "author": "fengbinbin-fbb",
+   "check": null,
+   "branch": "feature/new-client-develop",
+   "rework": 0,
+   "violations": [
+    "direct-push-main"
+   ],
+   "lead_hours": null,
+   "ci": null
+  },
+  {
+   "repo": "benegg/BOCPT-EE-Web",
+   "kind": "commit",
+   "id": "86a3078",
+   "url": "https://github.com/benegg/BOCPT-EE-Web/commit/86a30783fe83e405e999f760d5bcbcad92440497",
+   "date": "2026-04-02",
+   "title": "能换aboutUs的图标和公司名字",
+   "level": "L1",
+   "method": "inference:no-ai-evidence-default",
+   "additions": 10,
+   "deletions": 2,
+   "author": "fengbinbin-fbb",
+   "check": null,
+   "branch": "feature/new-client-develop",
    "rework": 0,
    "violations": [
     "direct-push-main"
@@ -35464,5 +36641,7 @@
    "issues": null
   }
  },
- "errors": []
+ "errors": [
+  "GraphQL error: Could not resolve to a Repository with the name 'benegg/BOCPT-GENERAL-WEB'."
+ ]
 }
