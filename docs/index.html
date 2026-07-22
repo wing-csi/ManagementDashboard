@@ -257,6 +257,8 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .chip.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
 .flag { color: var(--warn); margin-left: 6px; font-size: 12px; cursor: help; }
 .vflag { color: var(--alert); margin-left: 6px; font-size: 11px; cursor: help; }
+.lvlcell { white-space: nowrap; }
+.lvlcell .flag, .lvlcell .vflag { vertical-align: middle; }
 .projects { margin-bottom: 14px; }
 .proj-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 16px; }
 .proj-h { font-size: 12px; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
@@ -514,7 +516,7 @@ footer {
   <section class="card defects">
     <div class="card-head">
       <h2>Defect 追蹤</h2>
-      <span class="card-note">source: issues with `bug` label · 開放行先</span>
+      <span class="card-note">source: issues with bug label · 開放行先</span>
     </div>
     <table>
       <thead><tr><th>ID</th><th>Repo</th><th>Severity</th><th>描述</th><th>狀態</th><th>Assignee</th><th>Due</th></tr></thead>
@@ -1232,7 +1234,7 @@ function renderDefects() {
       <td class="mono" style="font-size:11.5px">${esc((r.assignees || []).join(', ') || '–')}</td>
       <td class="mono" style="font-size:11.5px">${esc(r.due || r.closed || '–')}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="mono" style="color:var(--muted)">冇 `bug` label 嘅 issues — defect 用 bug label 開 issue 就會入呢度</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="mono" style="color:var(--muted)">冇 bug label 嘅 issues — defect 用 bug label 開 issue 就會入呢度</td></tr>';
 }
 
 function renderTable() {
@@ -1258,7 +1260,7 @@ function renderTable() {
       <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.kind === 'pr' ? '#' + esc(r.id) : esc(r.id)}</a>${(r.rework || 0) > 0 ? `<span class="rework" title="被打回 ${r.rework} 次">↩${r.rework}</span>` : ''}</td>
       <td class="branch" title="${esc(r.branch || '')}">${esc(r.branch || '–')}</td>
       <td class="subject" title="${esc(r.title)}">${typeChip(r.title)}${esc(r.title)}</td>
-      <td>${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}${r.check && r.check.indexOf('suspect') === 0 ? `<span class="flag" title="${esc(r.check)}">⚠</span>` : ''}${(r.violations || []).length ? `<span class="vflag" title="${esc(r.violations.map((v) => (VIOLATION_META[v] || {}).label || v).join(' · '))}">⛔</span>` : ''}</td>
+      <td class="lvlcell">${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}${r.check && r.check.indexOf('suspect') === 0 ? `<span class="flag" title="${esc(r.check)}">⚠</span>` : ''}${(r.violations || []).length ? `<span class="vflag" title="${esc(r.violations.map((v) => (VIOLATION_META[v] || {}).label || v).join(' · '))}">⛔</span>` : ''}</td>
       <td class="lines">+${r.additions}<span class="del">−${r.deletions}</span></td>
     </tr>`).join('') || '<tr><td colspan="8" class="mono" style="color:var(--muted)">此範圍內無 tasks</td></tr>';
   $('tableCap').textContent = rows.length > TABLE_CAP ? `顯示 ${TABLE_CAP} / ${rows.length} 個 tasks` : '';
