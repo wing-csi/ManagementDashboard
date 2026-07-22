@@ -31,6 +31,65 @@ sop_paths = []
 # 監察 master + hotfix branch(共享 commits 歸 master;merge 入呢兩條唔算跨 branch 紅線)
 branches = ["master", "hotfix/v2.6.1"]
 
+# ---- benegg 項目群(用 BEN_GH_METRICS_TOKEN;workflow env 要傳入)----
+# 未知 AI 使用情況 → 唔設 no_evidence_level,跟全局誠實 fallback;
+# 呢啲 repos 冇 testcases/ 規範,sop_paths 清空免 SOP 模式誤 cap
+
+[[repos]]
+name = "benegg/BOCPT-EE-Web"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BOCPT-EE-APP-IOS"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BOCPT-EE-APP-ANDROID"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BOCPT-ER-WEB"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BOCPT-CMS-API"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BOCPT-ORSO-API"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BOCPT-WEB-API"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BOCPT-CMS-WEB"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/SUNLIFE-EE-APP-ANDROID"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BOCPT-EE-APP-EMBED-WEB"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "benegg/BoostBank-ReactNative-SMEApp"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
 # [[repos]]
 # name = "wing-csi/another-repo"
 
