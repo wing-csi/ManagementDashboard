@@ -481,7 +481,7 @@ def test_per_repo_no_evidence_override():
     ])])
     repo_cfg = {"name": "tony/abci-crm", "branch": "master",
                 "no_evidence_level": "L2", "sop_paths": [], "track_issues": False}
-    client.responses.append(META_EMPTY)
+    client.responses.extend([META_DEP_EMPTY, META_EMPTY])
     client.responses += [
         {"repository": {"issues": {"pageInfo": {"hasNextPage": False}, "nodes": []}}},
         {"repository": {"issues": {"pageInfo": {"hasNextPage": False}, "nodes": []}}},
@@ -516,7 +516,8 @@ def test_load_config_requires_repos(tmp_path):
 
 # --------------------------------------------------- DORA / meta / quality
 
-META_EMPTY = {"repository": {"releases": {"nodes": []}, "deployments": {"nodes": []}, "refs": {"nodes": []}}}
+META_DEP_EMPTY = {"repository": {"deployments": {"nodes": []}}}
+META_EMPTY = {"repository": {"releases": {"nodes": []}, "refs": {"nodes": []}}}
 
 
 def test_closed_unmerged_pr_counted_not_tasked():
@@ -543,10 +544,11 @@ def test_lead_hours_and_ci_state():
 
 def test_fetch_repo_meta_filters_window_and_tags():
     from collect_github import fetch_repo_meta
-    client = FakeClient([{"repository": {
+    client = FakeClient([
+        {"repository": {"deployments": {"nodes": [{"createdAt": "2026-06-01T00:00:00Z"}]}}},
+        {"repository": {
         "releases": {"nodes": [{"publishedAt": "2026-05-10T00:00:00Z"},
                                {"publishedAt": "2026-01-01T00:00:00Z"}]},
-        "deployments": {"nodes": [{"createdAt": "2026-06-01T00:00:00Z"}]},
         "refs": {"nodes": [
             # annotated tag → tagger.date
             {"name": "v1.4.0", "target": {"tagger": {"date": "2026-05-20T08:00:00+08:00"}}},
@@ -566,8 +568,8 @@ def test_fetch_repo_meta_filters_window_and_tags():
 
 def test_fetch_repo_meta_custom_tag_pattern():
     from collect_github import fetch_repo_meta
-    client = FakeClient([{"repository": {
-        "releases": {"nodes": []}, "deployments": {"nodes": []},
+    client = FakeClient([META_DEP_EMPTY, {"repository": {
+        "releases": {"nodes": []},
         "refs": {"nodes": [
             {"name": "deploy-20260601", "target": {"committedDate": "2026-06-01T00:00:00Z"}},
             {"name": "v2.0.0", "target": {"committedDate": "2026-06-02T00:00:00Z"}},
@@ -766,12 +768,12 @@ def test_plan_markers_due_priority_bug_and_inheritance():
 
 def test_fetch_repo_meta_languages_and_disk():
     from collect_github import fetch_repo_meta
-    client = FakeClient([{"repository": {
+    client = FakeClient([META_DEP_EMPTY, {"repository": {
         "diskUsage": 2048,
         "languages": {"totalSize": 1000,
                       "edges": [{"size": 700, "node": {"name": "Java"}},
                                 {"size": 300, "node": {"name": "Vue"}}]},
-        "releases": {"nodes": []}, "deployments": {"nodes": []}, "refs": {"nodes": []},
+        "releases": {"nodes": []}, "refs": {"nodes": []},
     }}])
     meta = fetch_repo_meta(client, "w/r", SINCE)
     assert meta["disk_kb"] == 2048
@@ -791,7 +793,7 @@ def test_multi_branch_commits_dedup_first_branch_wins():
                       commit_node(sha="bbb2222", message="feat: b")]),   # main
         commits_page([commit_node(sha="bbb2222", message="feat: b"),
                       commit_node(sha="ccc3333", message="feat: c")]),   # develop
-        META_EMPTY,
+        META_DEP_EMPTY, META_EMPTY,
     ])
     repo_cfg = {"name": "w/r", "branches": ["main", "develop"], "track_issues": False}
     tasks, _meta = collect_repo(client, repo_cfg, SINCE, "commits", CFG)
@@ -841,3 +843,26 @@ def test_graphql_partial_data_tolerance():
     # 有 errors 冇 data → 點都 raise
     with _pt.raises(CollectError):
         _graphql_data({"data": None, "errors": [{"message": "bad"}]}, allow_partial=True)
+
+
+def test_meta_survives_deployments_permission_error():
+    """Deployments 欄位無權限(fine-grained token)— 獨立失敗,唔累 tags / languages。"""
+    class MixedClient:
+        def __init__(self):
+            self.calls = 0
+        def graphql(self, q, v, **kw):
+            self.calls += 1
+            if "deployments" in q:
+                raise CollectError("Resource not accessible by personal access token")
+            return {"repository": {
+                "diskUsage": 512,
+                "languages": {"totalSize": 100, "edges": [{"size": 100, "node": {"name": "TypeScript"}}]},
+                "releases": {"nodes": []},
+                "refs": {"nodes": [{"name": "#app1.2-#2.04",
+                                    "target": {"committedDate": "2026-06-20T00:00:00Z"}}]},
+            }}
+    from collect_github import fetch_repo_meta
+    meta = fetch_repo_meta(MixedClient(), "benegg/BoostBank", SINCE)
+    assert meta["deployments"] == []
+    assert meta["tags"] == ["2026-06-20"]
+    assert meta["languages"]["items"][0]["name"] == "TypeScript"

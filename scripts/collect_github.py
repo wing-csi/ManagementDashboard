@@ -116,7 +116,6 @@ REPO_META_QUERY = """
 query($owner:String!,$name:String!){
   repository(owner:$owner,name:$name){
     releases(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ publishedAt } }
-    deployments(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ createdAt } }
     diskUsage
     languages(first:8, orderBy:{field:SIZE, direction:DESC}){
       totalSize
@@ -128,6 +127,13 @@ query($owner:String!,$name:String!){
         target{ ... on Commit { committedDate } ... on Tag { tagger { date } } }
       }
     }
+  }
+}"""
+
+DEPLOYMENTS_QUERY = """
+query($owner:String!,$name:String!){
+  repository(owner:$owner,name:$name){
+    deployments(first:50, orderBy:{field:CREATED_AT, direction:DESC}){ nodes{ createdAt } }
   }
 }"""
 
@@ -660,13 +666,22 @@ def fetch_repo_meta(
 ) -> dict:
     """Window-filtered release / deployment / version-tag dates (empty on failure)."""
     owner, name = repo.split("/", 1)
+    # fine-grained token 冇 Deployments 權限時,GitHub 會將成個 repository 節點
+    # null 化 — 所以 deployments 獨立查,佢失敗唔累 tags / languages
+    deployments: list[str] = []
+    try:
+        dep = client.graphql(DEPLOYMENTS_QUERY, {"owner": owner, "name": name})
+        deployments = [n["createdAt"][:10]
+                       for n in ((dep.get("repository") or {}).get("deployments") or {}).get("nodes", [])
+                       if n.get("createdAt") and n["createdAt"] >= since_iso]
+    except CollectError as e:
+        print(f"  note: {repo} deployments 讀唔到(token 冇 Deployments 權限?){str(e)[:60]}",
+              file=sys.stderr)
     try:
         data = client.graphql(REPO_META_QUERY, {"owner": owner, "name": name}, allow_partial=True)
         r = (data.get("repository") or {})
         releases = [n["publishedAt"][:10] for n in (r.get("releases") or {}).get("nodes", [])
                     if n.get("publishedAt") and n["publishedAt"] >= since_iso]
-        deployments = [n["createdAt"][:10] for n in (r.get("deployments") or {}).get("nodes", [])
-                       if n.get("createdAt") and n["createdAt"] >= since_iso]
         langs = r.get("languages") or {}
         languages = {
             "total_bytes": langs.get("totalSize", 0),
@@ -683,7 +698,7 @@ def fetch_repo_meta(
         return {"releases": releases, "deployments": deployments, "tags": tags,
                 "languages": languages, "disk_kb": disk_kb}
     except CollectError:
-        return {"releases": [], "deployments": [], "tags": []}
+        return {"releases": [], "deployments": deployments, "tags": []}
 
 
 def fetch_quality_file(client: GitHubClient, repo: str, path: str) -> dict | None:
