@@ -23,7 +23,6 @@ pytest.importorskip("playwright", reason="frontend snapshot test needs playwrigh
 DOCS = Path(__file__).parent.parent / "docs"
 FIXTURES = Path(__file__).parent / "fixtures"
 BASELINE = FIXTURES / "rendered-baseline.json"
-PORT = 8765
 
 # NOTE: the milestones section id in docs/index.html is "projMilestones",
 # not "projMs" — verified against docs/index.html before writing this list.
@@ -31,6 +30,19 @@ SECTION_IDS = [
     "strip", "alertList", "taskRows", "projChips", "projMilestones",
     "projLate", "projTodo", "footStamp",
 ]
+
+
+def _pick_free_port() -> int:
+    """Ask the OS for an unused TCP port instead of hardcoding one.
+
+    A hardcoded port can collide with an unrelated process already bound to
+    it (observed during development: stray http.server processes lingering
+    on a fixed port), causing confusing failures or a false pass against
+    the wrong server.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
 
 
 def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> None:
@@ -52,35 +64,46 @@ def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> None:
 
 @pytest.fixture(scope="module")
 def server():
+    port = _pick_free_port()
     proc = subprocess.Popen(
-        [sys.executable, "-m", "http.server", str(PORT), "-d", str(DOCS)],
+        [sys.executable, "-m", "http.server", str(port), "-d", str(DOCS)],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     try:
-        _wait_for_port("127.0.0.1", PORT)
+        _wait_for_port("127.0.0.1", port)
     except RuntimeError:
         proc.terminate()
         proc.wait(timeout=5)
         raise
-    yield f"http://127.0.0.1:{PORT}"
+    yield f"http://127.0.0.1:{port}"
     proc.terminate()
     proc.wait(timeout=5)
 
 
 @pytest.fixture(scope="module")
 def fixture_data():
-    """Swap the fixture in as docs/data/metrics.json for the duration of the test."""
+    """Swap the fixture in as docs/data/metrics.json for the duration of the test.
+
+    Setup and yield are wrapped in try/finally so the real file is always
+    restored on the way out — even if a disk-full or permission error
+    strikes between the backup move and the fixture copy landing — instead
+    of relying on `yield` being reached for teardown to run.
+    """
     target = DOCS / "data" / "metrics.json"
     backup = DOCS / "data" / "metrics.json.snapshot-backup"
     had_original = target.exists()
-    if had_original:
-        shutil.move(target, backup)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(FIXTURES / "metrics-fixture.json", target)
-    yield
-    target.unlink(missing_ok=True)
-    if had_original:
-        shutil.move(backup, target)
+    try:
+        if had_original:
+            shutil.move(target, backup)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(FIXTURES / "metrics-fixture.json", target)
+        yield
+    finally:
+        if had_original:
+            if backup.exists():
+                shutil.move(backup, target)
+        else:
+            target.unlink(missing_ok=True)
 
 
 def render_sections(page) -> dict[str, str]:
@@ -94,6 +117,9 @@ def test_rendered_output_matches_baseline(page, server, fixture_data, request):
     page.goto(server, wait_until="networkidle")
     page.wait_for_selector("#taskRows tr", timeout=10_000)
     actual = render_sections(page)
+
+    for sid in SECTION_IDS:
+        assert actual[sid].strip(), f"section #{sid} rendered empty"
 
     if request.config.getoption("--snapshot-update") or not BASELINE.exists():
         BASELINE.write_text(json.dumps(actual, ensure_ascii=False, indent=1) + "\n",
