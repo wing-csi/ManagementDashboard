@@ -312,7 +312,7 @@ BASELINE = FIXTURES / "rendered-baseline.json"
 PORT = 8765
 
 SECTION_IDS = [
-    "strip", "alertList", "taskRows", "projChips", "projMs",
+    "strip", "alertList", "taskRows", "projChips", "projMilestones",
     "projLate", "projTodo", "footStamp",
 ]
 
