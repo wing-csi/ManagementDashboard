@@ -1,0 +1,105 @@
+"""Rendered-output snapshot test for docs/index.html.
+
+Proves the Phase 0 frontend split is behaviour-preserving. Regenerate the
+baseline deliberately with:  pytest scripts/test_frontend_snapshot.py --snapshot-update
+
+Run:  python3 -m pytest scripts/test_frontend_snapshot.py -v
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+pytest.importorskip("playwright", reason="frontend snapshot test needs playwright")
+
+DOCS = Path(__file__).parent.parent / "docs"
+FIXTURES = Path(__file__).parent / "fixtures"
+BASELINE = FIXTURES / "rendered-baseline.json"
+PORT = 8765
+
+# NOTE: the milestones section id in docs/index.html is "projMilestones",
+# not "projMs" — verified against docs/index.html before writing this list.
+SECTION_IDS = [
+    "strip", "alertList", "taskRows", "projChips", "projMilestones",
+    "projLate", "projTodo", "footStamp",
+]
+
+
+def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> None:
+    """Poll until something accepts TCP connections on host:port.
+
+    A fixed sleep proved flaky in this environment (the child http.server
+    process can take longer than 1.5s to start accepting connections under
+    pytest), so we poll instead of guessing a delay.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(1.0)
+            if sock.connect_ex((host, port)) == 0:
+                return
+        time.sleep(0.2)
+    raise RuntimeError(f"server on {host}:{port} did not become reachable within {timeout}s")
+
+
+@pytest.fixture(scope="module")
+def server():
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "http.server", str(PORT), "-d", str(DOCS)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    try:
+        _wait_for_port("127.0.0.1", PORT)
+    except RuntimeError:
+        proc.terminate()
+        proc.wait(timeout=5)
+        raise
+    yield f"http://127.0.0.1:{PORT}"
+    proc.terminate()
+    proc.wait(timeout=5)
+
+
+@pytest.fixture(scope="module")
+def fixture_data():
+    """Swap the fixture in as docs/data/metrics.json for the duration of the test."""
+    target = DOCS / "data" / "metrics.json"
+    backup = DOCS / "data" / "metrics.json.snapshot-backup"
+    had_original = target.exists()
+    if had_original:
+        shutil.move(target, backup)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(FIXTURES / "metrics-fixture.json", target)
+    yield
+    target.unlink(missing_ok=True)
+    if had_original:
+        shutil.move(backup, target)
+
+
+def render_sections(page) -> dict[str, str]:
+    return {
+        sid: page.eval_on_selector(f"#{sid}", "el => el.innerHTML")
+        for sid in SECTION_IDS
+    }
+
+
+def test_rendered_output_matches_baseline(page, server, fixture_data, request):
+    page.goto(server, wait_until="networkidle")
+    page.wait_for_selector("#taskRows tr", timeout=10_000)
+    actual = render_sections(page)
+
+    if request.config.getoption("--snapshot-update") or not BASELINE.exists():
+        BASELINE.write_text(json.dumps(actual, ensure_ascii=False, indent=1) + "\n",
+                            encoding="utf-8")
+        pytest.skip("baseline written")
+
+    expected = json.loads(BASELINE.read_text(encoding="utf-8"))
+    for sid in SECTION_IDS:
+        assert actual[sid] == expected[sid], f"rendered output changed for #{sid}"

@@ -1,0 +1,40 @@
+{
+ "schema_version": 2,
+ "generated_at": "2026-07-20T05:00:00+00:00",
+ "window_days": 180,
+ "mode": "auto",
+ "repos": ["acme/widget"],
+ "tasks": [
+  {"id": "1", "repo": "acme/widget", "branch": "main", "title": "feat: add widget",
+   "author": "alice", "date": "2026-07-18", "level": "L3", "method": "label",
+   "additions": 120, "deletions": 4, "lead_hours": 3.5, "kind": "pr",
+   "url": "https://example.invalid/1", "rework": 0, "ci": "pass",
+   "check": null, "violations": []},
+  {"id": "2", "repo": "acme/widget", "branch": "main", "title": "fix: widget crash",
+   "author": "bob", "date": "2026-07-19", "level": "L1", "method": "rule",
+   "additions": 8, "deletions": 1, "lead_hours": null, "kind": "commit",
+   "url": "https://example.invalid/2", "rework": 0, "ci": null,
+   "check": null, "violations": []}
+ ],
+ "repo_meta": {
+  "acme/widget": {
+   "issues": {
+    "open_total": 3, "closed_total": 7,
+    "open": [
+     {"number": 11, "title": "Overdue important thing", "url": "https://example.invalid/i11",
+      "created": "2026-05-01", "updated": "2026-07-19", "labels": ["P0"],
+      "milestone": "M1", "due": "2026-07-10", "assignees": ["alice"]},
+     {"number": 12, "title": "Ordinary thing", "url": "https://example.invalid/i12",
+      "created": "2026-07-15", "updated": "2026-07-19", "labels": [],
+      "milestone": "M1", "due": "2026-08-30", "assignees": []},
+     {"number": 13, "title": "Old bug", "url": "https://example.invalid/i13",
+      "created": "2026-04-01", "updated": "2026-07-01", "labels": ["bug"],
+      "milestone": null, "due": null, "assignees": []}
+    ],
+    "closed_recent": [],
+    "milestones": [{"title": "M1", "due": "2026-07-10", "open": 2, "closed": 5}]
+   }
+  }
+ },
+ "errors": []
+}
