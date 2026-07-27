@@ -25,7 +25,11 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
    - `config.toml` 對應 repo 加:`token_env = "GH_TOKEN_CRM"` — 其他 repos 照用預設 token
    - env 缺失會即刻報錯,唔會靜靜 fallback 用錯 token
 4. 改 [`config.toml`](https://github.com/wing-csi/ManagementDashboard/blob/main/config.toml) 加返你嘅 repos
-5. **唔使開 Pages** — Phase 0 之後刻意停用,`collect.yml` 淨係每日跑 test + collect 做驗證,結果寫入 CI runner 嘅 `/tmp`,唔會 publish 出街。想睇 dashboard,睇下面「Private 模式」個本地流程:本機生成 `metrics.json` + 起 http server。
+5. **唔使開 Pages** — Phase 0 已經將 publish 步驟由 `collect.yml` 拎走,而家淨係每日跑 test + collect 做驗證,結果寫入 CI runner 嘅 `/tmp`,CI 呢邊唔會再 publish 出街。但**停用 Pages 本身仲要人手做**:repo Settings → Pages → Source 揀 None,呢步未必做咗,自己查:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" https://wing-csi.github.io/ManagementDashboard/data/metrics.json
+   ```
+   `404` = 已停用;`200` = 仲喺度出緊街,要即刻去 repo Settings 關 Pages。想睇 dashboard,睇下面「Private 模式」個本地流程:本機生成 `metrics.json` + 起 http server。
 6. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新(淨係驗證,唔會幫你出 dashboard)
 
 > 步驟 3、4、6 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
@@ -278,7 +282,11 @@ AIFlowTesting 本身已經跑緊 coverage + bandit(SOP Phase 5),加一個 step �
 
 **被追蹤 repo 係 private** — 必須 fine-grained PAT(Contents: Read + Pull requests: Read,Repository access 揀埋嗰個 repo)存做 `GH_METRICS_TOKEN`。留意 fine-grained PAT 只揀到**你自己或你所屬 org** 名下嘅 repo — 追第三者個人帳號嘅 private repo(你係 collaborator)要改用 classic PAT(`repo` scope),或者將 repo 搬入共同 org。
 
-**Pages 已經停用** — 唔理 hub repo 本身 public 定 private,`collect.yml` 而家淨係每日自動跑 test + collect 做驗證,產出寫入 CI runner 嘅 `/tmp`,乜嘢都唔會 publish 出街。認證 host(Worker,留返 Phase 1)未出之前,睇 dashboard 一律靠本機生成數據 + 本機起 server:
+**Publish pipeline 已經停用,但 Pages 本身要人手關** — 唔理 hub repo 本身 public 定 private,`collect.yml` 而家淨係每日自動跑 test + collect 做驗證,產出寫入 CI runner 嘅 `/tmp`,CI 呢邊已經冇任何一步會 publish 出街。但 repo Settings → Pages 個開關係獨立嘅人手步驟,Phase 0 冇自動幫你關,要自己去 Settings → Pages → Source 揀 None,再用下面指令確認:
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://wing-csi.github.io/ManagementDashboard/data/metrics.json
+```
+`404` = 已停用、冇曝露;`200` = 舊嘅 published 數據仲喺度,要即刻去 Settings 關 Pages。認證 host(Worker,留返 Phase 1)未出之前,睇 dashboard 一律靠本機生成數據 + 本機起 server:
 
 ```bash
 export GH_METRICS_TOKEN=github_pat_xxx
@@ -289,6 +297,8 @@ python3 -m http.server -d docs 8000   # http://localhost:8000
 `docs/index.html` 而家用 ES modules,直接雙擊個檔案用 `file://` 打開會俾瀏覽器 CORS 擋晒,一定要用返上面嗰個 http server。
 
 `docs/data/metrics.json` 已經加咗入 `.gitignore`,唔會再入 git history —— 呢個 repo 係 public,而呢個檔案可能含 private repo 嘅 commit titles、branch 名,千祈唔好手動 `git add -f` 或者用其他方式將佢 commit 返入去。
+
+留意:2026-07-27 之前嘅歷史 commit(嗰堆 `chore: update metrics [skip ci]`)仍然喺 git history 入面帶住呢個檔案 —— 呢個 repo public,所以歷史數據依然可以經 git history 讀到;清 history(rewrite / squash)係刻意留返做未做嘅 follow-up,唔係今次 Phase 0 範圍。
 
 ## config.toml 參考
 

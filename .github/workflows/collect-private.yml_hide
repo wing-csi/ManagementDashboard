@@ -1,3 +1,26 @@
+# ⚠ DEAD / DISABLED — DO NOT REACTIVATE AS-IS ⚠
+#
+# This file has the `.yml_hide` extension specifically so GitHub Actions will
+# NOT pick it up. It is inert today. Nothing references it any more.
+#
+# What it does: at the "Commit metrics back" step below, it runs
+# `git add docs/data/metrics.json` and pushes that commit straight back into
+# this repo on every scheduled/dispatched run.
+#
+# Why that must not happen: this repo (wing-csi/ManagementDashboard) is
+# PUBLIC, and docs/data/metrics.json contains private target-repo metadata
+# (commit titles, branch names, etc. from tracked private repos). Phase 0
+# removed exactly this commit-back behaviour from collect.yml after it leaked
+# that data via GitHub Pages. Renaming this file back to `collect-private.yml`
+# (or otherwise re-enabling it) recreates that same data leak.
+#
+# The `docs/data/metrics.json` file is now gitignored — nothing should ever
+# `git add` it again. Do not restore this workflow's commit-back step.
+#
+# Planned replacement: authenticated hosting (so metrics never need to be
+# committed into the public repo at all) is planned for Phase 1 — see
+# specs/2026-07-27-dashboard-enhancements-design.md.
+
 name: collect
 
 on:
