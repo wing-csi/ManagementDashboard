@@ -1,4 +1,4 @@
-import { state, $, esc, loadData, windowTasks, precedingTasks } from './data.js';
+import { state, $, esc, loadData, windowTasks, precedingTasks, LoadError } from './data.js';
 import { statsFromTasks, buildWeekly, metaInWindow } from './aggregate.js';
 import {
   renderKPIs, renderSpectrum, renderChart, renderAlerts, renderDora,
@@ -26,7 +26,18 @@ export function render() {
 }
 
 (async function init() {
-  const { data, demo } = await loadData();
+  let data, demo;
+  try {
+    ({ data, demo } = await loadData());
+  } catch (e) {
+    const box = $('loadError');
+    box.hidden = false;
+    $('loadErrorDetail').textContent =
+      e instanceof LoadError && e.status === 401
+        ? '需要登入。'
+        : `(${e instanceof LoadError ? e.status : 'network'})`;
+    return;
+  }
   state.data = data;
   state.demo = demo;
   $('demoBadge').classList.toggle('on', demo);

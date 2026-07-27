@@ -129,3 +129,18 @@ def test_rendered_output_matches_baseline(page, server, fixture_data, request):
     expected = json.loads(BASELINE.read_text(encoding="utf-8"))
     for sid in SECTION_IDS:
         assert actual[sid] == expected[sid], f"rendered output changed for #{sid}"
+
+
+def test_missing_data_shows_error_not_demo(page, server, fixture_data):
+    """A failed data fetch must show an explicit error, never silent demo data."""
+    page.route("**/data/metrics.json", lambda route: route.fulfill(status=500))
+    page.goto(server, wait_until="networkidle")
+    page.wait_for_selector("#loadError", state="visible", timeout=10_000)
+    assert page.is_visible("#loadError")
+
+
+def test_demo_mode_is_explicit(page, server, fixture_data):
+    """?demo=1 still loads the demo dataset deliberately."""
+    page.goto(f"{server}/?demo=1", wait_until="networkidle")
+    page.wait_for_selector("#demoBadge", timeout=10_000)
+    assert page.is_visible("#demoBadge")

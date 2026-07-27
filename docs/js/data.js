@@ -6,14 +6,21 @@ export const pct = (num, den, dp = 1) => (den > 0 ? ((num / den) * 100).toFixed(
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /* ---------------- data loading ---------------- */
+export class LoadError extends Error {
+  constructor(status) {
+    super(`metrics fetch failed: ${status}`);
+    this.name = 'LoadError';
+    this.status = status;
+  }
+}
+
 export async function loadData() {
-  try {
-    const res = await fetch('./data/metrics.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error(res.status);
-    return { data: await res.json(), demo: false };
-  } catch {
+  if (new URLSearchParams(location.search).get('demo') === '1') {
     return { data: DEMO_DATA, demo: true };
   }
+  const res = await fetch('./data/metrics.json', { cache: 'no-store' });
+  if (!res.ok) throw new LoadError(res.status);
+  return { data: await res.json(), demo: false };
 }
 
 /* ---------------- task windows ---------------- */

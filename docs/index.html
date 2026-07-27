@@ -10,6 +10,14 @@
 <body>
 <div class="wrap">
 
+  <div id="loadError" hidden role="alert" class="card">
+    <strong>載入數據失敗。</strong>
+    <span id="loadErrorDetail"></span>
+    <div style="margin-top:6px;color:var(--muted);font-size:12px">
+      未登入或者 session 過期?<a href="./">重新登入</a>。想睇示範數據:<a href="./?demo=1">?demo=1</a>
+    </div>
+  </div>
+
   <header class="masthead">
     <div>
       <div class="eyebrow" id="eyebrow">GITHUB TELEMETRY</div>
