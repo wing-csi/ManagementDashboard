@@ -16,6 +16,7 @@ from collect_github import (  # noqa: E402
     CollectError,
     classify,
     collect_commits,
+    collect_issues,
     collect_prs,
     load_config,
     normalize_level,
@@ -680,7 +681,8 @@ def test_collect_issues_parses_progress_and_milestones():
             "open": {"totalCount": 3}, "closed": {"totalCount": 7},
         }]},
     }}])
-    d = collect_issues(client, "w/r")
+    d, err = collect_issues(client, "w/r")
+    assert err is None
     assert d["open_total"] == 5 and d["closed_total"] == 15
     assert d["open"][0]["labels"] == ["P1", "bug"] and d["open"][0]["due"] == "2026-07-01"
     assert d["open"][0]["assignees"] == ["wing"]
@@ -695,7 +697,9 @@ def test_collect_issues_returns_none_on_failure():
         def graphql(self, q, v):
             raise CollectError("403")
 
-    assert collect_issues(Boom(), "w/r") is None
+    data, err = collect_issues(Boom(), "w/r")
+    assert data is None
+    assert err == "403"
 
 
 # ------------------------------------------------------------ plan file
@@ -866,3 +870,36 @@ def test_meta_survives_deployments_permission_error():
     assert meta["deployments"] == []
     assert meta["tags"] == ["2026-06-20"]
     assert meta["languages"]["items"][0]["name"] == "TypeScript"
+
+
+class RaisingClient:
+    """Raises CollectError on every GraphQL call (simulates a token without Issues:Read)."""
+
+    def __init__(self, message: str = "GraphQL error: Resource not accessible"):
+        self.message = message
+
+    def graphql(self, query: str, variables: dict, **kw) -> dict:
+        raise CollectError(self.message)
+
+
+def test_collect_issues_reports_permission_failure():
+    data, err = collect_issues(RaisingClient(), "owner/repo")
+    assert data is None
+    assert err is not None
+    assert "not accessible" in err
+
+
+def test_collect_issues_returns_no_error_on_success():
+    body = {
+        "repository": {
+            "openIssues": {"totalCount": 2},
+            "closedIssues": {"totalCount": 1},
+            "issues": {"nodes": []},
+            "closedRecent": {"nodes": []},
+            "milestones": {"nodes": []},
+        }
+    }
+    data, err = collect_issues(FakeClient([body]), "owner/repo")
+    assert err is None
+    assert data["open_total"] == 2
+    assert data["closed_total"] == 1

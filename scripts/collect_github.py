@@ -777,13 +777,17 @@ def fetch_plan_file(client: GitHubClient, repo: str, path: str) -> dict | None:
     return plan
 
 
-def collect_issues(client: GitHubClient, repo: str) -> dict | None:
-    """Open issues + milestone progress for the planning-side view (None on failure)."""
+def collect_issues(client: GitHubClient, repo: str) -> tuple[dict | None, str | None]:
+    """Open issues + milestone progress for the planning-side view.
+
+    Returns (data, error). A token without Issues:Read yields (None, message)
+    rather than a silent None — the dashboard must be able to say it is blind.
+    """
     owner, name = repo.split("/", 1)
     try:
         data = client.graphql(ISSUES_QUERY, {"owner": owner, "name": name})
-    except CollectError:
-        return None
+    except CollectError as e:
+        return None, str(e)
     r = data.get("repository") or {}
     return {
         "open_total": (r.get("openIssues") or {}).get("totalCount", 0),
@@ -823,7 +827,7 @@ def collect_issues(client: GitHubClient, repo: str) -> dict | None:
             }
             for m in (r.get("milestones") or {}).get("nodes", [])
         ],
-    }
+    }, None
 
 
 def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str, cfg: dict) -> tuple[list[Task], dict]:
@@ -873,7 +877,10 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     if repo_cfg.get("quality_file"):
         meta["quality"] = fetch_quality_file(client, repo, repo_cfg["quality_file"])
     if repo_classify.get("track_issues", True):
-        meta["issues"] = collect_issues(client, repo)
+        issues, issues_err = collect_issues(client, repo)
+        meta["issues"] = issues
+        if issues_err:
+            meta["issues_error"] = issues_err
     if repo_cfg.get("plan_file"):
         meta["plan"] = fetch_plan_file(client, repo, repo_cfg["plan_file"])
     return tasks, meta
