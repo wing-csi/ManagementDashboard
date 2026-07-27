@@ -1,0 +1,264 @@
+/* Chart.js 4.4.1 is loaded globally from the CDN <script> in index.html */
+
+import { state, $, pct, esc, windowTasks } from './data.js';
+import {
+  LEVELS, META, UNTAGGED_COLOR, INK, VIOLATION_META, median, fmtHours,
+  statsFromTasks, weekL3pct, fillGaps, metaInWindow,
+} from './aggregate.js';
+
+function setDelta(el, curr, prev, unit) {
+  if (curr == null || prev == null) { el.textContent = ''; return; }
+  const d = curr - prev;
+  const cls = Math.abs(d) < 0.05 ? 'flat' : d > 0 ? 'up' : 'down';
+  el.className = 'delta ' + cls;
+  el.textContent = `${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(1)}${unit} vs 前一段`;
+}
+
+export function renderKPIs(cur, prev) {
+  const l3 = pct(cur.l3plus, cur.tagged);
+  $('kpiL3').innerHTML = l3 == null ? '–' : `${l3}<span class="unit">%</span>`;
+  setDelta($('kpiL3d'), l3 && +l3, pct(prev.l3plus, prev.tagged) && +pct(prev.l3plus, prev.tagged), 'pt');
+
+  const loc = pct(cur.insAi, cur.insTotal);
+  $('kpiLoc').innerHTML = loc == null ? '–' : `${loc}<span class="unit">%</span>`;
+  setDelta($('kpiLocd'), loc && +loc, pct(prev.insAi, prev.insTotal) && +pct(prev.insAi, prev.insTotal), 'pt');
+
+  $('kpiTasks').textContent = cur.tagged.toLocaleString();
+  $('kpiTasksSub').textContent = `共 ${cur.total.toLocaleString()} tasks · mode: ${state.data.mode || '–'}`;
+  setDelta($('kpiTasksd'), cur.tagged, prev.total ? prev.tagged : null, ' 個');
+
+  const cov = pct(cur.tagged, cur.total);
+  const covEl = $('kpiCov');
+  covEl.innerHTML = cov == null ? '–' : `${cov}<span class="unit">%</span>`;
+  covEl.classList.toggle('warned', cov != null && +cov < 80);
+  $('kpiCovSub').textContent = `未分級 ${cur.untagged} 個 task`;
+  setDelta($('kpiCovd'), cov && +cov, pct(prev.tagged, prev.total) && +pct(prev.tagged, prev.total), 'pt');
+}
+
+export function renderSpectrum(cur) {
+  const strip = $('strip');
+  const legend = $('legend');
+  strip.innerHTML = '';
+  legend.innerHTML = '';
+  const parts = Object.entries(cur.methods).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`);
+  $('specNote').textContent = `已分級 ${cur.tagged} / ${cur.total}` + (parts.length ? ' · ' + parts.join(' · ') : '');
+
+  const total = cur.total || 1;
+  const segs = [{ key: 'untagged', n: cur.untagged }].concat(LEVELS.map((l) => ({ key: l, n: cur.byLevel[l] })));
+  for (const seg of segs) {
+    if (!seg.n) continue;
+    const div = document.createElement('div');
+    const share = (seg.n / total) * 100;
+    div.className = 'seg' + (seg.key === 'untagged' ? ' untagged' : META[seg.key].dark ? ' dark' : '');
+    div.style.flex = `0 0 ${share}%`;
+    if (seg.key !== 'untagged') div.style.background = META[seg.key].color;
+    div.innerHTML = `<span>${share >= 7 ? (seg.key === 'untagged' ? '—' : seg.key) : ''}</span>`;
+    div.title = `${seg.key === 'untagged' ? '未分級' : seg.key + ' ' + META[seg.key].name}: ${seg.n} (${share.toFixed(1)}%)`;
+    strip.appendChild(div);
+  }
+  const below = cur.untagged + cur.byLevel.L1 + cur.byLevel.L2;
+  $('threshold').style.left = `${(below / total) * 100}%`;
+  $('threshold').style.display = cur.total ? 'block' : 'none';
+
+  const rows = LEVELS.map((l) => ({ key: l, n: cur.byLevel[l] })).concat([{ key: 'untagged', n: cur.untagged }]);
+  for (const r of rows) {
+    const isU = r.key === 'untagged';
+    const share = cur.tagged && !isU ? (r.n / cur.tagged) * 100 : cur.total && isU ? (r.n / cur.total) * 100 : 0;
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <span class="lv"><span class="dot" style="background:${isU ? UNTAGGED_COLOR : META[r.key].color}"></span>${isU ? '—' : r.key}</span>
+      <span class="lv-name">${isU ? '未分級' : META[r.key].name}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${share}%;background:${isU ? UNTAGGED_COLOR : META[r.key].color}"></span></span>
+      <span class="n">${r.n}</span>
+      <span class="p">${share.toFixed(1)}%${isU ? '*' : ''}</span>`;
+    legend.appendChild(row);
+  }
+}
+
+export function renderChart(weeklyRows) {
+  if (typeof Chart === 'undefined') return; // CDN 未 load 到,唔好阻住其他區塊
+  const filled = fillGaps(weeklyRows);
+  const labels = filled.map((w) => w.week_start.slice(5));
+  const dataFor = (l) => filled.map((w) => w.by_level[l] || 0);
+  const line = filled.map((w) => { const v = weekL3pct(w); return v == null ? null : +v.toFixed(1); });
+
+  if (state.chart) state.chart.destroy();
+  Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+  Chart.defaults.font.size = 10.5;
+  Chart.defaults.color = '#6A7370';
+
+  state.chart = new Chart($('weeklyChart'), {
+    data: {
+      labels,
+      datasets: [
+        ...LEVELS.map((l) => ({ type: 'bar', label: l, data: dataFor(l), backgroundColor: META[l].color, stack: 's', borderRadius: 2 })),
+        { type: 'bar', label: '未分級', data: filled.map((w) => w.untagged || 0), backgroundColor: UNTAGGED_COLOR, stack: 's', borderRadius: 2 },
+        { type: 'line', label: 'L3+ %', data: line, borderColor: INK, backgroundColor: INK, yAxisID: 'y2', tension: 0, pointRadius: 4, pointBorderColor: '#FFFFFF', pointBorderWidth: 1.5, borderWidth: 2, spanGaps: false },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10, padding: 12 } } },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'tasks' } },
+        y2: { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: (v) => v + '%' } },
+      },
+    },
+  });
+}
+
+export function renderAlerts(weeklyRows, cur, prev) {
+  const list = $('alertList');
+  list.innerHTML = '';
+  const alerts = [];
+  const active = weeklyRows.filter((w) => weekL3pct(w) != null);
+
+  if (active.length >= 2) {
+    const a = weekL3pct(active[active.length - 2]);
+    const b = weekL3pct(active[active.length - 1]);
+    const d = b - a;
+    if (d <= -10) alerts.push({ sig: 'red', t: `L3+ 佔比週環比下跌 ${Math.abs(d).toFixed(0)}pt`, d: `${a.toFixed(0)}% → ${b.toFixed(0)}%。檢查 task 類型有無轉變,或者 harness / 工具鏈出咗問題。` });
+    else if (d >= 10) alerts.push({ sig: 'ink', t: `L3+ 佔比週環比上升 ${d.toFixed(0)}pt`, d: `${a.toFixed(0)}% → ${b.toFixed(0)}%。` });
+  }
+  const cov = cur.total ? (cur.tagged / cur.total) * 100 : null;
+  if (cov != null && cov < 80) alerts.push({ sig: 'amber', t: `分級覆蓋率偏低(${cov.toFixed(0)}%)`, d: '為 PR 加 ai-level label 或喺 commit / PR body 加 AI-Level trailer,否則指標會失真。' });
+
+  const curPct = cur.tagged ? (cur.l3plus / cur.tagged) * 100 : null;
+  const prevPct = prev.tagged ? (prev.l3plus / prev.tagged) * 100 : null;
+  if (curPct != null && prevPct != null && curPct >= 30 && prevPct < 30) {
+    alerts.push({ sig: 'ink', t: 'L3+ 佔比突破 30% 里程碑', d: `本段 ${curPct.toFixed(1)}%,對上一段 ${prevPct.toFixed(1)}%。` });
+  }
+  const lastTwo = active.slice(-2);
+  const hi = (w) => (w.by_level.L4 || 0) + (w.by_level.L5 || 0);
+  if (lastTwo.length === 2 && lastTwo.every((w) => hi(w) === 0) && (cur.byLevel.L4 + cur.byLevel.L5) > 0) {
+    alerts.push({ sig: 'amber', t: '近兩週無 L4+ task', d: '高自動化流程(end-to-end + auto verification)可能停咗用。' });
+  }
+  const vtypes = Object.entries(cur.violationCounts)
+    .sort((a, b) => ((VIOLATION_META[b[0]] || {}).red ? 1 : 0) - ((VIOLATION_META[a[0]] || {}).red ? 1 : 0) || b[1] - a[1]);
+  for (const [type, n] of vtypes) {
+    const vm = VIOLATION_META[type] || { label: type, red: false };
+    alerts.push({ sig: vm.red ? 'red' : 'amber',
+      t: `${vm.red ? '紅線' : '警告'}:${n} 個 task ${vm.label}`,
+      d: vm.red ? '規範四紅線 — 需要 review 並跟進;表格 ⛔ 標記咗涉事 rows。' : '表格 ⛔ 標記咗涉事 rows。' });
+  }
+  const cf = cur.total ? (cur.fixTasks / cur.total) * 100 : null;
+  const pf = prev.total ? (prev.fixTasks / prev.total) * 100 : null;
+  if (cf != null && pf != null && cf - pf >= 15 && cf >= 30) {
+    alerts.push({ sig: 'amber', t: `修復佔比上升 ${(cf - pf).toFixed(0)}pt`, d: `${pf.toFixed(0)}% → ${cf.toFixed(0)}%,可能係前一段輸出嘅質量問題浮現緊。` });
+  }
+  if (cur.suspects > 0) {
+    alerts.push({ sig: 'amber', t: `${cur.suspects} 個 task 嘅 level 聲稱同 PR 行為有矛盾`, d: '表格 ⚠ 標記嘅 rows:聲稱 L4/L5 但觀察到人工介入(review / 混合 commits / 冇 test),建議覆核。' });
+  }
+  if (state.data.errors && state.data.errors.length) {
+    alerts.push({ sig: 'amber', t: `${state.data.errors.length} 個 repo 收集失敗`, d: esc(state.data.errors[0]) });
+  }
+
+  if (!alerts.length) {
+    list.innerHTML = '<li><span></span><span class="empty">暫無異常,指標喺正常範圍。</span></li>';
+    return;
+  }
+  for (const a of alerts.slice(0, 6)) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="sig ${a.sig}"></span><span><div class="t">${a.t}</div><div class="d">${a.d}</div></span>`;
+    list.appendChild(li);
+  }
+}
+
+export function renderDora(cur, meta) {
+  const deployEvents = meta.deployments || meta.tags || meta.releases;
+  const src = meta.deployments ? 'deployments' : meta.tags ? 'tags' : 'releases';
+  const weeks = state.windowDays / 7;
+  if (!deployEvents) {
+    $('dDeploy').textContent = '–';
+    $('dDeploySub').textContent = '無 tag / release / deployment 記錄';
+  } else if (deployEvents / weeks >= 1) {
+    $('dDeploy').innerHTML = (deployEvents / weeks).toFixed(1) + '<span class="unit">次/週</span>';
+    $('dDeploySub').textContent = `${deployEvents} 次(${src})`;
+  } else {
+    $('dDeploy').innerHTML = deployEvents + '<span class="unit">次</span>';
+    $('dDeploySub').textContent = `${state.windowDays} 日內(${src})· 平均每 ${(weeks / deployEvents).toFixed(1)} 週 1 次`;
+  }
+  $('dLead').innerHTML = fmtHours(median(cur.leads));
+  const cfr = deployEvents ? (cur.failTasks / deployEvents) * 100 : null;
+  $('dCfr').innerHTML = cfr == null ? '–' : Math.min(cfr, 100).toFixed(0) + '<span class="unit">%</span>';
+  $('dMttr').innerHTML = fmtHours(median(cur.fixLeads));
+}
+
+function repoRag(repo) {
+  const saved = state.repo;
+  state.repo = repo;
+  const cur = statsFromTasks(windowTasks());
+  const meta = metaInWindow();
+  state.repo = saved;
+  const q = meta.quality[repo] || null;
+  const ciRate = cur.ciTotal ? (cur.ciPass / cur.ciTotal) * 100 : null;
+  const sec = (q && q.security) || {};
+  let color = '#9AA5A0', label = '資料不足';
+  if (ciRate != null || q) {
+    if ((sec.critical || 0) > 0 || (ciRate != null && ciRate < 75)) { color = 'var(--alert)'; label = 'RED'; }
+    else if ((sec.high || 0) > 0 || (ciRate != null && ciRate < 90)) { color = 'var(--warn)'; label = 'AMBER'; }
+    else { color = '#2E7D4F'; label = 'GREEN'; }
+  }
+  const bits = [];
+  if (ciRate != null) bits.push(`CI pass ${ciRate.toFixed(0)}%(${cur.ciPass}/${cur.ciTotal})`);
+  if (q && q.coverage != null) bits.push(`coverage ${q.coverage}%`);
+  if (q && q.security) bits.push(`security C${sec.critical || 0}/H${sec.high || 0}/M${sec.medium || 0}`);
+  if (!bits.length) bits.push('無 CI checks / quality file');
+  return { color, label, tip: bits.join(' · ') };
+}
+
+export function renderRag() {
+  const row = $('ragRow');
+  row.innerHTML = '';
+  let grey = 0, shown = 0;
+  for (const repo of (state.data.repos || [])) {
+    if (state.repo !== 'all' && repo !== state.repo) continue;
+    const r = repoRag(repo);
+    shown++;
+    if (r.label === '資料不足') grey++;
+    const el = document.createElement('span');
+    el.className = 'chip-rag';
+    el.title = r.tip;
+    el.innerHTML = `<span class="dotg" style="background:${r.color}"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">${r.label}</span>`;
+    row.appendChild(el);
+  }
+  $('ragHint').style.display = grey > 0 && grey >= shown / 2 ? 'block' : 'none';
+}
+
+export function renderQuality(cur) {
+  const fp = pct(cur.fixTasks, cur.total);
+  $('qFix').innerHTML = fp == null ? '–' : `${fp}<span class="unit">%</span>`;
+  $('qFixSub').textContent = `${cur.fixTasks} 個 fix / revert task,共 ${cur.total} 個`;
+  const rp = pct(cur.reworkPRs, cur.prTotal);
+  $('qRework').innerHTML = rp == null ? '–' : `${rp}<span class="unit">%</span>`;
+  $('qReworkSub').textContent = cur.prTotal
+    ? `${cur.reworkPRs} / ${cur.prTotal} 個 PR 收過 CHANGES_REQUESTED`
+    : '此範圍內無 PR';
+  const meta = metaInWindow();
+  const ap = pct(cur.prTotal, cur.prTotal + meta.closedUnmerged);
+  $('qAccept').innerHTML = ap == null ? '–' : `${ap}<span class="unit">%</span>`;
+  $('qAcceptSub').textContent = (cur.prTotal + meta.closedUnmerged)
+    ? `${cur.prTotal} merged / ${meta.closedUnmerged} 個 close 咗冇 merge`
+    : '此範圍內無 PR';
+  $('qMeaning').textContent = (cur.meaningful / (state.windowDays / 7)).toFixed(1);
+  const box = $('qLevels');
+  box.innerHTML = '';
+  for (const l of LEVELS) {
+    const n = cur.byLevel[l];
+    if (!n) continue;
+    const f = cur.fixByLevel[l] || 0;
+    const share = (f / n) * 100;
+    const row = document.createElement('div');
+    row.className = 'qrow';
+    row.innerHTML = `<span class="lv"><span class="dot" style="background:${META[l].color}"></span>${l}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${share}%;background:${META[l].color}"></span></span>
+      <span class="p">${share.toFixed(0)}% (${f}/${n})</span>`;
+    box.appendChild(row);
+  }
+  if (!box.children.length) box.innerHTML = '<div style="color:var(--muted);font-size:12px">未有已分級 tasks</div>';
+}
