@@ -3,7 +3,7 @@
 一個中央 repo,用 config 連接任意數量嘅 GitHub repos,經 API 讀取 commits + merged PRs,自動判別每個 task 嘅 AI 自動化水平(L1–L5),再出合併 dashboard。目標 repo **唔使改任何嘢**。
 
 ```
-config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→author→rules)──▶ metrics.json ──▶ Pages dashboard
+config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→author→rules)──▶ metrics.json ──▶ dashboard(本機睇,認證 host 留返 Phase 1)
                 (commits + merged PRs)
 ```
 
@@ -25,10 +25,10 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
    - `config.toml` 對應 repo 加:`token_env = "GH_TOKEN_CRM"` — 其他 repos 照用預設 token
    - env 缺失會即刻報錯,唔會靜靜 fallback 用錯 token
 4. 改 [`config.toml`](https://github.com/wing-csi/ManagementDashboard/blob/main/config.toml) 加返你嘅 repos
-5. 開 Pages → [github.com/wing-csi/ManagementDashboard/settings/pages](https://github.com/wing-csi/ManagementDashboard/settings/pages) → **Source = GitHub Actions**
-6. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新
+5. **唔使開 Pages** — Phase 0 之後刻意停用,`collect.yml` 淨係每日跑 test + collect 做驗證,結果寫入 CI runner 嘅 `/tmp`,唔會 publish 出街。想睇 dashboard,睇下面「Private 模式」個本地流程:本機生成 `metrics.json` + 起 http server。
+6. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新(淨係驗證,唔會幫你出 dashboard)
 
-> 步驟 3–6 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
+> 步驟 3、4、6 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
 
 ## 指標字典 — 每個數點計、代表咩
 
@@ -124,7 +124,7 @@ Bar = 該週 task 數(按 level 疊,週一起計,冇數嘅週補零);黑線 = �
 5. **兩套時間邏輯** — tasks / DORA / 品質跟 window selector 郁;項目進度(Issues)係**現時 snapshot**,轉 30/90 日佢唔會變。
 6. **分級靠 convention 同 assumption** — trailer / label 要紀律先準;abci-crm 嘅 L2 係 config 寫明嘅先驗假設(`no_evidence_level`),如果嗰邊工作方式變咗,assumption 要跟住更新。所有 assumption 都喺 config 度,可以 audit。
 7. **公開性** — hub public 嘅話,所有 tracked repo 嘅 commit titles / branch 名 / issue titles 都公開。追 private repo 前先諗清楚(見 Private 模式)。
-8. **數據新鮮度** — 每日跑一次,以 header 嘅 generated_at 為準;Pages 有 cache,唔對數先 hard refresh(Ctrl+Shift+R)。
+8. **數據新鮮度** — 每日跑一次,以 header 嘅 generated_at 為準;本機跑就用返「本地跑」個 flow 重新生成,瀏覽器仲顯示舊數據先 hard refresh(Ctrl+Shift+R)。
 
 ## 分級規則(priority 由高至低)
 
