@@ -276,18 +276,19 @@ AIFlowTesting 本身已經跑緊 coverage + bandit(SOP Phase 5),加一個 step �
 
 ## Private 模式
 
-兩個層面,setup 唔同:
-
 **被追蹤 repo 係 private** — 必須 fine-grained PAT(Contents: Read + Pull requests: Read,Repository access 揀埋嗰個 repo)存做 `GH_METRICS_TOKEN`。留意 fine-grained PAT 只揀到**你自己或你所屬 org** 名下嘅 repo — 追第三者個人帳號嘅 private repo(你係 collaborator)要改用 classic PAT(`repo` scope),或者將 repo 搬入共同 org。
 
-**Hub 本身要 private** — free plan 嘅 private repo 開唔到 Pages,而且就算 Pro,private repo 出嘅 Pages URL 都係公開可達(access-controlled Pages 係 Enterprise 先有)。做法:用 `collect-private.yml` **取代** `collect.yml`(commit-back 模式:workflow 將 `metrics.json` commit 返入 repo,唔行 Pages),本地睇:
+**Pages 已經停用** — 唔理 hub repo 本身 public 定 private,`collect.yml` 而家淨係每日自動跑 test + collect 做驗證,產出寫入 CI runner 嘅 `/tmp`,乜嘢都唔會 publish 出街。認證 host(Worker,留返 Phase 1)未出之前,睇 dashboard 一律靠本機生成數據 + 本機起 server:
 
 ```bash
-git pull
+export GH_METRICS_TOKEN=github_pat_xxx
+python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.json
 python3 -m http.server -d docs 8000   # http://localhost:8000
 ```
 
-反面警告:**hub public + target private = 漏緊嘢** — dashboard 會將 private repo 嘅 commit titles、branch 名公開晒。追 private repo,hub 就應該一齊 private。
+`docs/index.html` 而家用 ES modules,直接雙擊個檔案用 `file://` 打開會俾瀏覽器 CORS 擋晒,一定要用返上面嗰個 http server。
+
+`docs/data/metrics.json` 已經加咗入 `.gitignore`,唔會再入 git history —— 呢個 repo 係 public,而呢個檔案可能含 private repo 嘅 commit titles、branch 名,千祈唔好手動 `git add -f` 或者用其他方式將佢 commit 返入去。
 
 ## config.toml 參考
 
@@ -319,6 +320,8 @@ python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.j
 python3 -m http.server -d docs 8000   # 開 http://localhost:8000
 ```
 
+`docs/index.html` 用緊 ES modules,唔可以直接雙擊個檔案用 `file://` 開嚟睇(瀏覽器 CORS 擋晒),一定要用返上面個 http server。`docs/data/metrics.json` 已經 gitignore,唔會亦唔應該 commit 返入呢個 public repo。
+
 測試(唔使 network):`python3 -m pytest scripts/ -q`
 
 ## 指標定義
@@ -326,7 +329,5 @@ python3 -m http.server -d docs 8000   # 開 http://localhost:8000
 - **L3+ 佔比** = (L3+L4+L5) ÷ 已分級 tasks
 - **出碼率(近似)** = L2–L5 tasks 嘅 additions ÷ 全部 additions(L1 當人手計,想改就調 dashboard 同 collector 嘅 `AI_LOC_LEVELS`)
 - **覆蓋率** = 已分級 ÷ 全部 tasks
-
-免費 plan 嘅 **private repo 用唔到 Pages**:hub repo 開 public(dashboard 唔會show source code,只show task titles — 敏感就 keep private + 本地跑),或者升 Pro。
 
 指標睇 trend 為主;分級 rules 定咗之後唔好改,先有得比較。

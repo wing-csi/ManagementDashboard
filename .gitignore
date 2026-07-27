@@ -1,2 +1,3 @@
 docs/data/metrics.json
 docs/data/metrics.json.snapshot-backup
+__pycache__/
