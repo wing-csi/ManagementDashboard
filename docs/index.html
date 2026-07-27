@@ -740,11 +740,6 @@ function metaInWindow() {
   return out;
 }
 
-const PRIORITY_RE = [
-  [/^(p0|priority: ?(urgent|highest)|urgent|critical)$/i, 40],
-  [/^(p1|priority: ?high|high)$/i, 25],
-  [/^(p2|priority: ?medium|medium)$/i, 10],
-];
 function issuesInScope() {
   const rm = state.data.repo_meta || {};
   const out = { open: [], openTotal: 0, closedTotal: 0, milestones: [], hasData: false };
@@ -760,18 +755,6 @@ function issuesInScope() {
   }
   return out;
 }
-function issueScore(i, today) {
-  let s = 0;
-  const overdue = i.due && i.due < today ? Math.round((toDate(today) - toDate(i.due)) / 864e5) : 0;
-  s += overdue * 3;
-  for (const l of i.labels || []) {
-    for (const [re, w] of PRIORITY_RE) if (re.test(l)) s += w;
-    if (/^bug$/i.test(l)) s += 15;
-  }
-  if (i.created) s += Math.min(60, Math.round((toDate(today) - toDate(i.created)) / 864e5)) * 0.3;
-  return s;
-}
-
 /* ---------------- rendering ---------------- */
 function setDelta(el, curr, prev, unit) {
   if (curr == null || prev == null) { el.textContent = ''; return; }
@@ -1030,21 +1013,27 @@ function renderQuality(cur) {
   if (!box.children.length) box.innerHTML = '<div style="color:var(--muted);font-size:12px">未有已分級 tasks</div>';
 }
 
-const STALE_DAYS = 14;
-function issueScore(iss, today) {
-  let sc = 0; const why = [];
-  const labels = (iss.labels || []).map((l) => l.toLowerCase());
-  if (labels.some((l) => /p0|critical|blocker/.test(l))) { sc += 3; why.push('P0/critical'); }
-  else if (labels.some((l) => /p1|high|priority/.test(l))) { sc += 2; why.push('高優先 label'); }
-  if (labels.some((l) => /(^|\W)bug($|\W)/.test(l))) { sc += 1; why.push('bug'); }
-  const due = iss.milestone && iss.milestone.due;
-  if (due) {
-    const dd = (toDate(due) - today) / 864e5;
-    if (dd < 0) { sc += 3; why.push(`milestone 過期 ${Math.ceil(-dd)} 日`); }
-    else if (dd <= 7) { sc += 2; why.push(`milestone ${Math.ceil(dd)} 日內到期`); }
+const PRIORITY_RE = [
+  [/^(p0|priority: ?(urgent|highest)|urgent|critical|blocker)$/i, 40, 'P0/critical'],
+  [/^(p1|priority: ?high|high)$/i, 25, '高優先'],
+  [/^(p2|priority: ?medium|medium)$/i, 10, '中優先'],
+];
+function issueScore(iss, todayStr) {
+  let sc = 0;
+  const why = [];
+  const today = toDate(todayStr);
+  if (iss.due) {
+    const overdue = Math.round((today - toDate(iss.due)) / 864e5);
+    if (overdue > 0) { sc += overdue * 3; why.push(`遲咗 ${overdue} 日`); }
   }
-  const age = (today - toDate(iss.created)) / 864e5;
-  if (age > 30) { sc += 1; why.push(`開咗 ${Math.floor(age)} 日`); }
+  for (const l of iss.labels || []) {
+    for (const [re, w, label] of PRIORITY_RE) if (re.test(l)) { sc += w; why.push(label); }
+    if (/^bug$/i.test(l)) { sc += 15; why.push('bug'); }
+  }
+  if (iss.created) {
+    const age = Math.round((today - toDate(iss.created)) / 864e5);
+    if (age > 0) { sc += Math.min(60, age) * 0.3; why.push(`開咗 ${age} 日`); }
+  }
   return { sc, why };
 }
 
@@ -1148,7 +1137,7 @@ function renderProjects() {
   lateBox.innerHTML = abnormal.length
     ? abnormal.map((x) => item(x.i, x.over > 0 ? `<span class="late">遲咗 ${x.over} 日</span>` : `${x.stale} 日冇更新`)).join('')
     : '<li class="empty">暫無延誤或呆滯嘅 tasks。</li>';
-  const todo = [...pool].sort((a, b) => issueScore(b, today) - issueScore(a, today)).slice(0, 5);
+  const todo = [...pool].sort((a, b) => issueScore(b, today).sc - issueScore(a, today).sc).slice(0, 5);
   todoBox.innerHTML = todo.length
     ? todo.map((i) => item(i, (i.labels || []).slice(0, 2).join(' · ') || (i.milestone || ''))).join('')
     : '<li class="empty">冇 open issues — backlog 清晒。</li>';
