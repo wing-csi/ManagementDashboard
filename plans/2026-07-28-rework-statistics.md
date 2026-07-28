@@ -203,7 +203,6 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
         "mergedBy": {"login": merged_by[0], "__typename": merged_by[1]},
         "autoMergeRequest": {"enabledBy": {"login": "agent"}} if auto_merge else None,
         "reviews": {
-            "totalCount": len(rows),
             "nodes": [{"state": r["state"], "author": r["author"]} for r in rows],
         },
         "rejections": {"nodes": [
@@ -234,30 +233,9 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
 
 - [ ] **Step 2: Write the failing tests**
 
-Replace the existing `test_pr_rework_counts_multiple_changes_requested` at [test_collect_github.py:329-334](../scripts/test_collect_github.py). Its `assert t.rework == 2` **is defect 5** — two reviewers on one push is one round trip:
+Leave the existing `test_pr_rework_counts_multiple_changes_requested` at [test_collect_github.py:329-334](../scripts/test_collect_github.py) **alone for now** — Task 3 replaces it, because its `assert t.rework == 2` only becomes wrong once rounds are wired onto the `Task`. Add these new tests after it:
 
 ```python
-def test_two_reviewers_on_the_same_push_is_one_round():
-    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
-                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
-                           ("CHANGES_REQUESTED", "amy", "User", "2026-05-02T11:00:00Z"),
-                           ("APPROVED", "bob", "User")),
-                  pushes=("2026-05-01T09:00:00Z",))
-    assert t.rework == 1
-```
-
-Then add these after it:
-
-```python
-def test_rejection_after_a_push_is_a_second_round():
-    t = infer_one(labels=("ai-level/L3",),
-                  commits=(CLAUDE_FOOTER, CLAUDE_FOOTER),
-                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
-                           ("CHANGES_REQUESTED", "bob", "User", "2026-05-04T10:00:00Z")),
-                  pushes=("2026-05-01T09:00:00Z", "2026-05-03T09:00:00Z"))
-    assert t.rework == 2
-
-
 def test_dismissed_rejection_is_still_counted():
     # GitHub rewrites the review's state to DISMISSED, so it survives only on
     # the timeline. Dismissing a rejection must not erase that it happened.
@@ -283,17 +261,17 @@ def test_bot_rejection_is_not_counted():
 - [ ] **Step 3: Run the tests to verify they fail**
 
 ```bash
-python -m pytest scripts/test_collect_github.py -k "round or dismissed or bot_rejection" -v
+python -m pytest scripts/test_collect_github.py -k "dismissed or bot_rejection" -v
 ```
 
-Expected: `test_two_reviewers_on_the_same_push_is_one_round` fails with `assert 2 == 1`; the dismissed tests fail with `assert 0 == 1`.
+Expected: `test_dismissed_rejection_is_still_counted` fails with `assert 0 == 1` — the dismissed rejection is invisible until the timeline is queried. The other two already pass; they are the guards proving the fix does not over-count.
 
 - [ ] **Step 4: Update the GraphQL query**
 
 In `scripts/collect_github.py`, replace the `reviews` line and the `commits` line inside `PRS_QUERY` (lines 104 and 107):
 
 ```graphql
-        reviews(first:50){ totalCount nodes{ state author{ login __typename } } }
+        reviews(first:50){ nodes{ state author{ login __typename } } }
         rejections: reviews(first:50, states:[CHANGES_REQUESTED]){
           nodes{ author{ login __typename } submittedAt } }
         timelineItems(first:20, itemTypes:[REVIEW_DISMISSED_EVENT]){
@@ -384,7 +362,7 @@ def _rejection_times(node: dict, cfg: dict) -> tuple[str, ...]:
 python -m pytest scripts/test_collect_github.py -v
 ```
 
-Expected: all pass **except** the rework-round tests, which still fail on `t.rework` because rounds are not wired onto the `Task` until Task 3 — **that is expected here.** What must pass now: `test_dismissed_approval_is_not_counted_as_rework`, `test_bot_rejection_is_not_counted`, and every pre-existing test.
+Expected: **all pass**, including the pre-existing `test_pr_rework_counts_multiple_changes_requested` — after this task `changes_requested` is `len(rejections)`, which is still 2 for two reviewers. Task 3 is what makes that assertion wrong, and Task 3 replaces it.
 
 If a pre-existing inference test broke, the cause is almost certainly `changes_requested` now including dismissed rejections in `infer_level` / `verify_claim`. That is the intended improvement — a dismissed rejection is still a human gate that happened. Update the test's expectation, do not revert the behaviour.
 
@@ -415,7 +393,28 @@ git commit -m "fix: count dismissed rejections and stop counting self-reviews
 
 - [ ] **Step 1: Write the failing tests**
 
-Append to `scripts/test_collect_github.py`:
+First **replace** the existing `test_pr_rework_counts_multiple_changes_requested` at [test_collect_github.py:329-334](../scripts/test_collect_github.py). Its `assert t.rework == 2` **is defect 5** — two reviewers on one push is one round trip, not two:
+
+```python
+def test_two_reviewers_on_the_same_push_is_one_round():
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
+                           ("CHANGES_REQUESTED", "amy", "User", "2026-05-02T11:00:00Z"),
+                           ("APPROVED", "bob", "User")),
+                  pushes=("2026-05-01T09:00:00Z",))
+    assert t.rework == 1
+
+
+def test_rejection_after_a_push_is_a_second_round():
+    t = infer_one(labels=("ai-level/L3",),
+                  commits=(CLAUDE_FOOTER, CLAUDE_FOOTER),
+                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
+                           ("CHANGES_REQUESTED", "bob", "User", "2026-05-04T10:00:00Z")),
+                  pushes=("2026-05-01T09:00:00Z", "2026-05-03T09:00:00Z"))
+    assert t.rework == 2
+```
+
+Then append the rest:
 
 ```python
 def test_reviewed_is_false_without_any_human_review():
@@ -457,10 +456,10 @@ def test_no_rejection_means_no_rework_hours():
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-python -m pytest scripts/test_collect_github.py -k "reviewed or rework_hours or no_rejection" -v
+python -m pytest scripts/test_collect_github.py -k "reviewed or rework_hours or no_rejection or round" -v
 ```
 
-Expected: `AttributeError: 'Task' object has no attribute 'reviewed'`.
+Expected: the `reviewed` / `rework_hours` tests fail with `AttributeError: 'Task' object has no attribute 'reviewed'`, and `test_two_reviewers_on_the_same_push_is_one_round` fails with `assert 2 == 1` because `rework` is still the raw event count.
 
 - [ ] **Step 3: Add the `Task` fields**
 
@@ -503,7 +502,7 @@ Then in the `Task(...)` construction, replace the `rework=sig.changes_requested,
 python -m pytest scripts/ -v
 ```
 
-Expected: all pass, including the Task 2 rework-round tests that were still red.
+Expected: all pass.
 
 - [ ] **Step 6: Commit**
 
@@ -1018,4 +1017,4 @@ git commit -m "docs: document the corrected rework formulas and refresh demo dat
 
 **Type consistency** — `rework_rounds(list[str], list[str]) -> int` is defined in Task 1 and called in Task 3 with `list(sig.rejections)`, converting the tuple. `PrSignals.rejections` is a tuple throughout. `reviewed` / `rework` / `rework_hours` keep identical names from Task 3 (Python) through Task 5 (JS reads) to Task 6 (render) and Task 7 (demo blob). DOM ids `qTurn` / `qTurnSub` are created in Task 6 step 4, used in step 6, and asserted in the test from step 2.
 
-**Known ordering constraint:** Task 2 leaves the rework-round assertions red on purpose — `rework` is not wired onto `Task` until Task 3. Task 2 step 8 states this explicitly so a fresh implementer does not "fix" it by reverting.
+**Every task ends green.** The round assertions live in Task 3, not Task 2, precisely so no task finishes with a failing suite: after Task 2 `changes_requested` is `len(rejections)`, which still equals 2 for two reviewers, so the pre-existing `test_pr_rework_counts_multiple_changes_requested` keeps passing until Task 3 replaces it with the round-based version.
