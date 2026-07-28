@@ -1,4 +1,4 @@
-import { state, $, esc, windowTasks, repoInScope } from './data.js';
+import { state, $, esc, windowTasks, repoInScope, personInScope } from './data.js';
 import { TABLE_CAP, DEFECT_CAP, VIOLATION_META } from './aggregate.js';
 
 const TYPE_RE = /^(feat|fix|hotfix|revert|refactor|test|docs|chore|build|ci|perf|style)\b/i;
@@ -42,7 +42,7 @@ export function renderOverview(cur) {
     || '<div class="ov-sub">此範圍內無 tasks</div>';
   // monthly(全部 tasks,唔跟 window)
   const mon = {};
-  for (const t of (state.data.tasks || []).filter((t) => repoInScope(t.repo) && (state.branch === 'all' || t.branch === state.branch))) {
+  for (const t of (state.data.tasks || []).filter((t) => repoInScope(t.repo) && personInScope(t) && (state.branch === 'all' || t.branch === state.branch))) {
     const k = t.date.slice(0, 7);
     mon[k] = (mon[k] || 0) + 1;
   }

@@ -1,0 +1,19 @@
+{
+ "schema_version": 2,
+ "generated_at": "2026-07-28T05:00:00+00:00",
+ "window_days": 180,
+ "mode": "auto",
+ "repos": ["acme/alpha", "acme/beta"],
+ "people": {"Wing": ["wing-csi", "wing2036"]},
+ "tasks": [
+  {"date": "2026-07-20", "repo": "acme/alpha", "author": "wing-csi", "id": "1", "kind": "pr", "branch": "main", "title": "feat: alpha one", "level": "L3", "method": "label", "check": null, "additions": 40, "deletions": 2, "url": "https://example.test/1", "rework": 0, "violations": [], "lead_hours": 5, "ci": "pass"},
+  {"date": "2026-07-19", "repo": "acme/alpha", "author": "wing2036", "id": "a1b2c3d", "kind": "commit", "branch": "main", "title": "fix: alpha two", "level": "L2", "method": "rule", "check": null, "additions": 12, "deletions": 3, "url": "https://example.test/2", "rework": 0, "violations": []},
+  {"date": "2026-07-18", "repo": "acme/alpha", "author": "Tony", "id": "2", "kind": "pr", "branch": "main", "title": "feat: alpha three", "level": "L4", "method": "label", "check": null, "additions": 90, "deletions": 10, "url": "https://example.test/3", "rework": 1, "violations": [], "lead_hours": 30, "ci": "pass"},
+  {"date": "2026-07-17", "repo": "acme/beta", "author": "Tony", "id": "3", "kind": "pr", "branch": "main", "title": "revert: beta one", "level": "L1", "method": "rule", "check": null, "additions": 5, "deletions": 60, "url": "https://example.test/4", "rework": 0, "violations": [], "lead_hours": 2, "ci": "fail"}
+ ],
+ "repo_meta": {
+  "acme/alpha": {"owner": "Wing", "disk_kb": 1024, "languages": {"items": [{"name": "Python", "bytes": 5000}]}, "deployments": ["2026-07-20T00:00:00Z"], "releases": [], "tags": [], "closed_unmerged": [], "issues": null},
+  "acme/beta": {"disk_kb": 512, "languages": {"items": [{"name": "JavaScript", "bytes": 2000}]}, "deployments": [], "releases": [], "tags": [], "closed_unmerged": [], "issues": null}
+ },
+ "errors": []
+}

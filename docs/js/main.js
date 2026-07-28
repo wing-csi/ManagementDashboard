@@ -1,4 +1,5 @@
-import { state, $, esc, loadData, windowTasks, precedingTasks, LoadError } from './data.js';
+import { state, $, esc, loadData, windowTasks, precedingTasks, LoadError, repoInScope, singleRepo } from './data.js';
+import { buildPersonIndex, personOptions } from './people.js';
 import { statsFromTasks, buildWeekly, metaInWindow } from './aggregate.js';
 import {
   renderKPIs, renderSpectrum, renderChart, renderAlerts, renderDora,
@@ -40,6 +41,7 @@ export function render() {
   }
   state.data = data;
   state.demo = demo;
+  state.personIndex = buildPersonIndex(data.people);
   $('demoBadge').classList.toggle('on', demo);
 
   const repos = data.repos || [];
@@ -53,8 +55,9 @@ export function render() {
 
   const rebuildBranches = () => {
     const sel = $('branchSel');
-    if (state.repo === 'all') {
-      // branch 名喺唔同 repo 之間冇比較意義 — 全部 repos 時鎖死
+    const only = singleRepo();
+    if (!only) {
+      // branch 名喺唔同 repo 之間冇比較意義 — 唔係單一 repo 就鎖死
       state.branch = 'all';
       sel.innerHTML = `<option value="all">全部 branches</option>`;
       sel.disabled = true;
@@ -65,16 +68,45 @@ export function render() {
     sel.title = '';
     const set = new Set();
     for (const t of state.data.tasks || []) {
-      if (t.repo === state.repo && t.branch) set.add(t.branch);
+      if (t.repo === only && t.branch) set.add(t.branch);
     }
     const branches = [...set].sort();
     if (state.branch !== 'all' && !set.has(state.branch)) state.branch = 'all';
     sel.innerHTML = `<option value="all">全部 branches</option>` +
       branches.map((b) => `<option value="${esc(b)}"${b === state.branch ? ' selected' : ''}>${esc(b)}</option>`).join('');
   };
+
+  const syncOwnerParam = () => {
+    const url = new URL(location.href);
+    if (state.person === 'all') url.searchParams.delete('owner');
+    else url.searchParams.set('owner', state.person);
+    history.replaceState(null, '', url);
+  };
+
+  // 人係跨 repo 可比較嘅(同 branch 唔同),所以全部 repos 時一樣開住
+  const rebuildPeople = () => {
+    const inScope = (t) => repoInScope(t.repo) && (state.branch === 'all' || t.branch === state.branch);
+    const opts = personOptions(state.data.tasks || [], state.personIndex, inScope);
+    if (state.person !== 'all' && !opts.some((o) => o.person === state.person)) {
+      state.person = 'all';
+    }
+    $('personSel').innerHTML = `<option value="all">全部成員</option>` +
+      opts.map((o) => `<option value="${esc(o.person)}"${o.person === state.person ? ' selected' : ''}>${esc(o.person)} (${o.count})</option>`).join('');
+    syncOwnerParam();
+  };
+
+  // ?owner= 係唔可信輸入:淨係攞去同已知名單比對,唔會 render
+  const requested = new URLSearchParams(location.search).get('owner');
+  if (requested) {
+    const known = personOptions(state.data.tasks || [], state.personIndex, () => true);
+    if (known.some((o) => o.person === requested)) state.person = requested;
+  }
+
   rebuildBranches();
-  $('repoSel').addEventListener('change', (e) => { state.repo = e.target.value; rebuildBranches(); render(); });
-  $('branchSel').addEventListener('change', (e) => { state.branch = e.target.value; render(); });
+  rebuildPeople();
+  $('repoSel').addEventListener('change', (e) => { state.repo = e.target.value; rebuildBranches(); rebuildPeople(); render(); });
+  $('branchSel').addEventListener('change', (e) => { state.branch = e.target.value; rebuildPeople(); render(); });
+  $('personSel').addEventListener('change', (e) => { state.person = e.target.value; syncOwnerParam(); render(); });
   $('windowSel').addEventListener('change', (e) => { state.windowDays = +e.target.value; render(); });
   document.querySelectorAll('thead th.sortable').forEach((th) => th.addEventListener('click', () => {
     const k = th.dataset.key;

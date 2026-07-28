@@ -1,6 +1,7 @@
 import { DEMO_DATA } from '../data/demo-data.js';
+import { personOf } from './people.js';
 
-export const state = { data: null, demo: false, windowDays: 90, repo: 'all', branch: 'all', chart: null, sort: { key: 'date', dir: -1 } };
+export const state = { data: null, demo: false, windowDays: 90, repo: 'all', branch: 'all', person: 'all', personIndex: new Map(), chart: null, sort: { key: 'date', dir: -1 } };
 export const $ = (id) => document.getElementById(id);
 export const pct = (num, den, dp = 1) => (den > 0 ? ((num / den) * 100).toFixed(dp) : null);
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -23,6 +24,12 @@ export function repoInScope(repo) {
 export function singleRepo() {
   if (state.repo === 'all' || state.repo.startsWith(OWNER_PREFIX)) return null;
   return state.repo;
+}
+
+/** 呢個 task 係咪屬於揀咗嘅人('all' 嘅時候永遠 true)。 */
+export function personInScope(task) {
+  if (state.person === 'all') return true;
+  return personOf(task.author, state.personIndex) === state.person;
 }
 
 /* ---------------- data loading ---------------- */
@@ -50,6 +57,7 @@ export const refDate = () => toDate(state.data.generated_at.slice(0, 10));
 export function tasksBetween(fromMs, toMs) {
   return state.data.tasks.filter((t) => {
     if (!repoInScope(t.repo)) return false;
+    if (!personInScope(t)) return false;
     if (state.branch !== 'all' && t.branch !== state.branch) return false;
     const ms = toDate(t.date).getTime();
     return ms >= fromMs && ms < toMs;
