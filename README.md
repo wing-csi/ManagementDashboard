@@ -3,7 +3,7 @@
 一個中央 repo,用 config 連接任意數量嘅 GitHub repos,經 API 讀取 commits + merged PRs,自動判別每個 task 嘅 AI 自動化水平(L1–L5),再出合併 dashboard。目標 repo **唔使改任何嘢**。
 
 ```
-config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→author→rules)──▶ metrics.json ──▶ dashboard(本機睇,認證 host 留返 Phase 1)
+config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→author→rules)──▶ metrics.json ──▶ dashboard(本機睇,經 private data repo 攞 metrics.json;認證 host 已取消)
                 (commits + merged PRs)
 ```
 
