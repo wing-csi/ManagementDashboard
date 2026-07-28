@@ -55,8 +55,23 @@ export function render() {
 
   const repos = data.repos || [];
   renderEyebrow();
-  $('repoSel').innerHTML = `<option value="all">全部 repos</option>` +
-    repos.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  // 負責人 = repo 層面嘅 scoping,所以擺喺 repo select 入面,唔開第四個掣
+  const rm = data.repo_meta || {};
+  const ownerCounts = new Map();
+  for (const r of repos) {
+    const owner = (rm[r] || {}).owner;
+    if (owner) ownerCounts.set(owner, (ownerCounts.get(owner) || 0) + 1);
+  }
+  const ownerGroup = ownerCounts.size
+    ? `<optgroup label="按負責人">` + [...ownerCounts.entries()]
+        .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+        .map(([o, n]) => `<option value="owner:${esc(o)}">${esc(o)} 的項目 (${n})</option>`).join('')
+      + `</optgroup>`
+    : '';
+  const repoOptions = repos.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  const repoGroup = ownerCounts.size
+    ? `<optgroup label="個別 repo">${repoOptions}</optgroup>` : repoOptions;
+  $('repoSel').innerHTML = `<option value="all">全部 repos</option>` + ownerGroup + repoGroup;
 
   const ts = data.generated_at.replace('T', ' ').slice(0, 16) + ' UTC';
   $('stamp').textContent = ts;

@@ -35,6 +35,8 @@ export function renderProjects() {
     if (!repoInScope(repo)) continue;
     const iss = (rm[repo] || {}).issues;
     const plan = (rm[repo] || {}).plan;
+    const owner = (rm[repo] || {}).owner;
+    const ownerBit = ` <span style="color:var(--muted)">· 負責人 ${esc(owner || '未指定')}</span>`;
     const el = document.createElement('span');
     el.className = 'chip-rag';
     if (plan && plan.total) {
@@ -42,19 +44,19 @@ export function renderProjects() {
       const overdueN = hasIss ? (iss.open || []).filter((i) => i.due && i.due < today).length : 0;
       const dotColor = hasIss ? (overdueN > 0 ? 'var(--alert)' : '#2E7D4F') : '#5F8CC6';
       el.title = `scope 來源:${plan.path}(${plan.done}/${plan.total} checkboxes)${hasIss ? ' · 異常/建議來自 Issues' : ' · 未用 Issues,冇日期/優先級數據'}`;
-      el.innerHTML = `<span class="dotg" style="background:${dotColor}"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">完成度 ${((plan.done / plan.total) * 100).toFixed(0)}%(${plan.done}/${plan.total} · plan.md)</span>`;
+      el.innerHTML = `<span class="dotg" style="background:${dotColor}"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">完成度 ${((plan.done / plan.total) * 100).toFixed(0)}%(${plan.done}/${plan.total} · plan.md)</span>${ownerBit}`;
       chips.appendChild(el);
       continue;
     }
     if (!iss || (iss.open_total + iss.closed_total) === 0) {
-      el.innerHTML = `<span class="dotg" style="background:#9AA5A0"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">未用 Issues / plan file</span>`;
+      el.innerHTML = `<span class="dotg" style="background:#9AA5A0"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">未用 Issues / plan file</span>${ownerBit}`;
     } else {
       const done = iss.closed_total, total = iss.open_total + iss.closed_total;
       const overdueN = (iss.open || []).filter((i) => i.due && i.due < today).length;
       const staleN = (iss.open || []).filter((i) => (toDate(today) - toDate(i.updated)) / 864e5 > 14).length;
       const risk = overdueN > 0 ? ['var(--alert)', '高風險'] : (iss.open_total && staleN / iss.open_total >= 0.3) ? ['var(--warn)', '中風險'] : ['#2E7D4F', '正常'];
       el.title = `完成 ${done} / 剩餘 ${iss.open_total} · 延誤 ${overdueN} · 呆滯 ${staleN} · 分母=已開 issues,未拆 issue 嘅 scope 睇唔到`;
-      el.innerHTML = `<span class="dotg" style="background:${risk[0]}"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">完成度 ${((done / total) * 100).toFixed(0)}%(${done}/${total})· ${risk[1]}</span>`;
+      el.innerHTML = `<span class="dotg" style="background:${risk[0]}"></span>${esc(repo.split('/').pop())} <span style="color:var(--muted)">完成度 ${((done / total) * 100).toFixed(0)}%(${done}/${total})· ${risk[1]}</span>${ownerBit}`;
     }
     chips.appendChild(el);
   }

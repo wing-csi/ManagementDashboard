@@ -131,6 +131,36 @@ def test_eyebrow_names_the_filtered_person(people_page, server):
     assert "Wing" in page.text_content("#eyebrow")
 
 
+def test_owner_optgroup_lists_declared_owners(people_page, server):
+    page = open_dashboard(people_page, server)
+    values = page.eval_on_selector_all(
+        "#repoSel option", "els => els.map(e => e.value)")
+    assert "owner:Wing" in values
+    assert page.eval_on_selector_all("#repoSel optgroup", "els => els.length") == 2
+
+
+def test_owner_selection_scopes_to_that_owners_repos(people_page, server):
+    page = open_dashboard(people_page, server)
+    page.select_option("#repoSel", "owner:Wing")
+    repos = page.eval_on_selector_all(
+        "#taskRows tr td:nth-child(2)", "els => els.map(e => e.textContent.trim())")
+    assert set(repos) == {"alpha"}          # acme/beta has no owner
+
+
+def test_owner_selection_disables_branch_select(people_page, server):
+    """Branch names are not comparable across repos, same as 全部 repos."""
+    page = open_dashboard(people_page, server)
+    page.select_option("#repoSel", "owner:Wing")
+    assert page.is_disabled("#branchSel")
+
+
+def test_owner_chip_shows_on_project_progress(people_page, server):
+    page = open_dashboard(people_page, server)
+    page.wait_for_selector("#projChips .chip-rag")
+    text = page.text_content("#projChips")
+    assert "Wing" in text and "未指定" in text
+
+
 def test_rag_ignores_the_person_filter(people_page, server):
     """repoRag() calls windowTasks(); without pinning, its CI pass rate would
     silently become one person's PRs while coverage stays repo-wide."""
