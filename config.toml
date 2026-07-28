@@ -13,6 +13,7 @@ mode = "auto"
 
 [[repos]]
 name = "wing-csi/AIFlowTesting"
+plan_file = "plan.md"        # remediation tracker;`#bug` 嘅項目會入 Defect 追蹤
 # branch = "main"            # 單條:唔填就自動用 default branch(只影響 commits)
 # branches = ["main", "develop"]  # 多條:掃晒列表(共享 commit 去重,首名優先);
 #                                 # merge 入列表 + default branch 唔算「跨 branch 合併」紅線

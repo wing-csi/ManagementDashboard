@@ -1,5 +1,5 @@
 import { state, $, esc, windowTasks } from './data.js';
-import { TABLE_CAP, VIOLATION_META } from './aggregate.js';
+import { TABLE_CAP, DEFECT_CAP, VIOLATION_META } from './aggregate.js';
 
 const TYPE_RE = /^(feat|fix|hotfix|revert|refactor|test|docs|chore|build|ci|perf|style)\b/i;
 export function typeChip(t) {
@@ -75,17 +75,29 @@ export function renderDefects() {
   for (const [repo, m] of Object.entries(rm)) {
     if (state.repo !== 'all' && repo !== state.repo) continue;
     const iss = m.issues;
-    if (!iss) continue;
-    for (const i of (iss.open || []).filter((i) => i.labels.some((l) => /^bug$/i.test(l))))
-      rows.push({ ...i, repo, status: 'Open' });
-    for (const i of (iss.closed_recent || []).filter((i) => i.labels.some((l) => /^bug$/i.test(l))))
-      rows.push({ ...i, repo, status: 'Fixed' });
+    if (iss) {
+      for (const i of (iss.open || []).filter((i) => i.labels.some((l) => /^bug$/i.test(l))))
+        rows.push({ ...i, repo, status: 'Open' });
+      for (const i of (iss.closed_recent || []).filter((i) => i.labels.some((l) => /^bug$/i.test(l))))
+        rows.push({ ...i, repo, status: 'Fixed' });
+    }
+    // plan-file defects: `- [ ] … #bug !P1 due:YYYY-MM-DD` lines in the repo's plan_file.
+    // The parser only emits unticked tasks, so these are always Open.
+    const plan = m.plan;
+    for (const t of (plan?.open_tasks || []).filter((t) => t.bug))
+      rows.push({
+        number: null, title: t.title, repo, status: 'Open',
+        url: `https://github.com/${repo}/blob/HEAD/${plan.path}`,
+        labels: t.priority ? [t.priority] : [], assignees: [], due: t.due,
+      });
   }
   rows.sort((a, b) => (a.status === 'Open' ? 0 : 1) - (b.status === 'Open' ? 0 : 1));
-  $('defectRows').innerHTML = rows.slice(0, 10).map((r) => {
+  $('defectCount').textContent = rows.length > DEFECT_CAP
+    ? `${rows.length} 項,顯示頭 ${DEFECT_CAP}` : `${rows.length} 項`;
+  $('defectRows').innerHTML = rows.slice(0, DEFECT_CAP).map((r) => {
     const [sl, sc] = sev(r.labels || []);
     return `<tr>
-      <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">#${r.number}</a></td>
+      <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.number ? '#' + r.number : 'plan'}</a></td>
       <td class="repo">${esc(r.repo.split('/').pop())}</td>
       <td><span class="sevdot" style="background:${sc}"></span>${sl}</td>
       <td class="subject" title="${esc(r.title)}">${esc(r.title)}</td>
@@ -93,7 +105,7 @@ export function renderDefects() {
       <td class="mono" style="font-size:11.5px">${esc((r.assignees || []).join(', ') || '–')}</td>
       <td class="mono" style="font-size:11.5px">${esc(r.due || r.closed || '–')}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="mono" style="color:var(--muted)">冇 bug label 嘅 issues — defect 用 bug label 開 issue 就會入呢度</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="mono" style="color:var(--muted)">冇 defect — 開 issue 打 bug label,或者喺 plan file 寫 <code>- [ ] … #bug !P1 due:2026-08-01</code></td></tr>';
 }
 
 export function renderTable() {
