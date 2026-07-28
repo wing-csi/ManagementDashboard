@@ -29,10 +29,11 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
    ```bash
    curl -s -o /dev/null -w "%{http_code}\n" https://wing-csi.github.io/ManagementDashboard/data/metrics.json
    ```
-   `404` = 已停用;`200` = 仲喺度出緊街,要即刻去 repo Settings 關 Pages。想睇 dashboard,睇下面「Private 模式」個本地流程:本機生成 `metrics.json` + 起 http server。
-6. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新(結果會 push 去私有 data repo,但唔會幫你自動起本機 dashboard,睇下面「Private 模式」)
+   `404` = 已停用;`200` = 仲喺度出緊街,要即刻去 repo Settings 關 Pages。想睇 dashboard 見下面「線上睇」(Cloudflare Access 登入)或者「Private 模式」(本機 http server)。
+6. 開 Cloudflare Pages + Access(想線上睇先需要,做法見下面「線上睇」),然後喺 hub repo 加兩個 secret:`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`
+7. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新。一次 run 有兩個去向:push 去私有 data repo,同埋 deploy 上 Cloudflare Pages。本機 dashboard 唔會自動起,睇下面「Private 模式」
 
-> 步驟 3、4、6 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
+> 步驟 3、4、7 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
 
 ## 指標字典 — 每個數點計、代表咩
 
@@ -280,24 +281,38 @@ AIFlowTesting 本身已經跑緊 coverage + bandit(SOP Phase 5),加一個 step �
 
 ## 線上睇(Cloudflare Pages + Access)
 
-Dashboard 已經 host 喺 **https://management-dashboard-emj.pages.dev** — 開個 URL,輸入你嘅
-email,收一封一次性驗證碼(One-time PIN)郵件,入碼就睇到。唔使密碼、唔使裝任何嘢。
-只有名單內嘅 email 先入到;`/data/metrics.json` 同埋所有 preview URL 一樣受保護,
-未登入直接開只會見到 Cloudflare 登入頁。
+Dashboard 已經上線:**https://management-dashboard-emj.pages.dev**
 
-- **數據更新**:同 private data repo 同一條 nightly pipeline(`collect.yml` 最尾一步
-  用 wrangler 直接 upload `docs/`,每日 05:00 HKT)。頁面數據以 header 嘅
-  `generated_at` 為準。
-- **加人 / 減人**:Cloudflare Zero Trust → Access → Applications → 個 dashboard app
-  → 改 policy 嘅 email 名單,即時生效,唔使重新 deploy。
-- **同 Phase 1 嘅關係**:Phase 1「淨用 GitHub、唔加第三方」嘅約束由
-  `specs/2026-07-28-phase-2-cloudflare-pages-access-design.md` 正式取代 —
-  metrics 而家會存放喺 Cloudflare(Access 後面,唔公開)。下面「Private 模式」
-  嘅本地流程照用得,係冇網絡時嘅 fallback。
+開個 URL,輸入你嘅 email,收一封一次性驗證碼(One-time PIN)郵件,入碼就睇到。
+唔使密碼、唔使裝任何嘢、任何裝置都得。只有名單內嘅 email 入到;`/data/metrics.json`
+一樣受保護,未登入直接開只會 302 去 Cloudflare 登入頁(2026-07-28 實測)。
+
+- **數據更新**:同 private data repo 共用一條 nightly pipeline —— `collect.yml`
+  最尾一步用 wrangler 將 `docs/` 直接 upload,每日 05:00 HKT。頁面數據以 header
+  嘅 `generated_at` 為準。
+- **加人 / 減人**:Cloudflare Zero Trust → Access → Applications →
+  `management-dashboard-emj.pages.dev` → policy「Dashboard viewers」改 email 名單,
+  即時生效,唔使重新 deploy。
+- **兩個 Access application(留意)**:Cloudflare 鎖死咗 Pages 自動建立嗰個 app
+  只能綁 preview wildcard,所以 production 係另開一個:
+
+  | Application | 保護 | Policy |
+  |---|---|---|
+  | 自動建立(Pages「Restrict previews」) | `*.management-dashboard-emj.pages.dev` | Allow Members — **淨係 Cloudflare 帳號成員** |
+  | 手動建立(self-hosted) | `management-dashboard-emj.pages.dev` | Dashboard viewers — 3 個指定 email |
+
+  即係名單上嘅同事入到 production,入唔到 preview URL。CI 用 `--branch=main`
+  只出 production,所以實際用唔到 preview,唔影響日常。
 - **CI 紅咗、step 叫 `Deploy dashboard to Cloudflare Pages`**:多數係
-  `CLOUDFLARE_API_TOKEN` 過期或者未設 — 去 repo Settings → Secrets and variables
-  → Actions 換一個新 token(Cloudflare My Profile → API Tokens 開,權限只需要
-  Account / Cloudflare Pages / Edit)。
+  `CLOUDFLARE_API_TOKEN` 過期或者未設。個 step 有 guard,secret 唔見會即刻報
+  `::error::` 收工,唔會靜靜跳過。換 token:Cloudflare My Profile → API Tokens →
+  **Create Custom Token**(範本清單冇 Pages 嗰項),權限只揀
+  **Account → Cloudflare Pages → Edit**,Account Resources 限返呢個帳號 → 貼落
+  repo Settings → Secrets and variables → Actions。
+- **設定記錄**:Pages project 名 `management-dashboard`(所以 workflow 個
+  `--project-name` 唔受 hostname 影響);Access team domain
+  `summer-mud-0e86.cloudflareaccess.com`。詳細落成記錄同取捨見
+  `specs/2026-07-28-phase-2-cloudflare-pages-access-design.md`。
 
 ## Private 模式
 
@@ -305,7 +320,7 @@ email,收一封一次性驗證碼(One-time PIN)郵件,入碼就睇到。唔使�
 
 **Pages publish pipeline 已經停用,GitHub Pages 開關本身要人手關** — 呢個係「hub repo 唔好經 Pages 曝露 private repo 資料」嗰道防線,做法見上面 Setup 步驟 5(curl 查 404/200)。留意呢度講嘅係 hub 呢個 repo 嘅 Pages,同下面講嘅「metrics 私有 data repo」係兩回事。
 
-**Metrics 數據而家收埋喺另一個 private repo** — `wing-csi/ManagementDashboard-data`。`collect.yml` 每日自動跑 test + collect 之後,會多一步將 `metrics.json` push 落嗰個 private repo(唔會再經 hub 呢邊嘅 Pages 出街)。認證 host / Worker 呢類第三方方案已經取消 —— Phase 1 淨係用 GitHub 生態(private repo + collaborator 權限),唔加第三方服務。想睇 dashboard,你要先係 `ManagementDashboard-data` 嘅 collaborator,問維護者(wing-csi)攞 access。
+**Metrics 數據而家收埋喺另一個 private repo** — `wing-csi/ManagementDashboard-data`。`collect.yml` 每日自動跑 test + collect 之後,會將 `metrics.json` push 落嗰個 private repo(唔會再經 hub 呢邊嘅 Pages 出街)。Phase 1 嗰句「唔加第三方服務」**已經由 Phase 2 取代** —— 同一份 metrics 而家亦都 deploy 上 Cloudflare Pages,擺喺 Access 後面(見上面「線上睇」)。呢個本機流程保留做 fallback:唔想靠 Cloudflare、或者冇網嗰陣照用得。行呢條路要先係 `ManagementDashboard-data` 嘅 collaborator,問維護者(wing-csi)攞 access。
 
 **第一次(得做一次)—— clone 落嚟,擺喺呢個 repo 隔籬**(即係 `../ManagementDashboard-data`,唔係入面):
 ```bash
