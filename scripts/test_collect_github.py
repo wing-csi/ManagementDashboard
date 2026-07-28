@@ -356,12 +356,57 @@ def test_verify_l4_claim_with_review_churn_is_suspect():
     assert t.rework == 1  # 被打回次數傳到 task
 
 
-def test_pr_rework_counts_multiple_changes_requested():
+def test_two_reviewers_on_the_same_push_is_one_round():
     t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
-                  reviews=(("CHANGES_REQUESTED", "bob", "User"),
-                           ("CHANGES_REQUESTED", "amy", "User"),
-                           ("APPROVED", "bob", "User")))
+                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
+                           ("CHANGES_REQUESTED", "amy", "User", "2026-05-02T11:00:00Z"),
+                           ("APPROVED", "bob", "User")),
+                  pushes=("2026-05-01T09:00:00Z",))
+    assert t.rework == 1
+
+
+def test_rejection_after_a_push_is_a_second_round():
+    t = infer_one(labels=("ai-level/L3",),
+                  commits=(CLAUDE_FOOTER, CLAUDE_FOOTER),
+                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
+                           ("CHANGES_REQUESTED", "bob", "User", "2026-05-04T10:00:00Z")),
+                  pushes=("2026-05-01T09:00:00Z", "2026-05-03T09:00:00Z"))
     assert t.rework == 2
+
+
+def test_reviewed_is_false_without_any_human_review():
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,))
+    assert t.reviewed is False
+
+
+def test_reviewed_is_true_with_an_outside_review():
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  reviews=(("APPROVED", "bob", "User"),))
+    assert t.reviewed is True
+
+
+def test_authors_own_comment_does_not_make_a_pr_reviewed():
+    # Defect 7: this is the bypass. "wing" opens the PR and comments on it.
+    t = infer_one(labels=("ai-level/L3",), author="wing", commits=(CLAUDE_FOOTER,),
+                  reviews=(("COMMENTED", "wing", "User"),))
+    assert t.reviewed is False
+
+
+def test_rework_hours_measured_from_the_first_rejection():
+    # First rejection 2026-05-02T10:00Z, merged 2026-05-04T10:00Z = 48h.
+    t = infer_one(labels=("ai-level/L3",),
+                  commits=(CLAUDE_FOOTER, CLAUDE_FOOTER),
+                  merged="2026-05-04T10:00:00Z",
+                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
+                           ("CHANGES_REQUESTED", "amy", "User", "2026-05-03T10:00:00Z")),
+                  pushes=("2026-05-01T09:00:00Z", "2026-05-02T20:00:00Z"))
+    assert t.rework_hours == 48.0
+
+
+def test_no_rejection_means_no_rework_hours():
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  reviews=(("APPROVED", "bob", "User"),))
+    assert t.rework == 0 and t.rework_hours is None
 
 
 def test_dismissed_rejection_is_still_counted():

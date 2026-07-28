@@ -232,10 +232,12 @@ class Task:
     author: str
     check: str | None = None  # claim verification: "ok" | "suspect:*" | None (unverifiable)
     branch: str = ""  # PR head branch, or the scanned branch for commits
-    rework: int = 0  # human CHANGES_REQUESTED reviews on the PR (被打回次數)
     violations: list[str] = field(default_factory=list)  # governance red-line hits
     lead_hours: float | None = None  # PR createdAt → mergedAt (lead time to merge)
     ci: str | None = None  # last-commit check rollup: "pass" | "fail" | None
+    reviewed: bool = False  # ≥1 human review by someone other than the PR author
+    rework: int = 0  # rework rounds — rejections separated by a push (被打回輪數)
+    rework_hours: float | None = None  # first rejection → mergedAt (返工周轉時間)
 
 
 def _graphql_data(body: dict, allow_partial: bool) -> dict:
@@ -672,6 +674,11 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allo
             )
             text = f"{node['title']}\n{node.get('body') or ''}\n{commit_msgs}"
             sig = extract_signals(node, cfg)
+            pushes = [
+                c["commit"]["committedDate"]
+                for c in (node.get("commits") or {}).get("nodes", [])
+                if c.get("commit", {}).get("committedDate")
+            ]
             # ladder: label → trailer → author → inference → substring rules
             level, method = classify_explicit(cfg, labels=labels, text=text, author=author)
             check = (
@@ -697,10 +704,15 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allo
                     author=author,
                     check=check,
                     branch=node.get("headRefName") or "",
-                    rework=sig.changes_requested,
                     lead_hours=_lead_hours(node.get("createdAt"), node["mergedAt"]),
                     ci=_ci_state(node),
                     violations=detect_violations(node, sig, cfg, allowed_branches),
+                    reviewed=sig.human_reviews > 0,
+                    rework=rework_rounds(list(sig.rejections), pushes),
+                    rework_hours=(
+                        _lead_hours(sig.rejections[0], node["mergedAt"])
+                        if sig.rejections else None
+                    ),
                 )
             )
         # UPDATED_AT desc + (mergedAt <= updatedAt) => once a whole page is
