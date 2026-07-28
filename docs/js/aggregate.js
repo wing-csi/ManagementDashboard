@@ -32,7 +32,8 @@ export function statsFromTasks(list) {
   const s = {
     byLevel: Object.fromEntries(LEVELS.map((l) => [l, 0])),
     untagged: 0, insTotal: 0, insAi: 0, suspects: 0,
-    fixTasks: 0, prTotal: 0, reworkPRs: 0, fixByLevel: {},
+    fixTasks: 0, prTotal: 0, reviewedPRs: 0, reworkPRs: 0,
+    reworkRounds: [], reworkTurnarounds: [], fixByLevel: {},
     failTasks: 0, meaningful: 0, ciPass: 0, ciTotal: 0, leads: [], fixLeads: [],
     violationCounts: {},
     methods: {},
@@ -46,7 +47,14 @@ export function statsFromTasks(list) {
     if ((t.additions || 0) >= 10) s.meaningful++;
     if (t.kind === 'pr') {
       s.prTotal++;
-      if ((t.rework || 0) > 0) s.reworkPRs++;
+      // 打回率 分母係「有人 review 過」嘅 PR — 冇人 review 過嘅 PR 根本冇得被打回,
+      // 擺入分母只會令個率虛低。
+      if (t.reviewed) s.reviewedPRs++;
+      if ((t.rework || 0) > 0) {
+        s.reworkPRs++;
+        s.reworkRounds.push(t.rework);
+        if (t.rework_hours != null) s.reworkTurnarounds.push(t.rework_hours);
+      }
       if (t.ci) { s.ciTotal++; if (t.ci === 'pass') s.ciPass++; }
       if (t.lead_hours != null) { s.leads.push(t.lead_hours); if (isFix) s.fixLeads.push(t.lead_hours); }
     }
