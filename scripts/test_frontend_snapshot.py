@@ -10,15 +10,15 @@ from __future__ import annotations
 
 import json
 import shutil
-import socket
-import subprocess
-import sys
-import time
 from pathlib import Path
 
 import pytest
 
-pytest.importorskip("playwright", reason="frontend snapshot test needs playwright")
+# pytest-playwright is what supplies the `page` fixture. Guarding on the bare
+# `playwright` package let a machine with playwright-but-not-pytest-playwright
+# fail collection with "fixture 'page' not found" instead of skipping cleanly.
+pytest.importorskip("pytest_playwright",
+                    reason="frontend snapshot test needs pytest-playwright")
 
 DOCS = Path(__file__).parent.parent / "docs"
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -32,52 +32,8 @@ SECTION_IDS = [
 ]
 
 
-def _pick_free_port() -> int:
-    """Ask the OS for an unused TCP port instead of hardcoding one.
-
-    A hardcoded port can collide with an unrelated process already bound to
-    it (observed during development: stray http.server processes lingering
-    on a fixed port), causing confusing failures or a false pass against
-    the wrong server.
-    """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
-
-
-def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> None:
-    """Poll until something accepts TCP connections on host:port.
-
-    A fixed sleep proved flaky in this environment (the child http.server
-    process can take longer than 1.5s to start accepting connections under
-    pytest), so we poll instead of guessing a delay.
-    """
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.settimeout(1.0)
-            if sock.connect_ex((host, port)) == 0:
-                return
-        time.sleep(0.2)
-    raise RuntimeError(f"server on {host}:{port} did not become reachable within {timeout}s")
-
-
-@pytest.fixture(scope="module")
-def server():
-    port = _pick_free_port()
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "http.server", str(port), "-d", str(DOCS)],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
-    try:
-        _wait_for_port("127.0.0.1", port)
-    except RuntimeError:
-        proc.terminate()
-        proc.wait(timeout=5)
-        raise
-    yield f"http://127.0.0.1:{port}"
-    proc.terminate()
-    proc.wait(timeout=5)
+# The `server` fixture lives in scripts/conftest.py — several frontend test
+# modules need it, and one shared read-only http.server is enough for all.
 
 
 @pytest.fixture(scope="module")

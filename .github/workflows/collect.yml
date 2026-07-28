@@ -19,7 +19,10 @@ jobs:
 
       - name: Run tests
         run: |
-          pip install pytest pyyaml -q
+          # pytest-playwright(唔係淨係 playwright)先會提供 `page` fixture —
+          # 冇佢嘅話 docs/ 嘅前端 guard 會靜靜哋 skip 晒
+          pip install pytest pyyaml pytest-playwright -q
+          python3 -m playwright install --with-deps chromium
           python3 -m pytest scripts/ -q
 
       - name: Collect metrics
