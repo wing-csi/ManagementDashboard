@@ -576,6 +576,27 @@ def _lead_hours(created: str | None, merged: str) -> float | None:
     return round(delta.total_seconds() / 3600, 1)
 
 
+def rework_rounds(rejections: list[str], pushes: list[str]) -> int:
+    """Count rework round-trips, not rejection events.
+
+    A round is a maximal run of rejections with no push between them: two
+    reviewers rejecting the same code is one round trip for the author, while
+    a rejection arriving after a fresh push starts a new one.
+
+    Both arguments are ISO-8601 UTC timestamps, which compare correctly as
+    plain strings, so no parsing is needed.
+    """
+    if not rejections:
+        return 0
+    rejects = sorted(rejections)
+    pushed = sorted(pushes)
+    rounds = 1
+    for prev, cur in zip(rejects, rejects[1:]):
+        if any(prev < p <= cur for p in pushed):
+            rounds += 1
+    return rounds
+
+
 def _ci_state(node: dict) -> str | None:
     nodes = (node.get("lastCommit") or {}).get("nodes") or [{}]
     rollup = (nodes[0].get("commit") or {}).get("statusCheckRollup") or {}

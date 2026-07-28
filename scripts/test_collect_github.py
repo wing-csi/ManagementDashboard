@@ -20,6 +20,7 @@ from collect_github import (  # noqa: E402
     collect_prs,
     load_config,
     normalize_level,
+    rework_rounds,
 )
 
 CFG = DEFAULT_CLASSIFY
@@ -332,6 +333,42 @@ def test_pr_rework_counts_multiple_changes_requested():
                            ("CHANGES_REQUESTED", "amy", "User"),
                            ("APPROVED", "bob", "User")))
     assert t.rework == 2
+
+
+# ------------------------------------------------------- rework rounds
+
+def test_rework_rounds_no_rejections_is_zero():
+    assert rework_rounds([], ["2026-05-01T09:00:00Z"]) == 0
+
+
+def test_rework_rounds_two_reviewers_same_push_is_one_round():
+    # Amy and Bob both reject the same code — one round trip for the author.
+    assert rework_rounds(
+        ["2026-05-02T10:00:00Z", "2026-05-02T11:00:00Z"],
+        ["2026-05-01T09:00:00Z"],
+    ) == 1
+
+
+def test_rework_rounds_push_between_rejections_starts_a_new_round():
+    assert rework_rounds(
+        ["2026-05-02T10:00:00Z", "2026-05-04T10:00:00Z"],
+        ["2026-05-01T09:00:00Z", "2026-05-03T09:00:00Z"],
+    ) == 2
+
+
+def test_rework_rounds_sorts_its_input():
+    # GitHub does not promise ordering; the function must not trust it.
+    assert rework_rounds(
+        ["2026-05-04T10:00:00Z", "2026-05-02T10:00:00Z"],
+        ["2026-05-03T09:00:00Z"],
+    ) == 2
+
+
+def test_rework_rounds_push_before_first_rejection_does_not_add_a_round():
+    assert rework_rounds(
+        ["2026-05-02T10:00:00Z"],
+        ["2026-05-01T09:00:00Z", "2026-05-01T10:00:00Z"],
+    ) == 1
 
 
 def test_verify_l4_claim_without_tests_is_suspect():
