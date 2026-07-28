@@ -657,15 +657,18 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allo
         if conn is None:
             raise CollectError(f"{repo}: repo not found (check token access)")
         for node in conn["nodes"]:
+            # exclude_authors means 「完全唔計呢啲 author」 (README) — that has to
+            # apply before the merged/closed split, or an excluded bot's closed
+            # PRs still land in closed_unmerged and deflate 接受率.
+            author = (node.get("author") or {}).get("login") or ""
+            if author in cfg["exclude_authors"]:
+                continue
             if not node["mergedAt"]:
                 closed_at = node.get("closedAt") or ""
                 if closed_at >= since_iso:
                     closed_unmerged.append(closed_at[:10])
                 continue
             if node["mergedAt"] < since_iso:
-                continue
-            author = (node.get("author") or {}).get("login") or ""
-            if author in cfg["exclude_authors"]:
                 continue
             labels = tuple(l["name"] for l in node["labels"]["nodes"])
             commit_msgs = "\n".join(

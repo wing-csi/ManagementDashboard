@@ -695,6 +695,29 @@ def test_closed_unmerged_pr_counted_not_tasked():
     assert closed == ["2026-05-03"]
 
 
+def test_excluded_author_closed_pr_stays_out_of_closed_unmerged():
+    # A closed dependabot PR must not deflate 接受率 — README promises
+    # exclude_authors means 「完全唔計呢啲 author」, merged or not.
+    client = FakeClient([prs_page([
+        pr_node(number=7, author="dependabot[bot]", author_type="Bot",
+                merged=None, closed="2026-05-02T10:00:00Z",
+                updated="2026-05-02T10:00:00Z"),
+    ])])
+    tasks, closed_unmerged = collect_prs(client, "wing/abci", SINCE, CFG)
+    assert tasks == []
+    assert closed_unmerged == []
+
+
+def test_included_author_closed_pr_is_still_counted():
+    client = FakeClient([prs_page([
+        pr_node(number=8, author="wing", merged=None,
+                closed="2026-05-02T10:00:00Z", updated="2026-05-02T10:00:00Z"),
+    ])])
+    tasks, closed_unmerged = collect_prs(client, "wing/abci", SINCE, CFG)
+    assert tasks == []
+    assert closed_unmerged == ["2026-05-02"]
+
+
 def test_lead_hours_and_ci_state():
     client = FakeClient([prs_page([
         pr_node(number=22, created="2026-05-01T10:00:00Z",
