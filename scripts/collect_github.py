@@ -886,6 +886,38 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     return tasks, meta
 
 
+def parse_people(raw: dict) -> dict[str, list[str]]:
+    """Parse the optional [people] table: canonical name -> identities.
+
+    One human can appear under several identities because commit authors fall
+    back to the raw git display name when no GitHub account resolves (see
+    collect_commits). Without merging, a per-person filter undercounts.
+
+    Validation is strict and fails the whole run: a mis-typed alias silently
+    splits or merges someone's work, which is worse than not collecting.
+    """
+    table = raw.get("people") or {}
+    if not isinstance(table, dict):
+        raise CollectError("[people] must be a table of name = [identities]")
+    people: dict[str, list[str]] = {}
+    seen: dict[str, str] = {}  # identity -> canonical name that claimed it
+    for person, identities in table.items():
+        if not isinstance(identities, list) or not identities:
+            raise CollectError(
+                f"[people] {person}: expected a non-empty list of identities")
+        for ident in identities:
+            if not isinstance(ident, str) or not ident:
+                raise CollectError(
+                    f"[people] {person}: identity {ident!r} is not a non-empty string")
+            if ident in seen and seen[ident] != person:
+                raise CollectError(
+                    f"[people] identity {ident!r} is listed under both "
+                    f"{seen[ident]!r} and {person!r}")
+            seen[ident] = person
+        people[person] = list(identities)
+    return people
+
+
 def load_config(path: Path) -> dict:
     with path.open("rb") as f:
         raw = tomllib.load(f)
@@ -897,6 +929,7 @@ def load_config(path: Path) -> dict:
         "mode": raw.get("mode", "auto"),
         "repos": raw["repos"],
         "classify": classify_cfg,
+        "people": parse_people(raw),
     }
 
 

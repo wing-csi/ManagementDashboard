@@ -903,3 +903,57 @@ def test_collect_issues_returns_no_error_on_success():
     assert err is None
     assert data["open_total"] == 2
     assert data["closed_total"] == 1
+
+
+# ---------------------------------------------------------------- people
+
+def test_parse_people_absent_returns_empty():
+    from collect_github import parse_people
+    assert parse_people({}) == {}
+
+
+def test_parse_people_maps_canonical_to_identities():
+    from collect_github import parse_people
+    got = parse_people({"people": {"Wing": ["wing-csi", "wing2036"]}})
+    assert got == {"Wing": ["wing-csi", "wing2036"]}
+
+
+def test_parse_people_rejects_identity_under_two_people():
+    from collect_github import parse_people
+    with pytest.raises(CollectError, match="wing2036"):
+        parse_people({"people": {"Wing": ["wing-csi", "wing2036"],
+                                 "Shane": ["wing2036"]}})
+
+
+def test_parse_people_rejects_empty_identity_list():
+    from collect_github import parse_people
+    with pytest.raises(CollectError, match="Wing"):
+        parse_people({"people": {"Wing": []}})
+
+
+def test_parse_people_rejects_non_string_identity():
+    from collect_github import parse_people
+    with pytest.raises(CollectError, match="Wing"):
+        parse_people({"people": {"Wing": ["wing-csi", 7]}})
+
+
+def test_parse_people_rejects_non_list_value():
+    from collect_github import parse_people
+    with pytest.raises(CollectError, match="Wing"):
+        parse_people({"people": {"Wing": "wing-csi"}})
+
+
+def test_load_config_carries_people(tmp_path):
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(
+        '[[repos]]\nname = "wing/abci"\n'
+        '[people]\nWing = ["wing-csi", "wing2036"]\n'
+    )
+    cfg = load_config(cfg_file)
+    assert cfg["people"] == {"Wing": ["wing-csi", "wing2036"]}
+
+
+def test_load_config_without_people_is_empty(tmp_path):
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text('[[repos]]\nname = "wing/abci"\n')
+    assert load_config(cfg_file)["people"] == {}
