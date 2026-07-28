@@ -92,12 +92,15 @@ rejections: reviews(first:50, states:[CHANGES_REQUESTED]){
 timelineItems(first:20, itemTypes:[REVIEW_DISMISSED_EVENT]){
   nodes{ ... on ReviewDismissedEvent {
     previousReviewState
-    dismissedReview{ submittedAt author{ login __typename } } } } }
+    review{ submittedAt author{ login __typename } } } } }
 commits(first:50){ nodes{ commit{ message committedDate } } }
 ```
 
-`dismissedReview.submittedAt` is used rather than the event's own `createdAt`:
-round detection needs when the rejection was *made*, not when it was waved away.
+`review.submittedAt` is used rather than the event's own `createdAt`: round
+detection needs when the rejection was *made*, not when it was waved away.
+(The field on `ReviewDismissedEvent` is `review` — an earlier draft of this spec
+said `dismissedReview`, which does not exist and made the whole query fail
+schema validation. See §7 for why no test caught it.)
 
 **Defect 4 dissolves rather than being patched.** Splitting the connection means
 rejections no longer compete with `COMMENTED` noise for 50 slots, and `reviewed`
@@ -317,6 +320,30 @@ GitHub-recorded facts.
 | `FIX_RE` / `FAIL_RE` are English-prefix-only | [aggregate.js:16-17](../docs/js/aggregate.js). A team writing Chinese PR titles gets 修復佔比 and 變更失敗率 reading 0%, which reads as perfect health rather than "no signal". Documented behaviour ([README.md:89](../README.md)), not a defect — flagged because the 0% is easy to misread |
 | `reviewed` / `human_reviews` not time-filtered | The generic `reviews(first:50)` connection ([collect_github.py:104](../scripts/collect_github.py)) does not select `submittedAt`, so `reviewed=sig.human_reviews > 0` ([collect_github.py:716](../scripts/collect_github.py)) cannot be filtered to pre-merge like `rejections` is ([collect_github.py:687](../scripts/collect_github.py)). A PR merged with zero pre-merge human review, whose only review is a post-merge `CHANGES_REQUESTED`, still gets `reviewed=True`, `rework=0`, and escapes `merged-without-review` — it sits in the 打回率 denominator contributing nothing to the numerator. Not a regression: the old denominator was all merged PRs, and `merged-without-review` was already suppressed by any review regardless of timing. Fixing it means adding `submittedAt` to the `reviews` connection and would widen a governance red line — needs the project owner's explicit decision, same as the post-merge-rejection rule did |
 | Three API truncation residuals | `reviews(first:50)` — if the first 50 nodes are all bot / `PENDING` / self-authored, `human_reviews` is 0 so `reviewed` is false, while the separate `rejections:` connection still yields a rejection; the PR then vanishes from the KPI (aggregate nests rework under `reviewed`) while its `↩N` badge still renders in the table — deflates, needs 50 non-qualifying reviews so vanishingly rare. `commits(first:50)` — a PR with more than 50 commits loses later `committedDate` values, so rejections that should have been separated by a push merge into one round — under-counts rounds, the opposite direction from the documented force-push over-count (§3.3). `timelineItems(first:20)` — caps recovered dismissed rejections at 20 — under-counts |
+
+## 7.1 The test suite cannot validate the GraphQL query
+
+Learned the hard way: this spec originally specified `dismissedReview` on
+`ReviewDismissedEvent`. That field does not exist — the correct name is
+`review` — so GitHub rejected the entire `PRS_QUERY` at schema validation and
+**every repo failed to collect**. All 185 tests passed throughout.
+
+They passed because `FakeClient` ([test_collect_github.py:29](../scripts/test_collect_github.py))
+returns canned responses and `pr_node()` builds the node shape by hand. The mock
+was written from the same wrong assumption as the query, so the two agreed with
+each other and disagreed only with GitHub. No amount of mock-based testing can
+catch this class of error: the mock is not the schema.
+
+What would catch it, roughly in order of cost:
+
+| Guard | Catches | Cost |
+|---|---|---|
+| A CI smoke job running the collector against one real repo with a read-only token | Any query/schema drift, immediately | One workflow job, needs a token |
+| Validating `PRS_QUERY` against GitHub's published SDL in a test | Field-name and type errors, offline once the SDL is vendored | Vendor ~5 MB SDL, add a graphql parser dep — conflicts with the stdlib-only rule |
+| A test asserting `pr_node()`'s keys match the fields `PRS_QUERY` requests | Mock/query drift only — would NOT have caught this bug, since both were wrong together | Cheap, low value here |
+
+The first is the only one that would have prevented the outage. Recorded as the
+recommended follow-up; not implemented here because it needs a token decision.
 
 ## 8. Files touched
 

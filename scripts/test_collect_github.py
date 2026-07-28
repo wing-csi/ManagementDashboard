@@ -107,7 +107,7 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
         ]},
         "timelineItems": {"nodes": [
             {"previousReviewState": st,
-             "dismissedReview": {"submittedAt": at,
+             "review": {"submittedAt": at,
                                  "author": {"login": lg, "__typename": tp}}}
             for (st, lg, tp, at) in dismissed
         ]},

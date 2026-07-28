@@ -211,7 +211,7 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
         ]},
         "timelineItems": {"nodes": [
             {"previousReviewState": st,
-             "dismissedReview": {"submittedAt": at,
+             "review": {"submittedAt": at,
                                  "author": {"login": lg, "__typename": tp}}}
             for (st, lg, tp, at) in dismissed
         ]},
@@ -277,13 +277,13 @@ In `scripts/collect_github.py`, replace the `reviews` line and the `commits` lin
         timelineItems(first:20, itemTypes:[REVIEW_DISMISSED_EVENT]){
           nodes{ ... on ReviewDismissedEvent {
             previousReviewState
-            dismissedReview{ submittedAt author{ login __typename } } } } }
+            review{ submittedAt author{ login __typename } } } } }
         reviewThreads(first:1){ totalCount }
         labels(first:20){ nodes{ name } }
         commits(first:50){ nodes{ commit{ message committedDate } } }
 ```
 
-`dismissedReview.submittedAt` is deliberate — round detection needs when the rejection was *made*, not when it was waved away.
+`review.submittedAt` is deliberate — round detection needs when the rejection was *made*, not when it was waved away.
 
 - [ ] **Step 5: Add `rejections` to `PrSignals`**
 
@@ -350,7 +350,7 @@ def _rejection_times(node: dict, cfg: dict) -> tuple[str, ...]:
     for ev in (node.get("timelineItems") or {}).get("nodes", []):
         if ev.get("previousReviewState") != "CHANGES_REQUESTED":
             continue
-        review = ev.get("dismissedReview") or {}
+        review = ev.get("review") or {}
         if review.get("submittedAt") and not _is_bot(review.get("author"), cfg):
             times.append(review["submittedAt"])
     return tuple(sorted(times))
