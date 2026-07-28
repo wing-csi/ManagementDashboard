@@ -728,6 +728,31 @@ def test_violation_merged_without_review():
     assert "merged-without-review" in t.violations
 
 
+def test_self_commented_review_still_trips_merged_without_review():
+    # Defect 7: the PR author's own COMMENTED review must not count as a
+    # human review — otherwise it silently suppresses this red line.
+    # infer_one defaults the PR author to "wing" (a User), so a review
+    # authored by "wing" is a self-review.
+    t = infer_one(commits=(CLAUDE_FOOTER,),
+                  reviews=(("COMMENTED", "wing", "User"),))
+    assert "merged-without-review" in t.violations
+
+
+def test_pending_review_still_trips_merged_without_review():
+    # An unsubmitted draft (PENDING) review is not a review of anything yet.
+    t = infer_one(commits=(CLAUDE_FOOTER,),
+                  reviews=(("PENDING", "bob", "User"),))
+    assert "merged-without-review" in t.violations
+
+
+def test_other_user_commented_review_does_not_trip_merged_without_review():
+    # Contrast case: a COMMENTED review from someone other than the PR
+    # author is a real human review and must suppress the red line.
+    t = infer_one(commits=(CLAUDE_FOOTER,),
+                  reviews=(("COMMENTED", "bob", "User"),))
+    assert "merged-without-review" not in t.violations
+
+
 def test_violation_oversized_pr_threshold():
     t = infer_one(commits=(CLAUDE_FOOTER,), add=900,
                   reviews=(("APPROVED", "bob", "User"),))
