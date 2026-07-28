@@ -54,18 +54,18 @@ export async function loadData() {
 export const toDate = (s) => new Date(s + 'T00:00:00Z');
 export const refDate = () => toDate(state.data.generated_at.slice(0, 10));
 
-export function tasksBetween(fromMs, toMs) {
+export function tasksBetween(fromMs, toMs, { allPeople = false } = {}) {
   return state.data.tasks.filter((t) => {
     if (!repoInScope(t.repo)) return false;
-    if (!personInScope(t)) return false;
+    if (!allPeople && !personInScope(t)) return false;
     if (state.branch !== 'all' && t.branch !== state.branch) return false;
     const ms = toDate(t.date).getTime();
     return ms >= fromMs && ms < toMs;
   });
 }
-export function windowTasks() {
+export function windowTasks(opts) {
   const end = refDate().getTime() + 864e5;
-  return tasksBetween(end - state.windowDays * 864e5, end);
+  return tasksBetween(end - state.windowDays * 864e5, end, opts);
 }
 export function precedingTasks() {
   const end = refDate().getTime() + 864e5 - state.windowDays * 864e5;

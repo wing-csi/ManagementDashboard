@@ -94,3 +94,47 @@ def test_switching_repo_resets_a_person_with_no_tasks(people_page, server):
     page.select_option("#personSel", "Wing")
     page.select_option("#repoSel", "acme/beta")   # Wing has no tasks here
     assert page.input_value("#personSel") == "all"
+
+
+# ------------------- sections with no person dimension -------------------
+
+def test_cfr_is_blanked_for_a_person(people_page, server):
+    """One person's reverts over the whole repo's deploys is not a rate."""
+    page = open_dashboard(people_page, server)
+    assert page.text_content("#dCfr").strip() != "–"
+    page.select_option("#personSel", "Wing")
+    assert page.text_content("#dCfr").strip() == "–"
+
+
+def test_contributors_stay_team_wide(people_page, server):
+    """It is the comparison view and the place you pick a person from."""
+    page = open_dashboard(people_page, server)
+    page.select_option("#personSel", "Wing")
+    names = page.eval_on_selector_all(
+        "#ovContribs .contrib .nm span[title]", "els => els.map(e => e.title)")
+    assert "Tony" in names and "Wing" in names
+    assert page.eval_on_selector_all(
+        "#ovContribs .contrib.is-selected", "els => els.length") == 1
+
+
+def test_scope_notes_appear_only_when_filtered(people_page, server):
+    page = open_dashboard(people_page, server)
+    visible = "els => els.filter(e => !e.hidden).length"
+    assert page.eval_on_selector_all(".scope-note", visible) == 0
+    page.select_option("#personSel", "Wing")
+    assert page.eval_on_selector_all(".scope-note", visible) > 0
+
+
+def test_eyebrow_names_the_filtered_person(people_page, server):
+    page = open_dashboard(people_page, server)
+    page.select_option("#personSel", "Wing")
+    assert "Wing" in page.text_content("#eyebrow")
+
+
+def test_rag_ignores_the_person_filter(people_page, server):
+    """repoRag() calls windowTasks(); without pinning, its CI pass rate would
+    silently become one person's PRs while coverage stays repo-wide."""
+    page = open_dashboard(people_page, server)
+    before = page.inner_html("#ragRow")
+    page.select_option("#personSel", "Wing")
+    assert page.inner_html("#ragRow") == before

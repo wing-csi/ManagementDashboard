@@ -3,12 +3,21 @@ import { buildPersonIndex, personOptions } from './people.js';
 import { statsFromTasks, buildWeekly, metaInWindow } from './aggregate.js';
 import {
   renderKPIs, renderSpectrum, renderChart, renderAlerts, renderDora,
-  renderRag, renderQuality,
+  renderRag, renderQuality, setScopeNotes,
 } from './render-kpi.js';
 import { renderProjects } from './render-project.js';
 import { renderOverview, renderDefects, renderTable } from './render-table.js';
 
+/** eyebrow 要講明而家係邊個嘅視角,否則 filtered dashboard 會被當成全隊數字。 */
+export function renderEyebrow() {
+  const repos = state.data.repos || [];
+  const base = (repos.length === 1 ? repos[0].toUpperCase() : `${repos.length} REPOS`) + ' · GITHUB TELEMETRY';
+  $('eyebrow').textContent = state.person === 'all' ? base : `${base} · 負責人 ${state.person}`;
+}
+
 export function render() {
+  setScopeNotes(state.person !== 'all');
+  renderEyebrow();
   const wt = windowTasks();
   const cur = statsFromTasks(wt);
   const prev = statsFromTasks(precedingTasks());
@@ -45,7 +54,7 @@ export function render() {
   $('demoBadge').classList.toggle('on', demo);
 
   const repos = data.repos || [];
-  $('eyebrow').textContent = (repos.length === 1 ? repos[0].toUpperCase() : `${repos.length} REPOS`) + ' · GITHUB TELEMETRY';
+  renderEyebrow();
   $('repoSel').innerHTML = `<option value="all">全部 repos</option>` +
     repos.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
 

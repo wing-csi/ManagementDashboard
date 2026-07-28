@@ -184,17 +184,22 @@ export function renderDora(cur, meta) {
     $('dDeploySub').textContent = `${state.windowDays} 日內(${src})· 平均每 ${(weeks / deployEvents).toFixed(1)} 週 1 次`;
   }
   $('dLead').innerHTML = fmtHours(median(cur.leads));
-  const cfr = deployEvents ? (cur.failTasks / deployEvents) * 100 : null;
+  // 一個人嘅 revert ÷ 全 repo 部署次數 唔係一個比率 — 淨係喺全員視角先計
+  const cfr = (state.person === 'all' && deployEvents)
+    ? (cur.failTasks / deployEvents) * 100 : null;
   $('dCfr').innerHTML = cfr == null ? '–' : Math.min(cfr, 100).toFixed(0) + '<span class="unit">%</span>';
   $('dMttr').innerHTML = fmtHours(median(cur.fixLeads));
 }
 
 function repoRag(repo) {
   const saved = state.repo;
+  const savedPerson = state.person;
   state.repo = repo;
+  state.person = 'all';   // RAG 係 repo 級指標:唔可以變成某個人嘅 CI pass rate
   const cur = statsFromTasks(windowTasks());
   const meta = metaInWindow();
   state.repo = saved;
+  state.person = savedPerson;
   const q = meta.quality[repo] || null;
   const ciRate = cur.ciTotal ? (cur.ciPass / cur.ciTotal) * 100 : null;
   const sec = (q && q.security) || {};
@@ -261,4 +266,9 @@ export function renderQuality(cur) {
     box.appendChild(row);
   }
   if (!box.children.length) box.innerHTML = '<div style="color:var(--muted);font-size:12px">未有已分級 tasks</div>';
+}
+
+/** 標示邊啲區塊喺揀咗人之後,數字仍然係全 repo 範圍。 */
+export function setScopeNotes(active) {
+  for (const el of document.querySelectorAll('.scope-note')) el.hidden = !active;
 }

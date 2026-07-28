@@ -12,7 +12,7 @@
   {"date": "2026-07-17", "repo": "acme/beta", "author": "Tony", "id": "3", "kind": "pr", "branch": "main", "title": "revert: beta one", "level": "L1", "method": "rule", "check": null, "additions": 5, "deletions": 60, "url": "https://example.test/4", "rework": 0, "violations": [], "lead_hours": 2, "ci": "fail"}
  ],
  "repo_meta": {
-  "acme/alpha": {"owner": "Wing", "disk_kb": 1024, "languages": {"items": [{"name": "Python", "bytes": 5000}]}, "deployments": ["2026-07-20T00:00:00Z"], "releases": [], "tags": [], "closed_unmerged": [], "issues": null},
+  "acme/alpha": {"owner": "Wing", "disk_kb": 1024, "languages": {"items": [{"name": "Python", "bytes": 5000}]}, "deployments": ["2026-07-20"], "releases": [], "tags": [], "closed_unmerged": [], "issues": null},
   "acme/beta": {"disk_kb": 512, "languages": {"items": [{"name": "JavaScript", "bytes": 2000}]}, "deployments": [], "releases": [], "tags": [], "closed_unmerged": [], "issues": null}
  },
  "errors": []

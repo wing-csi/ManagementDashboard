@@ -340,3 +340,14 @@ footer {
 @media (prefers-reduced-motion: no-preference) {
   .bar-fill, .seg { transition: width 0.35s ease, flex-basis 0.35s ease; }
 }
+
+/* 揀咗某個人之後,呢啲區塊嘅數字仍然係全 repo 範圍 — 標示出嚟,
+   免得讀者當咗係嗰個人嘅數字。 */
+.scope-note {
+  font-size: 11px; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 3px; padding: 1px 5px; margin-left: 6px; white-space: nowrap;
+  font-weight: 400; letter-spacing: 0;
+}
+.contrib.is-selected {
+  outline: 2px solid #24407E; outline-offset: 2px; border-radius: 4px;
+}

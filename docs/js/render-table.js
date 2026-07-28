@@ -1,4 +1,5 @@
 import { state, $, esc, windowTasks, repoInScope, personInScope } from './data.js';
+import { personOf } from './people.js';
 import { TABLE_CAP, DEFECT_CAP, VIOLATION_META } from './aggregate.js';
 
 const TYPE_RE = /^(feat|fix|hotfix|revert|refactor|test|docs|chore|build|ci|perf|style)\b/i;
@@ -51,12 +52,17 @@ export function renderOverview(cur) {
   $('ovMonthly').innerHTML = me.map(([k, c]) => barRow(k, c, mmax, '#2E6B5E')).join('')
     || '<div class="ov-sub">無數據</div>';
   // contributors(window)
+  // 貢獻者係比較視角,亦係揀人嘅入口 — 保持全員,只標示揀咗邊個
   const by = {};
-  for (const t of windowTasks()) { if (t.author) by[t.author] = (by[t.author] || 0) + 1; }
+  for (const t of windowTasks({ allPeople: true })) {
+    if (!t.author) continue;
+    const p = personOf(t.author, state.personIndex);
+    by[p] = (by[p] || 0) + 1;
+  }
   const ce = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const total = ce.reduce((s, [, c]) => s + c, 0);
   const AV = ['#24407E', '#3D67B1', '#5F8CC6', '#2E6B5E', '#B07A1F', '#6D5A8E'];
-  $('ovContribs').innerHTML = ce.map(([n, c], i) => `<div class="contrib">
+  $('ovContribs').innerHTML = ce.map(([n, c], i) => `<div class="contrib${n === state.person ? ' is-selected' : ''}">
       <div class="nm"><span class="av" style="background:${AV[i % 6]}">${esc(n[0].toUpperCase())}</span><span title="${esc(n)}">${esc(n)}</span></div>
       <div class="ct">${c}<span style="font-size:11px;color:var(--muted)"> tasks</span></div>
       <div class="pc">${total ? ((c / total) * 100).toFixed(1) : 0}% of window</div>

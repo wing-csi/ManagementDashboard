@@ -67,7 +67,7 @@
 
   <section class="kpis dora">
     <div class="card kpi">
-      <div class="label">部署頻率</div>
+      <div class="label">部署頻率<span class="scope-note" hidden>全 repo 範圍</span></div>
       <div class="value" id="dDeploy">–</div>
       <div class="sub" id="dDeploySub">–</div>
     </div>
@@ -118,6 +118,7 @@
     <div class="card-head">
       <h2>品質 × 自動化</h2>
       <span class="card-note">fix / hotfix / revert 前綴 · PR CHANGES_REQUESTED</span>
+      <span class="scope-note" hidden>RAG 燈全 repo 範圍</span>
     </div>
     <div class="rag" id="ragRow"></div>
     <div class="ov-sub" id="ragHint" style="display:none;margin:-6px 0 14px">灰燈 = 無品質信號(要 PR 上有 CI checks,或 config 設 `quality_file`)— 詳見 README 品質指標</div>
@@ -154,6 +155,7 @@
     <div class="card-head">
       <h2>項目進度</h2>
       <span class="card-note">source: GitHub Issues / Milestones · 完成度以已開 issues 計</span>
+      <span class="scope-note" hidden>全 repo 範圍</span>
     </div>
     <div class="rag" id="projChips"></div>
     <div id="projMilestones"></div>
@@ -175,7 +177,7 @@
       <span class="card-note">languages 按 bytes · 月度活躍唔受 window 影響</span>
     </div>
     <div class="ov-grid">
-      <div><div class="proj-h">Codebase(語言構成)</div><div id="ovLangs"></div></div>
+      <div><div class="proj-h">Codebase(語言構成)<span class="scope-note" hidden>全 repo 範圍</span></div><div id="ovLangs"></div></div>
       <div><div class="proj-h">Commit types(window 內)</div><div id="ovTypes"></div></div>
       <div><div class="proj-h">月度活躍(全收集範圍)</div><div id="ovMonthly"></div></div>
     </div>
@@ -187,6 +189,7 @@
     <div class="card-head">
       <h2>Defect 追蹤</h2>
       <span class="card-note">source: issues with bug label + plan file <code>#bug</code> · 開放行先 · <span id="defectCount"></span></span>
+      <span class="scope-note" hidden>全 repo 範圍</span>
     </div>
     <table>
       <colgroup>
