@@ -1,7 +1,7 @@
 # Management Dashboard — 8 Feature Enhancements
 
 **Date:** 2026-07-27
-**Status:** Revision 2 — approved design, ready for implementation planning
+**Status:** Revision 3 — Phase 0 shipped; Phase 1 re-scoped to GitHub-only
 **Analysis:** Fable 5 (3 parallel agents) · **Adversarial review:** Fable 5 · **Implementation:** Opus 5 / Sonnet 5
 
 > Spec lives in `specs/` at repo root, **not** `docs/`. `docs/` is the GitHub Pages
@@ -171,13 +171,15 @@ permissions. A dashboard login contributes nothing. Relay this to whoever raised
 | # | Decision | Rationale |
 |---|---|---|
 | D1 | Repo stays **public**; gate the dashboard | User decision, informed |
-| D2 | Auth = **GitHub App** installation token performing collaborator/org check; visitor grants only `read:user` | Avoids demanding `repo` scope from visitors (§5.2) |
+| D2 | **GitHub-only. No third-party services of any kind.** Auth = GitHub repo permission on a **private data repo**; no login page, no hosted URL | User constraint. Rules out Cloudflare/Workers/R2 and every external IdP (§5.2) |
 | D3 | Planning source = **`plan_file` markdown** | Avoids the Issues:Read blocker; feeds #5, #6, #2 |
 | D4 | Rework = **revert detection only** | Fix-after-fix needs per-commit file paths the collector does not fetch (§6.8) |
 | D5 | **Split `docs/index.html`** into CSS + ES modules | 1349 lines vs. an 800 cap; §2.4 is the symptom |
 | D6 | SPDT = additional GitHub repos, names supplied at implementation | Config-only |
 | D7 | **Disable GitHub Pages immediately** | Stops the nightly re-publication (§5.3) |
-| D8 | **Auth moves to Phase 1** | Pages going dark makes it the path back to shared access |
+| D8 | **Access control moves to Phase 1** | Pages going dark makes it the path back to shared, refreshed data |
+| D9 | "Login with **Chinasoft email**" is **dropped, not deferred** | Impossible without a third-party IdP (D2). §5.2 |
+| D10 | Phase 1 also restores **nightly refresh** via commit-back to the data repo | Phase 0 made refresh manual; that is the main day-to-day cost to undo |
 
 ---
 
@@ -188,63 +190,57 @@ permissions. A dashboard login contributes nothing. Relay this to whoever raised
 Collector unchanged in kind — GitHub Actions, Python, daily cron. Delivery changes.
 
 ```
-config.toml ─▶ collect_github.py (Actions) ─▶ metrics.json + history.json
-                                                       │
-                                            upload to Cloudflare R2
-                                                       │
-   viewer ─▶ Cloudflare Worker ─▶ GitHub OAuth (read:user) ─▶ GitHub App
-                                     collaborator check ─▶ serve page + data
+  PUBLIC repo: wing-csi/ManagementDashboard
+  config.toml ─▶ collect_github.py (Actions, daily) ─▶ metrics.json + history.json
+                                                              │  push with DATA_REPO_PAT
+                                                              ▼
+  PRIVATE repo: wing-csi/ManagementDashboard-data  (data only, never code)
+                                                              │  git pull
+                                                              ▼
+  viewer (collaborator on the private data repo) ─▶ local static server ─▶ dashboard
 ```
 
-**Single origin.** The Worker serves *both* the static page and the data objects.
-Fetches stay same-origin: no CORS, no `SameSite=None`, no credentialed cross-origin
-requests. (Revision 1 contradicted itself here; resolved.)
+**No third-party services.** Everything above is GitHub: Actions, two GitHub repos, and
+GitHub's own permission model. No Cloudflare, no external identity provider, nothing to
+sign up for.
 
-### 5.2 The Worker
+### 5.2 Access control (D2, revised)
 
-| Unit | Responsibility |
+**There is no login page, and no authenticated URL.** This is a hard platform limit,
+not a preference: on the free/Pro plan a private repo's GitHub Pages site is still
+publicly reachable, and access-controlled Pages exists only on GitHub Enterprise Cloud
+(`README.md:283` documented this before this project began). GitHub offers no native
+way to put authentication in front of a static site. Every solution that yields an
+authenticated URL requires a third party, which D2 excludes.
+
+**Therefore authentication IS GitHub repository permission.** To obtain the data you
+must be able to `git pull` the private data repo, which requires GitHub credentials and
+an access grant. The gate is real and server-side — it is GitHub's own auth — it simply
+sits at `git pull` rather than at a web login.
+
+| Property | Outcome |
 |---|---|
-| `oauth.js` | GitHub OAuth code exchange incl. `state` CSRF parameter; no session logic |
-| `authorize.js` | Given a login, decide allow/deny. **Pure function over an injected GitHub client** |
-| `session.js` | Signed cookie issue/verify; no GitHub knowledge |
-| `serve.js` | Static asset + R2 object serving, gated on a valid session |
+| Who can read the data | Collaborators on `ManagementDashboard-data` (plus org owners) |
+| How access is granted | Add a collaborator on that repo |
+| How access is revoked | Remove them — effective immediately for future pulls |
+| What a revoked user keeps | Whatever they already pulled. Unavoidable in any pull-based model |
+| Link for non-technical stakeholders | **None.** See §5.5 |
 
-**Mechanism (the part revision 1 omitted).** A **GitHub App** is installed on the
-`benegg` org and on `wing-csi`, with the minimum permissions *Metadata: read* and
-*Members: read*. The Worker holds the App's private key as a Worker secret and mints
-short-lived (1 h) installation tokens.
+**Why a separate data repo rather than making the hub private.** It preserves the
+decision to keep the code public (D1) while still closing the exposure: code stays
+open, data becomes permission-gated. It also confines the private surface to a repo
+containing nothing but generated JSON, so over-sharing it leaks metrics rather than
+source.
 
-- The **visitor** authenticates via OAuth requesting only `read:user` — enough to
-  learn their login. **Visitors never grant `repo` scope.**
-- The **App installation token** performs the collaborator/org-membership lookup.
+**Consequence to flag at review time:** adding SPDT repos (#4) to `config.toml` puts
+their metadata into the same data repo, visible to every existing data-repo
+collaborator. That is an access-scope change wearing the costume of a config change.
+There is no per-repo filtering in this model — everyone with access sees every tracked
+repo.
 
-This avoids both revision-1 failure modes: no over-privileged visitor grant, and no
-long-lived all-repo PAT at the edge. The App key is still a secret at the edge, but is
-least-privilege (read-only metadata) and revocable by uninstalling the App.
-
-**Authorization rule.** Allow if *either*:
-
-- the login is a collaborator on ≥1 repo listed in `config.toml`, **or** a member of
-  the `benegg` org; **or**
-- the account's **verified primary email** matches the configured Chinasoft domain.
-  Matching must anchor on `@` — `endswith("chinasoft.com")` would also match
-  `evil-chinasoft.com`. Reading a private primary email requires `user:email` scope;
-  if the domain rule is enabled, that scope is requested too.
-
-Fail closed: any GitHub API error denies. Sessions ≤24 h so revoked access takes effect
-within a day. Cookies are `HttpOnly; Secure; SameSite=Lax`. The session signing key is
-a Worker secret with a documented rotation procedure.
-
-**Accepted blast radius (§3 risk 2).** Access is all-or-nothing across all 13 repos: a
-collaborator on *any* one of them — including the **public** `wing-csi/AIFlowTesting` —
-sees commit titles, authors and branch names for every tracked private repo. Likewise,
-enabling the Chinasoft domain rule admits every holder of such a mailbox. This grants
-more than GitHub itself would. Accepted; per-repo filtering is the upgrade path (§10).
-
-**Allowlist sync.** The Worker does not read the repo's `config.toml`. The tracked-repo
-list is Worker configuration, updated deliberately. **Consequence to flag at review
-time:** adding SPDT repos (#4) expands the viewer allowlist to every collaborator of
-those repos — an authorization change wearing the costume of a config change.
+**Dropped: "login with Chinasoft email."** GitHub has no concept of email-domain
+identity, so this is unachievable without a third-party IdP (Entra ID, Google
+Workspace, or an auth proxy) — all excluded by D2. Recorded as dropped, not deferred.
 
 ### 5.3 Ending the exposure (corrected)
 
@@ -261,7 +257,7 @@ the deploy step merely stops updating it. The exposure must be ended explicitly:
 3. `git rm --cached docs/data/metrics.json`; add `docs/data/metrics.json` to
    `.gitignore` so it is never re-committed to the public repo.
 
-**Interim viewing (Phases 0–1).** The dashboard is dark until the Worker ships. Anyone
+**Interim viewing (until Phase 1 ships).** The dashboard is dark. Anyone
 needing it runs the collector locally with their own token and serves `docs/`:
 
 ```bash
@@ -310,11 +306,37 @@ Required change: demo data loads **only** when explicitly requested (`?demo=1`);
 
 ### #1 Authorization — Phase 1
 
-Per §5.2. Deliverables: Worker source under `worker/`, `wrangler.toml`, a CI step
-uploading to R2, and unit tests for `authorize.js` covering: collaborator allowed,
-non-collaborator denied, org member allowed, Chinasoft email allowed, unverified email
-denied, near-miss domain (`evil-chinasoft.com`) denied, and **GitHub API failure denies
-(fail closed)**.
+Per §5.2, **no login page is built.** Access control is GitHub repository permission on
+a private data repo. Deliverables:
+
+1. **Create `wing-csi/ManagementDashboard-data`, private.** Contains only generated
+   JSON — never code, never config.
+2. **A fine-grained PAT** with *Contents: write* on that repo **only**, stored in the
+   public repo as the secret `DATA_REPO_PAT`. Least privilege: it can write the data
+   repo and nothing else.
+3. **Extend `.github/workflows/collect.yml`**: after the collect step, write
+   `metrics.json` (and `history.json`, per #6) into a checkout of the data repo and
+   push. Guard with `if: github.event_name != 'pull_request'` so forks and PRs never
+   attempt a push with a secret they cannot read.
+4. **A `docs/data/.gitignore`-aware local wiring step** so a viewer can point the
+   dashboard at their pulled copy — simplest is a documented `cp`/symlink from the data
+   repo clone into `docs/data/metrics.json`, which is already gitignored in the public
+   repo.
+5. **README rewrite** of the run instructions: clone both repos, pull, serve. Replaces
+   the interim "run the collector yourself" flow (§5.3).
+
+**Testing.** There is no `authorize.js` to unit-test — the authorization logic is
+GitHub's. What must be verified instead is that the pipeline cannot leak:
+
+- a test asserting the workflow's push step is guarded and targets the data repo, not
+  `origin`;
+- a check that `docs/data/metrics.json` remains gitignored in the public repo after
+  Phase 1 (regression guard against re-introducing the original leak);
+- a manual, documented verification that the data repo is private and that a logged-out
+  request for its raw content returns 404.
+
+**Explicitly not built:** OAuth flow, session cookies, a Worker, `wrangler.toml`, R2, or
+any Chinasoft-email rule (D9).
 
 ### #2 Fix / User Request — Phase 2
 
@@ -379,7 +401,8 @@ Config-only. Procedure:
    `collect.yml` (the `BEN_GH_METRICS_TOKEN` precedent, `:41`), and `token_env` on the
    repo entry. Missing env fails loudly (`:924-930`).
 3. Set `sop_paths`, `branches`, `no_evidence_level` per repo.
-4. **Update the Worker's tracked-repo allowlist** and review who that admits (§5.2).
+4. **Review who this newly exposes.** SPDT metadata lands in the same private data
+   repo, so every existing data-repo collaborator gains visibility of it (§5.2).
 
 **Input required:** exact `owner/repo` names. Precedent warns against guessing —
 `benegg/BOCPT-GENERAL-WEB` was configured from a guessed name that does not exist
@@ -404,14 +427,17 @@ Config-only. Procedure:
 - **Project start/end**: new per-repo `config.toml` keys `start_date` / `end_date`
   (`YYYY-MM-DD`), plumbed through `repo_meta`.
 - **Burn-down** via a new `history.json`: append-only, **aggregates only** — per repo
-  per day, open/closed counts and plan done/total. Stored in R2 beside `metrics.json`.
+  per day, open/closed counts and plan done/total. Stored in the **private data repo**
+  beside `metrics.json` (revision 3: was Cloudflare R2).
 
-**Read-back design** (missing in revision 1): the collector fetches the existing
-`history.json` from R2 at the start of each run, appends today's aggregate row
-(replacing any row with the same date, so re-runs are idempotent), and writes it back.
-A missing object means first run → start a new file. R2 credentials become GitHub
-Actions secrets (§9). This is why history lands in Phase 3, *after* R2 exists in
-Phase 1 — revision 1 had Phase 2 writing to a store created in Phase 3.
+**Read-back design:** because the workflow already checks out the data repo to push
+(#1), history read-back is just reading the file from that checkout. The collector
+appends today's aggregate row, replacing any row with the same date so re-runs are
+idempotent, then the existing push step commits it. A missing file means first run →
+start a new one. **No new credentials** — it reuses `DATA_REPO_PAT`.
+
+Git also gives history-of-the-history for free: if an aggregate is ever computed wrong,
+the data repo's commit log shows exactly when it changed.
 
 **Recorded limitation:** the chart accrues from ship day; no backfill exists (§2.5).
 
@@ -458,30 +484,26 @@ at all — `:596-599` keeps only a date, so this needs a new record type).
 
 ## 7. Phasing
 
-Re-sequenced in revision 2: disabling Pages (D7) makes auth the route back to shared
-access, and R2 must exist before history is written.
-
-| Phase | Contents | Depends on |
-|---|---|---|
-| **0 — Contain & stabilise** | Disable Pages; strip deploy steps; gitignore `metrics.json`; fix duplicate `issueScore`; split frontend (§5.4); make `collect_issues` record failures in `errors`; stop silent DEMO fallback | — |
-| **1 — Auth & hosting** | GitHub App, Worker, OAuth, R2 upload; restores shared access | Cloudflare account, GitHub App install on `benegg` |
-| **2 — Cheap wins** | #3 owner filter + alias map; #4 SPDT; #2 `work_type` | Phase 0 split |
-| **3 — Planning data** | Adopt `plan_file`; #5 today's tasks; #6 progress + `history.json` | Teams writing plan files; R2 from Phase 1 |
-| **4 — Rework** | #8 revert detection + honest denominators | Phase 2 `work_type` |
-| **Deferred** | #7 | Source system named |
+| Phase | Contents | Depends on | Status |
+|---|---|---|---|
+| **0 — Contain & stabilise** | Strip deploy steps; gitignore `metrics.json`; fix duplicate `issueScore`; split frontend (§5.4); `collect_issues` records failures; stop silent DEMO fallback | — | ✅ **done** (`106bb63`..`10839bf`, 85 tests). ⚠️ Manual Pages disable still outstanding |
+| **1 — Private data repo** | Create the private data repo; `DATA_REPO_PAT`; nightly commit-back; README rewrite. Restores automatic refresh and gates the data behind GitHub permissions | Data repo + PAT (§9.3) | next |
+| **2 — Cheap wins** | #3 owner filter + alias map; #4 SPDT; #2 `work_type` | Phase 0 split | |
+| **3 — Planning data** | Adopt `plan_file`; #5 today's tasks; #6 progress + `history.json` | Teams writing plan files; data repo from Phase 1 | |
+| **4 — Rework** | #8 revert detection + honest denominators | Phase 2 `work_type` | |
+| **Deferred** | #7 | Source system named | |
 
 **Each phase gets its own implementation plan and its own spec→plan→build cycle.** This
 document is the shared design; it is deliberately too large for one pass.
 
-**Rollback.** Phase 0 is reversible by re-enabling Pages. Phase 1 cutover keeps the
-local-viewing path (§5.3) working throughout, so a Worker misconfiguration degrades to
-"view locally" rather than "no dashboard". The Worker deploys behind a versioned
-`wrangler` release; reverting is a redeploy of the prior version.
+**Rollback.** Phase 1 is low-risk to reverse: delete the push step and the data repo.
+The local-collector path (§5.3) keeps working throughout, so a broken push step
+degrades to "run the collector yourself", never to "no dashboard". No deploy, no DNS,
+no external service to roll back.
 
-**Local development after Phase 1.** Developers run the collector locally and serve
-`docs/` directly, bypassing the Worker entirely — the frontend takes its data URL from
-a build-time constant defaulting to `./data/metrics.json`. No developer needs to
-authenticate against the Worker to see real data.
+**Local development after Phase 1.** Two supported paths, both offline-capable: pull
+the data repo, or run the collector directly with your own token. The frontend always
+reads `./data/metrics.json` — how that file arrives is the viewer's choice.
 
 ---
 
@@ -510,11 +532,13 @@ Per project convention (`scripts/test_collect_github.py`) and the global 80% rul
 1. **Teams must write `plan_file` markdown.** Without it #5 and #6 stay empty
    regardless of code quality. Highest-leverage non-code action.
 2. **SPDT repo names**, exactly.
-3. **Cloudflare account** + R2 bucket; R2 credentials as Actions secrets.
-4. **GitHub App** created and **installed on the `benegg` org** — requires a benegg
-   admin. This is an external dependency on a third party and gates Phase 1.
-5. **The exact Chinasoft email domain**, plus GitHub App client ID/secret and private
-   key as Worker secrets.
+3. **Create the private data repo** `ManagementDashboard-data` and mint a fine-grained
+   PAT scoped to *Contents: write on that repo only*, stored as `DATA_REPO_PAT`. Gates
+   Phase 1. No third-party account needed.
+4. **Decide who gets data-repo access**, and accept that everyone on that list sees
+   every tracked repo's metadata (§5.2 — no per-repo filtering).
+5. **Disable GitHub Pages** — still outstanding, and it is what actually closes the
+   original exposure.
 6. **Per-repo `start_date` / `end_date`** need an owner who knows each project's real
    timeline, or the elapsed-vs-completed comparison is meaningless.
 7. Optionally, granting Issues:Read (on `BEN_GH_METRICS_TOKEN` for benegg repos, and on
@@ -536,7 +560,32 @@ Per project convention (`scripts/test_collect_github.py`) and the global 80% rul
 
 ---
 
-## 11. Revision 2 corrections
+## 11. Revision 3 changes (2026-07-27, post-Phase-0)
+
+User constraint: **"only work in github, i dont want any third party things."**
+
+| Area | Was (rev. 2) | Now (rev. 3) |
+|---|---|---|
+| Hosting | Cloudflare Pages/Workers + R2 | **None.** Local viewing only |
+| Auth | GitHub App + OAuth + collaborator check in a Worker | **GitHub repo permission** on a private data repo. No login page |
+| Chinasoft email login | Supported via verified-email rule | **Dropped** — impossible without a third-party IdP (D9) |
+| `history.json` store | Cloudflare R2 | Private data repo; reuses `DATA_REPO_PAT`, no new credentials |
+| Phase 1 name | "Auth & hosting" | "Private data repo" |
+| Refresh model | Nightly to R2, served by Worker | Nightly commit-back; viewers `git pull` |
+
+**What this costs, stated plainly (§5.5):** no shareable URL, no always-on dashboard,
+no per-viewer filtering. Every viewer needs a GitHub account, data-repo access, git,
+Python and a terminal. Non-technical stakeholders cannot be served by this model. The
+only routes that would change that are GitHub Enterprise Cloud or a third-party host,
+both currently excluded.
+
+**What it gains:** zero new vendors, zero cost, no secrets at a public edge, no OAuth
+code to write or get wrong, and the exposure closes permanently rather than being
+gated. It also restores nightly refresh, undoing Phase 0's main day-to-day cost.
+
+---
+
+## 12. Revision 2 corrections
 
 | ID | Severity | Correction |
 |---|---|---|
