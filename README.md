@@ -104,10 +104,47 @@ Bar = 該週 task 數(按 level 疊,週一起計,冇數嘅週補零);黑線 = �
 
 **完成度嘅前提:成個 project plan 要拆晒落 Issues。** 個 % 嘅分母係「已開咗嘅 issues」,唔係 project 實際 scope — 如果邊做邊開 issue,佢量度嘅只係已知 backlog 嘅消化率,會系統性高估進度;而每次補開新 issues,% 會回跌 — 呢個唔係 bug,係 scope 浮現緊。想個 % 反映真進度:
 
-- **或者用 plan file**:config 設 `plan_file = "docs/project-plan.md"`,collector 讀 markdown checkboxes(`- [ ]` 未做 / `- [x]` 做咗),`#` heading 做 section 出 progress bars — 啱晒 plan 本身喺 markdown 嘅 workflow(例如 project brief)。task / heading 可以帶 inline 標記:`due:YYYY-MM-DD`(task 級 override section 級)、`!P0`/`!P1`/`!P2`、`#bug` — 有咗呢啲,「異常 tasks」同「今日建議」都食到 plan file(list 入面顯示 `plan` link)。冇標記嘅 plain checkbox 只入完成度,唔入建議排序;plan tasks 冇「更新時間」概念,所以呆滯偵測仍然只有 Issues 做到。
+- **或者用 plan file**:config 設 `plan_file = "docs/project-plan.md"`,collector 讀 markdown checkboxes(`- [ ]` 未做 / `- [x]` 做咗),`#` heading 做 section 出 progress bars — 啱晒 plan 本身喺 markdown 嘅 workflow(例如 project brief)。task / heading 可以帶 inline 標記:`due:YYYY-MM-DD`(task 級 override section 級)、`!P0`/`!P1`/`!P2`、`#bug` — 有咗呢啲,「異常 tasks」、「今日建議」同埋 **Defect 追蹤**(見下面)都食到 plan file(list 入面顯示 `plan` link)。冇標記嘅 plain checkbox 只入完成度,唔入建議排序;plan tasks 冇「更新時間」概念,所以呆滯偵測仍然只有 Issues 做到。
 - 以 **milestone 做 scope 單位** — 開新階段時,一次過將該階段全部 tasks 拆晒做 issues 掛入 milestone、設 due date。咁 milestone bar 先係可信嘅完成度,repo 級總 % 只當參考(佢永遠受「未開嘅嘢睇唔到」影響)。
 - 未估到細節嘅探索性工作,開一個 placeholder issue(例:`spike: X 方案調研`),令 scope 至少喺個分母度。
 - 見到 % 跌,先問「係咪開咗新 issues」,唔好直接當退步。
+
+### Defect 追蹤
+
+兩個來源合埋同一個表,未修嘅排先:
+
+| 來源 | 點寫 | 行為 |
+|---|---|---|
+| GitHub Issues | issue 打 `bug` label(要**完全等於** `bug`,`bugs` / `type:bug` 唔會 match) | Open 同最近 closed 都入,狀態顯示「未修」/ Fixed;Assignee、Due 跟 issue |
+| Plan file | config 設 `plan_file`,markdown 寫**未打勾** checkbox 加 `#bug` | 只有未打勾嘅入表(所以永遠係「未修」);打勾即代表修好,會由表消失 |
+
+**Plan file 寫法(直接 copy 改):**
+
+```markdown
+## Issue board
+
+- [ ] P-01 · CI · `lint` 呢個 required check 空跑,實際乜都檢查唔到 #bug !P1 due:2026-07-17
+- [ ] P-02 · docs · README 寫 3 個 required checks,ruleset 實際要 5 個 #bug !P2 due:2026-07-22
+- [ ] P-03 · CI · Actions 全部用浮動 major tag,又冇 Dependabot #bug !P3 due:2026-09-18
+- [x] P-00 · src · 打咗勾嘅會由 Defect 表消失(當已修好) #bug !P2 due:2026-07-01
+```
+
+| 標記 | 作用 | 冇寫會點 |
+|---|---|---|
+| `#bug` | 標明係 defect | checkbox 只入完成度,唔會出現喺 Defect 表 |
+| `!P1` / `!P2` / `!P3` | Severity → High / Medium / Low(`!P0` 亦當 High) | Severity 欄顯示 `—` |
+| `due:YYYY-MM-DD` | Due 欄。寫喺 `#` heading 就成個 section 共用,task 自己寫會 override | Due 欄顯示 `–` |
+
+`P-01 · CI ·` 呢類前綴純粹係你自己嘅編號同分類,dashboard 原樣顯示、唔會解析 — 想點編都得。
+
+**Severity 對照**(issue label 同 plan 標記共用同一套):`critical` / `high` / `P0` / `P1` → **High**;`medium` / `P2` → **Medium**;`low` / `P3` / `P4` → **Low**;乜都冇 → **—**。
+
+**幾點要知:**
+
+- 表最多顯示 10 行,右上角會寫實際總數(例:`11 項,顯示頭 10`),唔會靜靜截走。
+- Assignee 欄 plan file 冇對應概念,固定 `–`;要 assignee 就要用 GitHub Issues。
+- Plan file 睇唔到「已修好」歷史(打勾就消失)。想睇 Fixed 記錄要用 Issues — closed 嘅 `bug` issue 會以 Fixed 狀態留喺表入面。
+- 兩個來源可以同時用:同一個 repo 可以一邊開 issues、一邊喺 plan file 記,兩邊都會入表。
 
 ### 最近 Tasks 表格標記
 
@@ -357,7 +394,7 @@ python3 -m http.server -d docs 8000
 | `repos[].name` | — | `owner/name` |
 | `repos[].branch` | default branch | 單條 branch(只影響 commits)|
 | `repos[].branches` | — | **多 branch 監察**:`["main", "develop"]` — 逐條掃,共享 commits 去重(首名 branch 優先);同時做「跨 branch 合併」紅線嘅放行名單(自動加埋 default branch)|
-| `repos[].plan_file` | — | project plan markdown 路徑,checkboxes 做完成度 scope |
+| `repos[].plan_file` | — | project plan markdown 路徑;checkboxes 做完成度 scope,帶 `#bug` 嘅入 Defect 追蹤 |
 | `repos[].token_env` | `GH_METRICS_TOKEN` | 呢個 repo 改用另一個 env var 嘅 token(least privilege;workflow env 要傳入) |
 | `repos[].no_evidence_level` 等 | 跟全局 | 每個 repo 可獨立 override `no_evidence_level` / `sop_paths` / `rules` / `agent_authors`(例:已知 AI 輔助但冇 SOP convention 嘅 repo 設 `no_evidence_level = "L2"`、`sop_paths = []`) |
 | `classify.label_prefix` | `ai-level/` | PR label 前綴 |
