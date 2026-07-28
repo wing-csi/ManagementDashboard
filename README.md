@@ -87,7 +87,7 @@ Bar = 該週 task 數(按 level 疊,週一起計,冇數嘅週補零);黑線 = �
 |---|---|---|---|
 | RAG 燈 | 紅:security critical>0 或 CI pass<75%;黃:high>0 或 CI pass<90%;綠:其餘;灰:無 CI checks 又無 quality file | repo 健康一眼睇 | CI pass rate = rollup SUCCESS 嘅 PR ÷ 有 rollup 嘅 PR;coverage / security 數字嚟自 `quality_file` |
 | 修復佔比 | title match `^(fix|hotfix|revert)\b` 嘅 tasks ÷ 全部 × 100 | 工作有幾多係執手尾 | 量度**工作構成**,唔係「AI 錯誤率」— fix 修嘅可能係任何 level 引入嘅問題 |
-| PR 打回率 | 收過 ≥1 個 human `CHANGES_REQUESTED` 嘅 PR ÷ merged PRs × 100 | 字面意義嘅「被打回重做」 | 直接嚟自 GitHub review 記錄,冇得靠估;冇 PR flow 顯示「無 PR」 |
+| PR 打回率 | 收過 ≥1 個 merge 之前嘅 human `CHANGES_REQUESTED` 嘅 PR ÷ merged PRs × 100 | 字面意義嘅「被打回重做」 | 直接嚟自 GitHub review 記錄,冇得靠估;merge 之後先嚟嘅 CHANGES_REQUESTED 唔算(code 已經出咗,冇嘢返工過);冇 PR flow 顯示「無 PR」 |
 | PR 接受率 | merged ÷ (merged + window 內 close 咗冇 merge) × 100 | 提出嘅改動有幾多被接納 | |
 | 有效 tasks / 週 | additions ≥10 行嘅 tasks ÷ 週數 | 撇除 typo 級改動嘅真實產出節奏 | 閾值 10 行寫死喺 dashboard,想改就改 `meaningful` 嗰行 |
 | 各 Level 修復佔比 | 該 level 入面 fix tasks ÷ 該 level tasks | 「自動化越高係咪越多手尾」嘅切面 | 樣本細時波動大 |
@@ -151,7 +151,7 @@ Bar = 該週 task 數(按 level 疊,週一起計,冇數嘅週補零);黑線 = �
 | 標記 | 意思 |
 |---|---|
 | `#N` / hex | PR 號 / commit sha,click 去 GitHub |
-| `↩N` | 呢個 PR 被打回(CHANGES_REQUESTED)N 次 |
+| `↩N` | 呢個 PR 被打回(merge 之前嘅 CHANGES_REQUESTED)N 次 |
 | ⚠(黃) | level 聲稱同 PR 行為矛盾,hover 見原因(唔會自動降級) |
 | ⛔(紅) | 中咗治理紅線,hover 見邊條 |
 
@@ -255,12 +255,12 @@ Dashboard 有一欄量度「自動化程度同輸出質量嘅關係」:
 | 指標 | 計法 | 意義 |
 |---|---|---|
 | 修復佔比 | `fix:` / `hotfix:` / `revert:` 前綴 tasks ÷ 全部 | 工作有幾多係執手尾 |
-| PR 打回率 | 收過 `CHANGES_REQUESTED` 嘅 PR ÷ 全部 PR | 字面意義嘅「被打回重做」,直接嚟自 GitHub review 記錄 |
+| PR 打回率 | 收過 merge 之前嘅 `CHANGES_REQUESTED` 嘅 PR ÷ 全部 PR | 字面意義嘅「被打回重做」,直接嚟自 GitHub review 記錄 |
 | 各 Level 修復佔比 | 每個 level 入面 fix tasks 嘅比例 | 「自動化越高係咪越多手尾」嘅切面 |
 
 表格 Task 欄嘅 `↩N` badge = 呢個 PR 被打回 N 次;修復佔比較上一段升 ≥15pt 且 ≥30% 會出異常提醒。
 
-Attribution caveat:修復佔比量度嘅係**工作構成**,唔係「AI 寫錯率」— 一個 fix task 修嘅可能係任何 level 引入嘅問題,fix 本身嘅 level 唔代表邊個惹禍。打回率就冇呢個問題,打回打嘅係嗰個 PR 自己。冇 PR flow 嘅 repo(全 direct commit)打回率會顯示「無 PR」,本身就係一個發現。
+Attribution caveat:修復佔比量度嘅係**工作構成**,唔係「AI 寫錯率」— 一個 fix task 修嘅可能係任何 level 引入嘅問題,fix 本身嘅 level 唔代表邊個惹禍。打回率就冇呢個問題,打回打嘅係嗰個 PR 自己。打回只計 merge 之前收到嘅 CHANGES_REQUESTED —— GitHub 容許 review 已經 merge 咗嘅 PR,但嗰陣代碼已經出咗,唔算返工過。冇 PR flow 嘅 repo(全 direct commit)打回率會顯示「無 PR」,本身就係一個發現。
 
 ## 項目進度(Issues + Milestones)
 

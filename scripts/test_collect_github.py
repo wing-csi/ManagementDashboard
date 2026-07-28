@@ -358,6 +358,7 @@ def test_verify_l4_claim_with_review_churn_is_suspect():
 
 def test_two_reviewers_on_the_same_push_is_one_round():
     t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  merged="2026-05-10T10:00:00Z",
                   reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
                            ("CHANGES_REQUESTED", "amy", "User", "2026-05-02T11:00:00Z"),
                            ("APPROVED", "bob", "User")),
@@ -368,6 +369,7 @@ def test_two_reviewers_on_the_same_push_is_one_round():
 def test_rejection_after_a_push_is_a_second_round():
     t = infer_one(labels=("ai-level/L3",),
                   commits=(CLAUDE_FOOTER, CLAUDE_FOOTER),
+                  merged="2026-05-10T10:00:00Z",
                   reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),
                            ("CHANGES_REQUESTED", "bob", "User", "2026-05-04T10:00:00Z")),
                   pushes=("2026-05-01T09:00:00Z", "2026-05-03T09:00:00Z"))
@@ -409,20 +411,30 @@ def test_no_rejection_means_no_rework_hours():
     assert t.rework == 0 and t.rework_hours is None
 
 
-def test_rejection_after_merge_does_not_yield_negative_rework_hours():
+def test_rejection_after_merge_is_not_rework():
     # A slower reviewer's "Request changes" can land after a race auto-merge.
-    # The only rejection is submitted after mergedAt, so there is no turnaround
-    # to report — rework_hours must be None, never negative.
+    # The only rejection is submitted after mergedAt, so nothing was reworked —
+    # it counts as neither a rework round nor turnaround time.
     t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
                   merged="2026-05-02T10:00:00Z",
                   reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T11:00:00Z"),))
+    assert t.rework == 0
     assert t.rework_hours is None
+
+
+def test_rejection_exactly_at_merge_is_not_rework():
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  merged="2026-05-04T10:00:00Z",
+                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-04T10:00:00Z"),),
+                  pushes=("2026-05-01T09:00:00Z",))
+    assert t.rework == 0 and t.rework_hours is None
 
 
 def test_dismissed_rejection_is_still_counted():
     # GitHub rewrites the review's state to DISMISSED, so it survives only on
     # the timeline. Dismissing a rejection must not erase that it happened.
     t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  merged="2026-05-10T10:00:00Z",
                   dismissed=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),),
                   pushes=("2026-05-01T09:00:00Z",))
     assert t.rework == 1

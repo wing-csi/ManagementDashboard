@@ -682,7 +682,9 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allo
                 for c in (node.get("commits") or {}).get("nodes", [])
                 if c.get("commit", {}).get("committedDate")
             ]
-            first_reject = sig.rejections[0] if sig.rejections else None
+            # 打回 = merge 之前收到嘅 CHANGES_REQUESTED。Merge 之後先收到嗰啲唔算返工 —
+            # 嗰陣代碼已經出咗,冇嘢返工過。
+            rejections = [r for r in sig.rejections if r < node["mergedAt"]]
             # ladder: label → trailer → author → inference → substring rules
             level, method = classify_explicit(cfg, labels=labels, text=text, author=author)
             check = (
@@ -712,11 +714,8 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allo
                     ci=_ci_state(node),
                     violations=detect_violations(node, sig, cfg, allowed_branches),
                     reviewed=sig.human_reviews > 0,
-                    rework=rework_rounds(list(sig.rejections), pushes),
-                    rework_hours=(
-                        _lead_hours(first_reject, node["mergedAt"])
-                        if first_reject and first_reject < node["mergedAt"] else None
-                    ),
+                    rework=rework_rounds(rejections, pushes),
+                    rework_hours=_lead_hours(rejections[0], node["mergedAt"]) if rejections else None,
                 )
             )
         # UPDATED_AT desc + (mergedAt <= updatedAt) => once a whole page is

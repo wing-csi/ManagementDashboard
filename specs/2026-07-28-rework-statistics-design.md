@@ -68,13 +68,16 @@ self-rejection is impossible on GitHub.
 
 | Metric | Formula | Notes |
 |---|---|---|
-| **PR 打回率** | PRs with ≥1 rejection ÷ PRs with ≥1 **outside** human review × 100 | Denominator excludes PRs with no human review, and self-reviews do not qualify |
+| **PR 打回率** | PRs with ≥1 **pre-merge** rejection ÷ PRs with ≥1 **outside** human review × 100 | Denominator excludes PRs with no human review, and self-reviews do not qualify |
 | **平均返工輪數** | median rounds over rejected PRs | Shown as sub-text on the 打回率 card, not its own card |
 | **返工周轉時間** | median hours, first rejection → `mergedAt` | New KPI card. Measures the whole rework period, not just the last round |
 | **`↩N` badge** | rework **rounds** on that PR | Meaning changes from events to rounds |
 
 A **rejection** is a human `CHANGES_REQUESTED` review, whether still live or since
-dismissed. A **round** is a maximal run of rejections with no push between them.
+dismissed, **submitted before the PR merged**. GitHub permits reviewing an
+already-merged PR, but a rejection arriving after the merge caused no rework —
+the code had already shipped — so it counts as neither a round nor turnaround
+time. A **round** is a maximal run of rejections with no push between them.
 
 ## 3. Collector — `scripts/collect_github.py`
 
