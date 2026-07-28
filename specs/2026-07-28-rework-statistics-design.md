@@ -240,19 +240,44 @@ cases without going through a PR node.
 Frontend: an aggregation test that `reworkPRs <= reviewedPRs`, and that the 打回率
 card reads `–` with the un-reviewed message when every PR is unreviewed.
 
-### 6.2 Baseline
+### 6.2 Baseline — verified unaffected
 
-`test_frontend_snapshot.py` / `rendered-baseline.json` **will** shift — 打回率
-legitimately changes value. That baseline exists to prove the default render did
-*not* move, so re-baselining is a deliberate reviewed step in the plan, with the
-before/after numbers stated in the commit. It is not a silent regeneration.
+An earlier draft of this spec claimed `rendered-baseline.json` would shift. It
+will not, and the reason matters for the plan:
+
+- `SECTION_IDS` in [test_frontend_snapshot.py:29-32](../scripts/test_frontend_snapshot.py)
+  captures `strip`, `alertList`, `taskRows`, `projChips`, `projMilestones`,
+  `projLate`, `projTodo`, `footStamp`. The `.qgrid` quality block is **not**
+  among them, so 打回率 and the new card are outside the snapshot entirely.
+- `taskRows` **is** captured and does render the `↩N` badge — but
+  `metrics-fixture.json` holds exactly two tasks, both `"rework": 0`, so no badge
+  is emitted and the tooltip rewording changes nothing.
+
+`metrics-fixture.json` and `rendered-baseline.json` are therefore **left
+untouched**, honouring the standing rule from
+[plans/2026-07-28-owner-contributor-filter.md:722-724](../plans/2026-07-28-owner-contributor-filter.md):
+their whole value is proving the *default* render did not shift.
 
 ### 6.3 Fixtures
 
-`scripts/fixtures/metrics-fixture.json`,
-`scripts/fixtures/metrics-fixture-people.json`, and `docs/data/demo-data.js` gain
-`reviewed` and `rework_hours`, with at least one fixture PR exercising a
-multi-round rejection so the median has something to chew on.
+New frontend coverage gets its own fixture and module, following the precedent
+of `metrics-fixture-people.json` + `test_frontend_people.py`:
+
+- **Create** `scripts/fixtures/metrics-fixture-rework.json` — PRs covering
+  reviewed/un-reviewed, single-round and multi-round rejection, so both the new
+  denominator and the median have something to chew on.
+- **Create** `scripts/test_frontend_rework.py`, serving that fixture by
+  **intercepting the `metrics.json` request** (`page.route`), never by swapping
+  the file on disk. [test_frontend_people.py:5-9](../scripts/test_frontend_people.py)
+  documents why: `docs/data/metrics.json` holds the operator's real ~1.2 MB
+  private data, and an interrupted disk-swap run leaves a 2 KB fixture in its
+  place, which the next run then "restores" as if it were the original.
+
+`docs/data/demo-data.js` also gains the fields. It is a hand-extracted 80 KB
+single-line blob with no generator, so it is transformed by a one-off script
+rather than edited by hand. Demo values are synthetic and that is legitimate:
+demo mode is opt-in behind `?demo=1` and sets `state.demo = true`
+([data.js:44-51](../docs/js/data.js)).
 
 Field shapes, using synthetic values:
 
