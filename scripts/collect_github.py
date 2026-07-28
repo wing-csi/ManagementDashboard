@@ -102,9 +102,15 @@ query($owner:String!,$name:String!,$cursor:String){
         mergedBy{ login __typename }
         autoMergeRequest{ enabledBy{ login } }
         reviews(first:50){ nodes{ state author{ login __typename } } }
+        rejections: reviews(first:50, states:[CHANGES_REQUESTED]){
+          nodes{ author{ login __typename } submittedAt } }
+        timelineItems(first:20, itemTypes:[REVIEW_DISMISSED_EVENT]){
+          nodes{ ... on ReviewDismissedEvent {
+            previousReviewState
+            dismissedReview{ submittedAt author{ login __typename } } } } }
         reviewThreads(first:1){ totalCount }
         labels(first:20){ nodes{ name } }
-        commits(first:50){ nodes{ commit{ message } } }
+        commits(first:50){ nodes{ commit{ message committedDate } } }
         lastCommit: commits(last:1){ nodes{ commit{ statusCheckRollup{ state } } } }
         files(first:100){ nodes{ path changeType } }
       }
@@ -372,6 +378,7 @@ class PrSignals:
     touches_tests: bool  # diff includes test-looking file paths
     touches_sop: bool = False  # diff includes SOP artifact paths (e.g. testcases/)
     approvals: int = 0  # human APPROVED reviews
+    rejections: tuple[str, ...] = ()  # submit times of human rejections, live + dismissed
 
 
 def _is_bot(actor: dict | None, cfg: dict) -> bool:
@@ -385,24 +392,58 @@ def _is_bot(actor: dict | None, cfg: dict) -> bool:
     )
 
 
+def _rejection_times(node: dict, cfg: dict) -> tuple[str, ...]:
+    """Submit times of every human CHANGES_REQUESTED review, live and dismissed.
+
+    Dismissing a rejection rewrites its `state` to DISMISSED, so it disappears
+    from `reviews` — REVIEW_DISMISSED_EVENT.previousReviewState is the only
+    place it survives. Because a dismissed review is no longer CHANGES_REQUESTED
+    in `reviews`, the two sources never overlap and nothing is double-counted.
+
+    Self-rejection needs no filter: GitHub does not allow an author to request
+    changes on their own PR.
+    """
+    times = [
+        r["submittedAt"]
+        for r in (node.get("rejections") or {}).get("nodes", [])
+        if r.get("submittedAt") and not _is_bot(r.get("author"), cfg)
+    ]
+    for ev in (node.get("timelineItems") or {}).get("nodes", []):
+        if ev.get("previousReviewState") != "CHANGES_REQUESTED":
+            continue
+        review = ev.get("dismissedReview") or {}
+        if review.get("submittedAt") and not _is_bot(review.get("author"), cfg):
+            times.append(review["submittedAt"])
+    return tuple(sorted(times))
+
+
 def extract_signals(node: dict, cfg: dict) -> PrSignals:
     messages = [c["commit"]["message"] for c in (node.get("commits") or {}).get("nodes", [])]
     ai_commits = sum(
         1 for m in messages
         if any(rule["contains"].lower() in m.lower() for rule in cfg["rules"])
     )
+    pr_author = (node.get("author") or {}).get("login") or ""
     reviews = [
         r for r in (node.get("reviews") or {}).get("nodes", [])
         if not _is_bot(r.get("author"), cfg)
+        # PENDING = an unsubmitted draft review, not yet a review of anything.
+        and r.get("state") != "PENDING"
+        # Defect 7: GitHub blocks self-approve and self-request-changes but
+        # permits a COMMENTED self-review. Counting it lets an author mark
+        # their own PR "reviewed" and suppress merged-without-review.
+        and not (pr_author and (r.get("author") or {}).get("login") == pr_author)
     ]
+    rejections = _rejection_times(node, cfg)
     paths = [f["path"] for f in (node.get("files") or {}).get("nodes", [])]
     return PrSignals(
         author_is_bot=_is_bot(node.get("author"), cfg),
         merged_by_bot=_is_bot(node.get("mergedBy"), cfg),
         auto_merge=node.get("autoMergeRequest") is not None,
         human_reviews=len(reviews),
-        changes_requested=sum(1 for r in reviews if r.get("state") == "CHANGES_REQUESTED"),
+        changes_requested=len(rejections),
         approvals=sum(1 for r in reviews if r.get("state") == "APPROVED"),
+        rejections=rejections,
         review_threads=(node.get("reviewThreads") or {}).get("totalCount", 0),
         total_commits=len(messages),
         ai_commits=ai_commits,

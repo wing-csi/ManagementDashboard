@@ -65,7 +65,22 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
             author_type="User", merged="2026-05-02T10:00:00Z", updated=None, add=50,
             commits=(), merged_by=("wing", "User"), auto_merge=False, reviews=(),
             threads=0, files=(), branch="feature/demo",
-            created="2026-05-01T10:00:00Z", closed=None, ci=None, base="main"):
+            created="2026-05-01T10:00:00Z", closed=None, ci=None, base="main",
+            dismissed=(), pushes=()):
+    """Build a fake PR node.
+
+    reviews:   (state, login, __typename) or (state, login, __typename, submittedAt)
+    dismissed: (previousReviewState, login, __typename, submittedAt) — reviews GitHub
+               has rewritten to DISMISSED, which survive only on the timeline
+    pushes:    committedDate per commit, positionally; commits past the end of this
+               tuple fall back to a fixed early date
+    """
+    rows = [
+        {"state": r[0],
+         "author": {"login": r[1], "__typename": r[2]},
+         "submittedAt": r[3] if len(r) > 3 else "2026-05-01T12:00:00Z"}
+        for r in reviews
+    ]
     return {
         "number": number,
         "headRefName": branch,
@@ -82,13 +97,27 @@ def pr_node(number=1, title="feat: y", body="", labels=(), author="wing",
         "author": {"login": author, "__typename": author_type},
         "mergedBy": {"login": merged_by[0], "__typename": merged_by[1]},
         "autoMergeRequest": {"enabledBy": {"login": "agent"}} if auto_merge else None,
-        "reviews": {"nodes": [
-            {"state": st, "author": {"login": lg, "__typename": tp}}
-            for (st, lg, tp) in reviews
+        "reviews": {
+            "nodes": [{"state": r["state"], "author": r["author"]} for r in rows],
+        },
+        "rejections": {"nodes": [
+            {"author": r["author"], "submittedAt": r["submittedAt"]}
+            for r in rows if r["state"] == "CHANGES_REQUESTED"
+        ]},
+        "timelineItems": {"nodes": [
+            {"previousReviewState": st,
+             "dismissedReview": {"submittedAt": at,
+                                 "author": {"login": lg, "__typename": tp}}}
+            for (st, lg, tp, at) in dismissed
         ]},
         "reviewThreads": {"totalCount": threads},
         "labels": {"nodes": [{"name": l} for l in labels]},
-        "commits": {"nodes": [{"commit": {"message": m}} for m in commits]},
+        "commits": {"nodes": [
+            {"commit": {"message": m,
+                        "committedDate": pushes[i] if i < len(pushes)
+                        else "2026-05-01T09:00:00Z"}}
+            for i, m in enumerate(commits)
+        ]},
         "lastCommit": {"nodes": [{"commit": {"statusCheckRollup": {"state": ci} if ci else None}}]},
         "files": {"nodes": [
             {"path": f, "changeType": "MODIFIED"} if isinstance(f, str)
@@ -333,6 +362,28 @@ def test_pr_rework_counts_multiple_changes_requested():
                            ("CHANGES_REQUESTED", "amy", "User"),
                            ("APPROVED", "bob", "User")))
     assert t.rework == 2
+
+
+def test_dismissed_rejection_is_still_counted():
+    # GitHub rewrites the review's state to DISMISSED, so it survives only on
+    # the timeline. Dismissing a rejection must not erase that it happened.
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  dismissed=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),),
+                  pushes=("2026-05-01T09:00:00Z",))
+    assert t.rework == 1
+
+
+def test_dismissed_approval_is_not_counted_as_rework():
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  dismissed=(("APPROVED", "bob", "User", "2026-05-02T10:00:00Z"),))
+    assert t.rework == 0
+
+
+def test_bot_rejection_is_not_counted():
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  reviews=(("CHANGES_REQUESTED", "sonar[bot]", "Bot",
+                            "2026-05-02T10:00:00Z"),))
+    assert t.rework == 0
 
 
 # ------------------------------------------------------- rework rounds
