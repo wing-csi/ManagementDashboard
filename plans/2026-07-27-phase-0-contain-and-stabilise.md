@@ -56,13 +56,17 @@ Highest urgency in the plan. The live file at `https://wing-csi.github.io/Manage
 - Consumes: nothing
 - Produces: a CI workflow that collects and validates but publishes nothing.
 
-- [x] **Step 1: Disable GitHub Pages (manual, do this first)**
+- [ ] **Step 1: Disable GitHub Pages (manual, do this first)** ⚠️ **NOT DONE**
 
 In a browser: `https://github.com/wing-csi/ManagementDashboard/settings/pages` → **Source → None** → Save.
 
 This is the step that actually takes the URL down. Do not skip it or defer it.
 
-- [x] **Step 2: Verify the URL is dead**
+> **Still outstanding.** This is a manual browser action and was never performed.
+> Every other step in this plan is complete; this one is not, and it is the step that
+> actually closes the data exposure.
+
+- [ ] **Step 2: Verify the URL is dead** ⚠️ **NOT DONE — last check returned HTTP 200**
 
 ```bash
 curl -s -o /dev/null -w "HTTP %{http_code}\n" https://wing-csi.github.io/ManagementDashboard/data/metrics.json
