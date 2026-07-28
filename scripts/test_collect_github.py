@@ -1016,3 +1016,17 @@ def test_build_output_warns_on_unknown_owner(capsys):
            "people": {"Wing": ["wing-csi"]}}
     build_output(cfg, [], {"wing/abci": {}}, [], "2026-07-28T05:00:00+00:00")
     assert "Wng" in capsys.readouterr().err
+
+
+def test_build_output_warns_once_per_unknown_owner(capsys):
+    """A non-committing owner of many repos is one fact, not N nightly warnings."""
+    from collect_github import build_output
+    repos = [{"name": f"acme/r{i}", "owner": "Lam"} for i in range(9)]
+    cfg = {"window_days": 90, "mode": "auto", "repos": repos, "people": {}}
+    repo_meta = {r["name"]: {} for r in repos}
+    build_output(cfg, [], repo_meta, [], "2026-07-28T05:00:00+00:00")
+    err = capsys.readouterr().err
+    assert err.count("Lam") == 1
+    assert "9 repos" in err            # still says how widespread it is
+    # every repo still gets the owner stamped, warning or not
+    assert all(m["owner"] == "Lam" for m in repo_meta.values())

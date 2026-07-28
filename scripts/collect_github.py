@@ -945,6 +945,7 @@ def build_output(cfg: dict, tasks: list, repo_meta: dict,
     """
     known = set(cfg["people"]) | {i for ids in cfg["people"].values() for i in ids}
     task_authors = {t.author for t in tasks if t.author}
+    unknown_owners: dict[str, int] = {}
     for repo_cfg in cfg["repos"]:
         owner = resolve_owner(repo_cfg, cfg["people"])
         if owner is None:
@@ -954,10 +955,17 @@ def build_output(cfg: dict, tasks: list, repo_meta: dict,
             continue
         meta["owner"] = owner
         if owner not in known and owner not in task_authors:
-            # Not fatal: an owner who never commits is legitimate. But this is
-            # also exactly how a typo looks, so say so.
-            print(f"  ! warning: {repo_cfg['name']}: owner {owner!r} matches no "
-                  "known person or task author", file=sys.stderr)
+            unknown_owners[owner] = unknown_owners.get(owner, 0) + 1
+    for owner, n in unknown_owners.items():
+        # Not fatal: an owner who never commits is legitimate (a manager, say).
+        # But this is also exactly how a typo looks, so say so — once per owner,
+        # not once per repo, or one non-committing owner of nine repos produces
+        # nine identical lines every nightly run.
+        # ASCII only: this goes to a Windows console too, where a non-cp1252
+        # character prints as a replacement glyph.
+        print(f"  ! warning: owner {owner!r} matches no known person or task "
+              f"author ({n} repos) - typo, or add their identity to [people]",
+              file=sys.stderr)
     return {
         "schema_version": 2,
         "generated_at": generated_at,

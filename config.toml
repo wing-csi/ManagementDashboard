@@ -25,6 +25,7 @@ plan_file = "plan.md"        # remediation tracker;`#bug` 嘅項目會入 Defect
 
 [[repos]]
 name = "Tony-Liu-1248/abci-crm"
+owner = "Tony"
 # 已知全程 AI 輔助嘅 project,但冇 footer / SOP convention:
 # 冇證據時預設 L2(override 全局嘅 L1),另外呢個 repo 冇 testcases/ 規範
 no_evidence_level = "L2"
@@ -38,43 +39,51 @@ branches = ["master", "hotfix/v2.6.1"]
 
 [[repos]]
 name = "benegg/BOCPT-EE-Web"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 branches = ["feature/new-client-develop"]
 
 [[repos]]
 name = "benegg/BOCPT-EE-APP-IOS"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
 name = "benegg/BOCPT-EE-APP-ANDROID"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
 name = "benegg/BOCPT-ER-WEB"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
 name = "benegg/BOCPT-CMS-API"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 branches = ["feature/new-client-develop"]
 
 [[repos]]
 name = "benegg/BOCPT-ORSO-API"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
 name = "benegg/BOCPT-WEB-API"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
 name = "benegg/BOCPT-CMS-WEB"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 branches = ["feature/new-client-develop"]
@@ -84,6 +93,7 @@ branches = ["feature/new-client-develop"]
 # 同時確認 Ben 個 token 嘅 Repository access 有揀埋佢
 # [[repos]]
 # name = "benegg/???"
+# owner = "Lam"
 # token_env = "BEN_GH_METRICS_TOKEN"
 # sop_paths = []
 # branches = ["feature/new-client-develop"]
@@ -95,6 +105,7 @@ sop_paths = []
 
 [[repos]]
 name = "benegg/BOCPT-EE-APP-EMBED-WEB"
+owner = "Lam"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 
@@ -126,6 +137,9 @@ branches = ["main", "Refactor", "product-selection-update"]
 # 錯咗嘅 alias 會靜靜哋拆散或者夾埋人哋嘅工作量,比收唔到數更差。
 [people]
 Wing = ["wing-csi", "wing2036"]
+Tony = ["Tony-Liu-1248"]
+# Lam 冇喺數據入面出現過(純負責人,唔 commit)—
+# 唔使喺度列。如果佢有 GitHub 帳號,加返落嚟就唔會再出 warning。
 
 # ---- 分級規則(priority:label → trailer → author → rules)----
 
