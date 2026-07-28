@@ -1,0 +1,18 @@
+{
+ "schema_version": 2,
+ "generated_at": "2026-07-28T05:00:00+00:00",
+ "window_days": 180,
+ "mode": "auto",
+ "repos": ["acme/alpha"],
+ "people": {"Wing": ["wing-csi"]},
+ "tasks": [
+  {"date": "2026-07-20", "repo": "acme/alpha", "author": "wing-csi", "id": "1", "kind": "pr", "branch": "main", "title": "feat: reviewed and rejected twice", "level": "L3", "method": "label", "check": null, "additions": 40, "deletions": 2, "url": "https://example.test/1", "reviewed": true, "rework": 2, "rework_hours": 48, "violations": [], "lead_hours": 60, "ci": "pass"},
+  {"date": "2026-07-19", "repo": "acme/alpha", "author": "wing-csi", "id": "2", "kind": "pr", "branch": "main", "title": "feat: reviewed and rejected once", "level": "L3", "method": "label", "check": null, "additions": 30, "deletions": 1, "url": "https://example.test/2", "reviewed": true, "rework": 1, "rework_hours": 12, "violations": [], "lead_hours": 20, "ci": "pass"},
+  {"date": "2026-07-18", "repo": "acme/alpha", "author": "wing-csi", "id": "3", "kind": "pr", "branch": "main", "title": "feat: reviewed and clean", "level": "L3", "method": "label", "check": null, "additions": 20, "deletions": 1, "url": "https://example.test/3", "reviewed": true, "rework": 0, "rework_hours": null, "violations": [], "lead_hours": 5, "ci": "pass"},
+  {"date": "2026-07-17", "repo": "acme/alpha", "author": "Tony", "id": "4", "kind": "pr", "branch": "main", "title": "feat: auto-merged never reviewed", "level": "L5", "method": "label", "check": null, "additions": 10, "deletions": 0, "url": "https://example.test/4", "reviewed": false, "rework": 0, "rework_hours": null, "violations": [], "lead_hours": 1, "ci": "pass"}
+ ],
+ "repo_meta": {
+  "acme/alpha": {"owner": "Wing", "disk_kb": 1024, "languages": {"items": [{"name": "Python", "bytes": 5000}]}, "deployments": [], "releases": [], "tags": [], "closed_unmerged": ["2026-07-16"], "issues": null}
+ },
+ "errors": []
+}

@@ -135,7 +135,7 @@ export function renderTable() {
       <td class="mono">${r.date}</td>
       <td class="repo" title="${esc(r.repo)}">${esc(r.repo.split('/').pop())}</td>
       <td class="mono" style="font-size:11.5px" title="${esc(r.author || '')}">${esc(r.author || '–')}</td>
-      <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.kind === 'pr' ? '#' + esc(r.id) : esc(r.id)}</a>${(r.rework || 0) > 0 ? `<span class="rework" title="被打回 ${r.rework} 次">↩${r.rework}</span>` : ''}</td>
+      <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.kind === 'pr' ? '#' + esc(r.id) : esc(r.id)}</a>${(r.rework || 0) > 0 ? `<span class="rework" title="被打回 ${r.rework} 輪">↩${r.rework}</span>` : ''}</td>
       <td class="branch" title="${esc(r.branch || '')}">${esc(r.branch || '–')}</td>
       <td class="subject" title="${esc(r.title)}">${typeChip(r.title)}${esc(r.title)}</td>
       <td class="lvlcell">${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}${r.check && r.check.indexOf('suspect') === 0 ? `<span class="flag" title="${esc(r.check)}">⚠</span>` : ''}${(r.violations || []).length ? `<span class="vflag" title="${esc(r.violations.map((v) => (VIOLATION_META[v] || {}).label || v).join(' · '))}">⛔</span>` : ''}</td>

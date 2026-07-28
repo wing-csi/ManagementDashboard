@@ -117,7 +117,7 @@
   <section class="card quality">
     <div class="card-head">
       <h2>品質 × 自動化</h2>
-      <span class="card-note">fix / hotfix / revert 前綴 · PR CHANGES_REQUESTED</span>
+      <span class="card-note">fix / hotfix / revert 前綴 · PR 打回輪數(以 push 分隔)</span>
       <span class="scope-note" hidden>RAG 燈全 repo 範圍</span>
     </div>
     <div class="rag" id="ragRow"></div>
@@ -132,6 +132,11 @@
         <div class="label">PR 打回率</div>
         <div class="value" id="qRework">–</div>
         <div class="sub" id="qReworkSub">–</div>
+      </div>
+      <div class="kpi">
+        <div class="label">返工周轉時間</div>
+        <div class="value" id="qTurn">–</div>
+        <div class="sub" id="qTurnSub">–</div>
       </div>
       <div class="kpi">
         <div class="label">PR 接受率</div>

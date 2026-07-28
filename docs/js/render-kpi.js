@@ -239,17 +239,36 @@ export function renderQuality(cur) {
   const fp = pct(cur.fixTasks, cur.total);
   $('qFix').innerHTML = fp == null ? '–' : `${fp}<span class="unit">%</span>`;
   $('qFixSub').textContent = `${cur.fixTasks} 個 fix / revert task,共 ${cur.total} 個`;
-  const rp = pct(cur.reworkPRs, cur.prTotal);
+  // 打回率 分母係「有人 review 過」嘅 PR — 冇人 review 過嘅 PR 根本冇得被打回,
+  // 擺入分母等同當佢「通過咗 review」。
+  const rp = pct(cur.reworkPRs, cur.reviewedPRs);
   $('qRework').innerHTML = rp == null ? '–' : `${rp}<span class="unit">%</span>`;
-  $('qReworkSub').textContent = cur.prTotal
-    ? `${cur.reworkPRs} / ${cur.prTotal} 個 PR 收過 CHANGES_REQUESTED`
-    : '此範圍內無 PR';
+  if (cur.reviewedPRs) {
+    const mr = median(cur.reworkRounds);
+    $('qReworkSub').textContent =
+      `${cur.reworkPRs} / ${cur.reviewedPRs} 個有 review 嘅 PR 被打回 · 中位 ${mr} 輪`;
+  } else {
+    $('qReworkSub').textContent = cur.prTotal
+      ? '此範圍內無經 review 嘅 PR'
+      : '此範圍內無 PR';
+  }
+
+  $('qTurn').innerHTML = fmtHours(median(cur.reworkTurnarounds));
+  $('qTurnSub').textContent = cur.reworkTurnarounds.length
+    ? `由第一次打回到 merge · ${cur.reworkTurnarounds.length} 個 PR`
+    : '此範圍內無被打回嘅 PR';
+
   const meta = metaInWindow();
-  const ap = pct(cur.prTotal, cur.prTotal + meta.closedUnmerged);
+  // 一個人嘅 merged PR ÷ 全 repo 嘅 closed PR 唔係一個比率 — closed_unmerged
+  // 係 repo 層面 metadata,冇 person 維度(同 變更失敗率 一樣嘅處理)。
+  const ap = state.person === 'all'
+    ? pct(cur.prTotal, cur.prTotal + meta.closedUnmerged) : null;
   $('qAccept').innerHTML = ap == null ? '–' : `${ap}<span class="unit">%</span>`;
-  $('qAcceptSub').textContent = (cur.prTotal + meta.closedUnmerged)
-    ? `${cur.prTotal} merged / ${meta.closedUnmerged} 個 close 咗冇 merge`
-    : '此範圍內無 PR';
+  $('qAcceptSub').textContent = state.person !== 'all'
+    ? '需要全員範圍(closed PR 冇 person 維度)'
+    : ((cur.prTotal + meta.closedUnmerged)
+      ? `${cur.prTotal} merged / ${meta.closedUnmerged} 個 close 咗冇 merge`
+      : '此範圍內無 PR');
   $('qMeaning').textContent = (cur.meaningful / (state.windowDays / 7)).toFixed(1);
   const box = $('qLevels');
   box.innerHTML = '';

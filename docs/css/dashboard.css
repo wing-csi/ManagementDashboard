@@ -299,7 +299,7 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .qrow .p { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: right; }
 .rework { color: var(--warn); font-family: var(--font-mono); font-size: 11px; margin-left: 6px; }
 .kpis.dora .value { font-size: 26px; }
-.qgrid { grid-template-columns: repeat(4, 1fr); }
+.qgrid { grid-template-columns: repeat(5, 1fr); }
 .rag { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; }
 .rag .chip-rag { font-family: var(--font-mono); font-size: 12px; display: flex; align-items: center; gap: 7px; cursor: help; }
 .rag .dotg { width: 10px; height: 10px; border-radius: 50%; }
