@@ -60,9 +60,11 @@ instructions; the API token value is never handled by the agent):
    (production) and `*.management-dashboard-emj.pages.dev` (preview URLs).
 4. Access policy: Allow → Include → Emails: the three addresses above.
    Login method: **One-time PIN only** (no IdP, nothing to install).
-5. Create an API token with the **"Cloudflare Pages — Edit"** template (least privilege),
-   note the Account ID, and add both to the hub repo's GitHub Actions secrets:
-   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
+5. Create an API token via **Create Custom Token** — the token-template list has no
+   Pages entry (checked 2026-07-28). Permission: **Account → Cloudflare Pages → Edit**,
+   that row only; Account Resources scoped to this account. Note the Account ID, and add
+   both to the hub repo's GitHub Actions secrets: `CLOUDFLARE_API_TOKEN`,
+   `CLOUDFLARE_ACCOUNT_ID`.
 
 **Ordering constraint (security):** the first CI deploy contains real `metrics.json`,
 so steps 1–4 must be completed — and the unauthenticated-request check verified to show
@@ -134,8 +136,8 @@ Access team domain: `summer-mud-0e86.cloudflareaccess.com`.
 - [x] Unauthenticated `https://management-dashboard-emj.pages.dev/data/metrics.json` → blocked the same way. **Verified 2026-07-28: 302 → same login.**
 - [ ] Login with an allowlisted email (OTP) → dashboard renders with real data, no console errors.
 - [ ] An email outside the allowlist cannot get in.
-- [ ] `workflow_dispatch` run of `collect` is green end-to-end and the site shows the fresh `generated_at`.
-- [ ] `docs/data/metrics.json` still untracked in this public repo (existing guard test passes).
+- [x] `collect` run green end-to-end. **Verified 2026-07-28: run #70 (attempt 2) all steps success, including `Deploy dashboard to Cloudflare Pages`.**
+- [x] `docs/data/metrics.json` still untracked in this public repo. **Verified 2026-07-28: guard tests pass (106 passed, 1 skipped).**
 
 ## Out of scope
 

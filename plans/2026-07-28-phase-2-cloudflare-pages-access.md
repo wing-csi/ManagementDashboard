@@ -273,9 +273,9 @@ the verification at each step is the ground truth, not the exact click path.
   (OTP email) → now shows "placeholder". A non-allowlisted email must be rejected.
   **Do not proceed to Task 4 until this passes.**
 - [ ] **M6 — API token + GitHub secrets (user handles the value alone).**
-  dash.cloudflare.com → My Profile → API Tokens → Create Token → template
-  "Cloudflare Pages — Edit" (or Custom: Account / Cloudflare Pages / Edit, scoped to
-  this account only). Copy the token. Find the Account ID (Workers & Pages overview,
+  dash.cloudflare.com → My Profile → API Tokens → Create Token → **Create Custom
+  Token** (the template list has no Pages entry). Permission: **Account → Cloudflare
+  Pages → Edit**, Account Resources scoped to this account. Copy the token. Find the Account ID (Workers & Pages overview,
   right column). Then in GitHub: `wing-csi/ManagementDashboard` → Settings → Secrets
   and variables → Actions → New repository secret ×2: `CLOUDFLARE_API_TOKEN` (the
   token), `CLOUDFLARE_ACCOUNT_ID` (the account id). The agent never sees either value.
