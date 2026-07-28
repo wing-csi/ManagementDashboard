@@ -371,6 +371,26 @@ def test_rework_rounds_push_before_first_rejection_does_not_add_a_round():
     ) == 1
 
 
+def test_rework_rounds_push_equal_to_earlier_rejection_does_not_add_round():
+    # Boundary case: push timestamp exactly equals the earlier rejection.
+    # The condition `prev < p <= cur` requires p to be strictly after prev,
+    # so a push equal to prev does NOT count as between rejections.
+    assert rework_rounds(
+        ["2026-05-02T10:00:00Z", "2026-05-02T11:00:00Z"],
+        ["2026-05-02T10:00:00Z"],
+    ) == 1
+
+
+def test_rework_rounds_push_equal_to_later_rejection_adds_round():
+    # Boundary case: push timestamp exactly equals the later rejection.
+    # The condition `prev < p <= cur` is true when p equals cur and prev < p,
+    # so a push equal to cur DOES count as between rejections.
+    assert rework_rounds(
+        ["2026-05-02T10:00:00Z", "2026-05-02T11:00:00Z"],
+        ["2026-05-02T11:00:00Z"],
+    ) == 2
+
+
 def test_verify_l4_claim_without_tests_is_suspect():
     t = infer_one(body="AI-Level: L4", commits=(CLAUDE_FOOTER,),
                   files=("src/app.py",), add=200)
