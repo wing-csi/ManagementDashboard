@@ -246,7 +246,8 @@ export function renderQuality(cur) {
   if (cur.reviewedPRs) {
     const mr = median(cur.reworkRounds);
     $('qReworkSub').textContent =
-      `${cur.reworkPRs} / ${cur.reviewedPRs} 個有 review 嘅 PR 被打回 · 中位 ${mr} 輪`;
+      `${cur.reworkPRs} / ${cur.reviewedPRs} 個有 review 嘅 PR 被打回`
+      + (mr == null ? '' : ` · 中位 ${mr} 輪`);
   } else {
     $('qReworkSub').textContent = cur.prTotal
       ? '此範圍內無經 review 嘅 PR'
@@ -256,7 +257,9 @@ export function renderQuality(cur) {
   $('qTurn').innerHTML = fmtHours(median(cur.reworkTurnarounds));
   $('qTurnSub').textContent = cur.reworkTurnarounds.length
     ? `由第一次打回到 merge · ${cur.reworkTurnarounds.length} 個 PR`
-    : '此範圍內無被打回嘅 PR';
+    : (cur.reworkPRs
+      ? '被打回嘅 PR 都係 merge 之後先收到打回,冇返工時間可計'
+      : '此範圍內無被打回嘅 PR');
 
   const meta = metaInWindow();
   // 一個人嘅 merged PR ÷ 全 repo 嘅 closed PR 唔係一個比率 — closed_unmerged

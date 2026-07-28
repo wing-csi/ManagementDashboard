@@ -13,6 +13,7 @@ Run:  python -m pytest scripts/test_frontend_rework.py -v
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -69,3 +70,59 @@ def test_accept_rate_blanks_out_under_a_person_filter(rework_page, server):
 def test_accept_rate_still_renders_for_everyone(rework_page, server):
     page = open_dashboard(rework_page, server)
     assert page.text_content("#qAccept").strip() != "–"
+
+
+# ------------- edge cases in the reviewed/rework/turnaround empty states -------------
+#
+# These use `page` directly rather than the `rework_page` fixture: each test needs its
+# own variant of the fixture data, built by loading the pinned JSON and mutating a copy
+# (same pattern as test_frontend_people.py::test_contributors_are_not_truncated), not by
+# editing metrics-fixture-rework.json itself — that file pins the arithmetic the five
+# tests above assert.
+
+def _load_fixture() -> dict:
+    return json.loads(FIXTURE.read_text(encoding="utf-8"))
+
+
+def _serve(page, data: dict) -> None:
+    page.route(
+        "**/data/metrics.json",
+        lambda route: route.fulfill(
+            status=200, content_type="application/json",
+            body=json.dumps(data, ensure_ascii=False)),
+    )
+
+
+def test_rework_sub_omits_median_when_no_reviewed_pr_was_rejected(page, server):
+    """reworkRounds is [] when every reviewed PR is clean; median([]) is null,
+    and the subtext must not interpolate the literal string "null"."""
+    data = _load_fixture()
+    for t in data["tasks"]:
+        t["rework"] = 0
+        t["rework_hours"] = None
+    _serve(page, data)
+    dash = open_dashboard(page, server)
+    assert "null" not in dash.text_content("#qReworkSub")
+    assert dash.text_content("#qRework").strip().startswith("0.0")
+
+
+def test_turn_sub_distinguishes_no_measurable_turnaround_from_no_rejection(page, server):
+    """rework > 0 with rework_hours all null is a real by-design state (the
+    first rejection landed at/after merge) — it must not be reported as if
+    nothing was rejected."""
+    data = _load_fixture()
+    for t in data["tasks"]:
+        t["rework_hours"] = None
+    _serve(page, data)
+    dash = open_dashboard(page, server)
+    assert "無被打回" not in dash.text_content("#qTurnSub")
+    assert dash.text_content("#qTurn").strip() == "–"
+
+
+def test_rework_sub_reports_no_prs_when_scope_has_none(page, server):
+    data = _load_fixture()
+    for t in data["tasks"]:
+        t["kind"] = "commit"
+    _serve(page, data)
+    dash = open_dashboard(page, server)
+    assert dash.text_content("#qReworkSub").strip() == "此範圍內無 PR"
