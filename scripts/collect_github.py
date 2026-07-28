@@ -679,6 +679,7 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allo
                 for c in (node.get("commits") or {}).get("nodes", [])
                 if c.get("commit", {}).get("committedDate")
             ]
+            first_reject = sig.rejections[0] if sig.rejections else None
             # ladder: label → trailer → author → inference → substring rules
             level, method = classify_explicit(cfg, labels=labels, text=text, author=author)
             check = (
@@ -710,8 +711,8 @@ def collect_prs(client: GitHubClient, repo: str, since_iso: str, cfg: dict, allo
                     reviewed=sig.human_reviews > 0,
                     rework=rework_rounds(list(sig.rejections), pushes),
                     rework_hours=(
-                        _lead_hours(sig.rejections[0], node["mergedAt"])
-                        if sig.rejections else None
+                        _lead_hours(first_reject, node["mergedAt"])
+                        if first_reject and first_reject < node["mergedAt"] else None
                     ),
                 )
             )

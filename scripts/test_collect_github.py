@@ -409,6 +409,16 @@ def test_no_rejection_means_no_rework_hours():
     assert t.rework == 0 and t.rework_hours is None
 
 
+def test_rejection_after_merge_does_not_yield_negative_rework_hours():
+    # A slower reviewer's "Request changes" can land after a race auto-merge.
+    # The only rejection is submitted after mergedAt, so there is no turnaround
+    # to report — rework_hours must be None, never negative.
+    t = infer_one(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                  merged="2026-05-02T10:00:00Z",
+                  reviews=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T11:00:00Z"),))
+    assert t.rework_hours is None
+
+
 def test_dismissed_rejection_is_still_counted():
     # GitHub rewrites the review's state to DISMISSED, so it survives only on
     # the timeline. Dismissing a rejection must not erase that it happened.
