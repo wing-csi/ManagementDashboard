@@ -48,12 +48,11 @@ def test_token_is_never_interpolated_into_a_shell_string() -> None:
     assert "x-access-token:${" not in text, "put the PAT in actions/checkout, not a URL"
 
 
-# --- structural guards: need PyYAML (installed by the workflow's test step) ---
-
-yaml = pytest.importorskip("yaml", reason="PyYAML needed for workflow structure tests")
+# --- structural guards: need PyYAML — they skip without it; the file-text guards above never do ---
 
 
 def _steps() -> list[dict]:
+    yaml = pytest.importorskip("yaml", reason="PyYAML needed for workflow structure tests")
     wf = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     (job,) = wf["jobs"].values()
     return job["steps"]
@@ -68,6 +67,7 @@ def _step(name: str) -> dict:
 
 def test_workflow_token_stays_read_only() -> None:
     """The job pushes with a PAT, so the workflow's own token needs no write access."""
+    yaml = pytest.importorskip("yaml", reason="PyYAML needed for workflow structure tests")
     wf = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     assert wf["permissions"] == {"contents": "read"}
 
