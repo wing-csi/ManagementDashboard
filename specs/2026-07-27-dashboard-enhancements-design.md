@@ -375,6 +375,11 @@ Bump `schema_version` (`:945`).
 
 ### #3 Owner filter — Phase 2
 
+> **Superseded by [`2026-07-28-owner-contributor-filter-design.md`](2026-07-28-owner-contributor-filter-design.md).**
+> That document is the authoritative design. Two points below are stale: the author
+> count is now **18** (re-counted against live data), and aliases live in a top-level
+> `[people]` block, not `[classify.author_aliases]`.
+
 Data already present: `Task.author` (`:226`), populated at `:515-516` (commits) and
 `:603` (PRs). **16 distinct authors**, retained per work item.
 
