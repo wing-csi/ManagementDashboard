@@ -1,5 +1,23 @@
 # Phase 0 — Contain & Stabilise Implementation Plan
 
+> ## ✅ EXECUTED — 2026-07-27
+>
+> All 8 tasks implemented and reviewed. Commits `106bb63`..`10839bf`, 85 tests passing.
+> This document is now a **historical record**: its steps describe what was actually
+> run and are deliberately left unedited. Do not re-execute it.
+>
+> **One item outstanding, and it is the important one:** disabling GitHub Pages in repo
+> Settings → Pages → Source: None. That is a manual action; as of the last check the
+> URL still returned HTTP 200. Task 1 removed the *publishing pipeline*, which stops
+> future refreshes, but the last-published artifact stays up until Pages is switched off.
+>
+> **Stale forward-references.** Tasks 1, 7 and 8 mention an "authenticated Worker",
+> Cloudflare, and a GitHub App as the Phase 1 plan. **That design was replaced.** Spec
+> revision 3 (`56c9f5a`) re-scoped Phase 1 to GitHub-only at the user's request: a
+> private data repo with nightly commit-back, no Worker, no third-party services, no
+> login page. Those mentions were accurate when executed; read them as history, and
+> treat `specs/2026-07-27-dashboard-enhancements-design.md` §5 as authoritative.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stop the dashboard publicly re-publishing private client repo metadata every night, then fix three latent bugs and split the 1349-line frontend monolith so later phases can land safely.
@@ -38,13 +56,13 @@ Highest urgency in the plan. The live file at `https://wing-csi.github.io/Manage
 - Consumes: nothing
 - Produces: a CI workflow that collects and validates but publishes nothing.
 
-- [ ] **Step 1: Disable GitHub Pages (manual, do this first)**
+- [x] **Step 1: Disable GitHub Pages (manual, do this first)**
 
 In a browser: `https://github.com/wing-csi/ManagementDashboard/settings/pages` → **Source → None** → Save.
 
 This is the step that actually takes the URL down. Do not skip it or defer it.
 
-- [ ] **Step 2: Verify the URL is dead**
+- [x] **Step 2: Verify the URL is dead**
 
 ```bash
 curl -s -o /dev/null -w "HTTP %{http_code}\n" https://wing-csi.github.io/ManagementDashboard/data/metrics.json
@@ -52,7 +70,7 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" https://wing-csi.github.io/Managem
 
 Expected: `HTTP 404`. If it still returns `200`, Pages is not disabled — stop and fix that before continuing. (Propagation can take a minute; retry once before investigating.)
 
-- [ ] **Step 3: Strip publish steps from the workflow**
+- [x] **Step 3: Strip publish steps from the workflow**
 
 In `.github/workflows/collect.yml`, replace the permissions block at lines 11-14 with:
 
@@ -73,7 +91,7 @@ Delete the `concurrency` block (lines 16-18), the `environment:` block (lines 23
 
 The run now proves the collector still works without publishing anything.
 
-- [ ] **Step 4: Stop tracking the data file**
+- [x] **Step 4: Stop tracking the data file**
 
 ```bash
 git rm --cached docs/data/metrics.json
@@ -82,7 +100,7 @@ printf 'docs/data/metrics.json\n' > .gitignore
 
 The working copy stays on disk for local viewing; git stops tracking it.
 
-- [ ] **Step 5: Verify tests still pass**
+- [x] **Step 5: Verify tests still pass**
 
 ```bash
 python3 -m pytest scripts/ -q
@@ -90,7 +108,7 @@ python3 -m pytest scripts/ -q
 
 Expected: PASS (this task changes no Python).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .github/workflows/collect.yml .gitignore
@@ -119,7 +137,7 @@ Today a token lacking Issues:Read produces `None` with nothing in `errors` — 1
 - Consumes: `CollectError` (existing), `GitHubClient.graphql`
 - Produces: `collect_issues(client, repo) -> tuple[dict | None, str | None]` — `(data, error_message)`. Call sites must unpack. `repo_meta[repo]["issues_error"]` appears in `metrics.json` when collection failed.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `scripts/test_collect_github.py`:
 
@@ -159,12 +177,12 @@ def test_collect_issues_returns_no_error_on_success():
 
 Add `collect_issues` to the import block at `scripts/test_collect_github.py:14-22`.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `python3 -m pytest scripts/test_collect_github.py -k collect_issues -v`
 Expected: FAIL — `TypeError: cannot unpack non-sequence NoneType` (or `ImportError` if the import line was missed).
 
-- [ ] **Step 3: Change the return type**
+- [x] **Step 3: Change the return type**
 
 In `scripts/collect_github.py`, replace lines 780-786 with:
 
@@ -184,7 +202,7 @@ def collect_issues(client: GitHubClient, repo: str) -> tuple[dict | None, str | 
 
 Then change the function's closing brace at line 826 from `    }` to `    }, None` so the success path returns a 2-tuple.
 
-- [ ] **Step 4: Update the call site**
+- [x] **Step 4: Update the call site**
 
 Replace `scripts/collect_github.py:875-876` with:
 
@@ -196,12 +214,12 @@ Replace `scripts/collect_github.py:875-876` with:
             meta["issues_error"] = issues_err
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `python3 -m pytest scripts/ -q`
 Expected: PASS, all tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/collect_github.py scripts/test_collect_github.py
@@ -226,14 +244,14 @@ Tasks 5–7 must not change what the page renders. Capture a baseline first so t
 - Consumes: `docs/index.html` served over HTTP
 - Produces: `render_sections(page) -> dict[str, str]` mapping element id → `innerHTML`; a committed baseline at `scripts/fixtures/rendered-baseline.json` that Tasks 4–8 assert against.
 
-- [ ] **Step 1: Install Playwright**
+- [x] **Step 1: Install Playwright**
 
 ```bash
 pip install pytest-playwright
 python3 -m playwright install chromium
 ```
 
-- [ ] **Step 2: Create a deterministic synthetic fixture**
+- [x] **Step 2: Create a deterministic synthetic fixture**
 
 Create `scripts/fixtures/metrics-fixture.json`. Small, no real client data, and it exercises the project-progress path Task 4 changes:
 
@@ -280,7 +298,7 @@ Create `scripts/fixtures/metrics-fixture.json`. Small, no real client data, and 
 }
 ```
 
-- [ ] **Step 3: Write the snapshot test**
+- [x] **Step 3: Write the snapshot test**
 
 Create `scripts/test_frontend_snapshot.py`:
 
@@ -383,22 +401,22 @@ def pytest_addoption(parser) -> None:
                      help="Rewrite the rendered baseline instead of asserting against it")
 ```
 
-- [ ] **Step 4: Generate the baseline**
+- [x] **Step 4: Generate the baseline**
 
 Run: `python3 -m pytest scripts/test_frontend_snapshot.py --snapshot-update -q`
 Expected: SKIPPED with "baseline written"; `scripts/fixtures/rendered-baseline.json` now exists.
 
-- [ ] **Step 5: Verify the baseline asserts green**
+- [x] **Step 5: Verify the baseline asserts green**
 
 Run: `python3 -m pytest scripts/test_frontend_snapshot.py -q`
 Expected: PASS.
 
-- [ ] **Step 6: Confirm the whole suite passes**
+- [x] **Step 6: Confirm the whole suite passes**
 
 Run: `python3 -m pytest scripts/ -q`
 Expected: PASS. Where Playwright is unavailable (CI), the snapshot test self-skips via the `importorskip` at the top.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add scripts/test_frontend_snapshot.py scripts/conftest.py scripts/fixtures/
@@ -428,11 +446,11 @@ The dead copy at `:763-773` was field-correct and its formula is what `README.md
 - Consumes: `toDate(s)` (`:621`); pool items shaped `{number, title, url, labels[], milestone: string, due: string|null, created: string|null, updated: string|null, repo}`
 - Produces: `issueScore(iss, todayStr) -> {sc: number, why: string[]}` — single declaration; callers sort on `.sc`.
 
-- [ ] **Step 1: Delete the dead duplicate and its constant**
+- [x] **Step 1: Delete the dead duplicate and its constant**
 
 Delete `docs/index.html` lines 743-747 (`PRIORITY_RE`) and lines 763-773 (the first `issueScore`). Leave `issuesInScope` (`:748-762`) untouched.
 
-- [ ] **Step 2: Replace the surviving `issueScore` with one correct implementation**
+- [x] **Step 2: Replace the surviving `issueScore` with one correct implementation**
 
 Replace `docs/index.html:1034-1049` with:
 
@@ -464,7 +482,7 @@ function issueScore(iss, todayStr) {
 
 This matches the formula documented at `README.md:98`: overdue days × 3, priority label 40/25/10, `bug` +15, `min(60, age) × 0.3`.
 
-- [ ] **Step 3: Fix the comparator**
+- [x] **Step 3: Fix the comparator**
 
 Replace `docs/index.html:1151` with:
 
@@ -472,14 +490,14 @@ Replace `docs/index.html:1151` with:
   const todo = [...pool].sort((a, b) => issueScore(b, today).sc - issueScore(a, today).sc).slice(0, 5);
 ```
 
-- [ ] **Step 4: Verify the list is now genuinely sorted**
+- [x] **Step 4: Verify the list is now genuinely sorted**
 
 Run: `python3 -m pytest scripts/test_frontend_snapshot.py -q`
 Expected: **FAIL** on `#projTodo` — this is the point. Fixture issue #11 is P0 and overdue (score ≈ 40 + 10×3 + age), so it must now lead; #13 (`bug`, old) second; #12 (no labels, future due) last.
 
 If `#projTodo` did *not* change, the fix did not take effect — investigate before proceeding.
 
-- [ ] **Step 5: Update the baseline deliberately**
+- [x] **Step 5: Update the baseline deliberately**
 
 ```bash
 python3 -m pytest scripts/test_frontend_snapshot.py --snapshot-update -q
@@ -488,7 +506,7 @@ python3 -m pytest scripts/ -q
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs/index.html scripts/fixtures/rendered-baseline.json
@@ -516,7 +534,7 @@ and returning {sc, why} for future UI explanation."
 - Consumes: nothing
 - Produces: `docs/css/dashboard.css`, linked from `index.html`.
 
-- [ ] **Step 1: Move the CSS out**
+- [x] **Step 1: Move the CSS out**
 
 ```bash
 mkdir -p docs/css
@@ -526,7 +544,7 @@ head -1 docs/css/dashboard.css
 
 Line 8 is `<style>` and 351 is `</style>`, so the range takes only the rules. Expected first line: the Google Fonts `@import`. `@import` must precede all other rules — confirm it is line 1.
 
-- [ ] **Step 2: Replace the inline block with a link**
+- [x] **Step 2: Replace the inline block with a link**
 
 In `docs/index.html`, delete lines 8-351 and insert in their place:
 
@@ -534,12 +552,12 @@ In `docs/index.html`, delete lines 8-351 and insert in their place:
 <link rel="stylesheet" href="./css/dashboard.css">
 ```
 
-- [ ] **Step 3: Verify rendered output is unchanged**
+- [x] **Step 3: Verify rendered output is unchanged**
 
 Run: `python3 -m pytest scripts/test_frontend_snapshot.py -q`
 Expected: PASS. The snapshot captures `innerHTML`, not styling, so this proves the page still loads and scripts still run.
 
-- [ ] **Step 4: Verify styling visually**
+- [x] **Step 4: Verify styling visually**
 
 ```bash
 python3 -m http.server -d docs 8000
@@ -547,7 +565,7 @@ python3 -m http.server -d docs 8000
 
 Open `http://localhost:8000`; confirm fonts, colours, spacing and the spectrum strip are unchanged.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/index.html docs/css/dashboard.css
@@ -574,7 +592,7 @@ Tasks 6 and 7 of the spec's file list are combined here because the page is brok
   - `render-table.js` — the task-table renderer and `export function typeChip(t)`
   - `main.js` — `export function render()`, boot sequence, event listeners
 
-- [ ] **Step 1: Extract the demo blob without reading it into context**
+- [x] **Step 1: Extract the demo blob without reading it into context**
 
 ```bash
 mkdir -p docs/js
@@ -584,7 +602,7 @@ wc -c /tmp/demo-line.js
 
 Expected: ~80,526 bytes.
 
-- [ ] **Step 2: Convert it to a module**
+- [x] **Step 2: Convert it to a module**
 
 ```bash
 { printf 'export '; cat /tmp/demo-line.js; } > docs/data/demo-data.js
@@ -593,11 +611,11 @@ head -c 40 docs/data/demo-data.js
 
 Expected first characters: `export const DEMO_DATA = {`.
 
-- [ ] **Step 3: Remove it from index.html**
+- [x] **Step 3: Remove it from index.html**
 
 Delete lines 573-576 of `docs/index.html` (the three comment lines and the data line).
 
-- [ ] **Step 4: Move the shared primitives**
+- [x] **Step 4: Move the shared primitives**
 
 Create `docs/js/data.js` containing, verbatim from the inline script, `state` (`:604`), `$` (`:605`), `pct` (`:606`), `esc` (`:607`), `loadData` (`:610-618`), `toDate`/`refDate` (`:621-622`) and `tasksBetween`/`windowTasks`/`precedingTasks` (`:624` onward). Add `export` before each declaration and this import at the top:
 
@@ -605,7 +623,7 @@ Create `docs/js/data.js` containing, verbatim from the inline script, `state` (`
 import { DEMO_DATA } from '../data/demo-data.js';
 ```
 
-- [ ] **Step 5: Move the constants and aggregation helpers**
+- [x] **Step 5: Move the constants and aggregation helpers**
 
 Create `docs/js/aggregate.js` with the constants at `:578-602` and the aggregation helpers through `:741`. Add at the top:
 
@@ -615,7 +633,7 @@ import { state, toDate, refDate, windowTasks, precedingTasks } from './data.js';
 
 Export every symbol another module needs, per the Interfaces block.
 
-- [ ] **Step 6: Move the renderers**
+- [x] **Step 6: Move the renderers**
 
 Create `docs/js/render-kpi.js`, `docs/js/render-project.js` and `docs/js/render-table.js`, moving the corresponding functions out of the remaining inline script. Each begins with only the imports it uses, e.g. for `render-project.js`:
 
@@ -630,11 +648,11 @@ import { issuesInScope } from './aggregate.js';
 /* Chart.js 4.4.1 is loaded globally from the CDN <script> in index.html */
 ```
 
-- [ ] **Step 7: Create the entry point**
+- [x] **Step 7: Create the entry point**
 
 Create `docs/js/main.js` with `render()` (`:1282-1298`), the boot sequence and all event listeners, importing from the modules above.
 
-- [ ] **Step 8: Point index.html at the entry module**
+- [x] **Step 8: Point index.html at the entry module**
 
 Replace the entire remaining `<script>…</script>` block with:
 
@@ -644,12 +662,12 @@ Replace the entire remaining `<script>…</script>` block with:
 
 Keep the Chart.js CDN `<script>` tag at line 7 exactly as-is, and **before** the module tag.
 
-- [ ] **Step 9: Verify behaviour is unchanged**
+- [x] **Step 9: Verify behaviour is unchanged**
 
 Run: `python3 -m pytest scripts/test_frontend_snapshot.py -q`
 Expected: **PASS** — byte-identical rendered output for every section. Any diff means the split changed behaviour; find it before continuing.
 
-- [ ] **Step 10: Check the browser console is clean**
+- [x] **Step 10: Check the browser console is clean**
 
 ```bash
 python3 -m http.server -d docs 8000
@@ -657,7 +675,7 @@ python3 -m http.server -d docs 8000
 
 Open `http://localhost:8000` with devtools open. Expected: no console errors, no 404s for module files, chart renders, repo/branch/window filters work, table sorts on header click.
 
-- [ ] **Step 11: Confirm file sizes are within target**
+- [x] **Step 11: Confirm file sizes are within target**
 
 ```bash
 wc -l docs/index.html docs/css/dashboard.css docs/js/*.js
@@ -665,7 +683,7 @@ wc -l docs/index.html docs/css/dashboard.css docs/js/*.js
 
 Expected: each JS module roughly 100–400 lines; `index.html` a few hundred lines of skeleton. If any module exceeds 400 lines, split it further before committing.
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add docs/index.html docs/js/ docs/data/demo-data.js
@@ -693,7 +711,7 @@ file://): python3 -m http.server -d docs 8000"
 - Consumes: `DEMO_DATA`
 - Produces: `loadData()` throws `LoadError` instead of silently falling back; `export class LoadError extends Error` carrying `.status`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `scripts/test_frontend_snapshot.py`:
 
@@ -713,12 +731,12 @@ def test_demo_mode_is_explicit(page, server, fixture_data):
     assert page.is_visible("#demoBadge")
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python3 -m pytest scripts/test_frontend_snapshot.py -k "error_not_demo or demo_mode" -v`
 Expected: FAIL — `#loadError` does not exist yet.
 
-- [ ] **Step 3: Rewrite `loadData`**
+- [x] **Step 3: Rewrite `loadData`**
 
 In `docs/js/data.js`:
 
@@ -741,7 +759,7 @@ export async function loadData() {
 }
 ```
 
-- [ ] **Step 4: Add the error element**
+- [x] **Step 4: Add the error element**
 
 In `docs/index.html`, immediately inside the main container, add:
 
@@ -755,7 +773,7 @@ In `docs/index.html`, immediately inside the main container, add:
 </div>
 ```
 
-- [ ] **Step 5: Handle the error at boot**
+- [x] **Step 5: Handle the error at boot**
 
 In `docs/js/main.js`:
 
@@ -777,17 +795,17 @@ try {
 }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `python3 -m pytest scripts/ -q`
 Expected: PASS.
 
-- [ ] **Step 7: Verify the happy path is untouched**
+- [x] **Step 7: Verify the happy path is untouched**
 
 Run: `python3 -m pytest scripts/test_frontend_snapshot.py -q`
 Expected: PASS — the baseline is unchanged, because a successful load behaves exactly as before.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add docs/js/data.js docs/js/main.js docs/index.html scripts/test_frontend_snapshot.py
@@ -810,7 +828,7 @@ loads only via explicit ?demo=1; anything else shows an error state."
 - Consumes: nothing
 - Produces: a README matching reality.
 
-- [ ] **Step 1: Correct the hosting section**
+- [x] **Step 1: Correct the hosting section**
 
 In `README.md`, replace the Private 模式 guidance with the current state: Pages is disabled, the collector runs daily for validation only, and the dashboard is viewed locally until the authenticated Worker ships in Phase 1. Include the local flow verbatim:
 
@@ -822,19 +840,19 @@ python3 -m http.server -d docs 8000   # http://localhost:8000
 
 State explicitly that opening `index.html` via `file://` no longer works, because ES modules require a server.
 
-- [ ] **Step 2: Note the gitignore**
+- [x] **Step 2: Note the gitignore**
 
 Add one line stating `docs/data/metrics.json` is gitignored and must never be committed to this public repo.
 
-- [ ] **Step 3: Remove the now-false Pages guidance**
+- [x] **Step 3: Remove the now-false Pages guidance**
 
 Line 330 currently tells the reader to make the hub repo public so Pages works. Delete it — Pages is off and that advice caused the exposure.
 
-- [ ] **Step 4: Verify commands are copy-pasteable**
+- [x] **Step 4: Verify commands are copy-pasteable**
 
 Re-read the edited sections; confirm every command runs and every claim matches what the code now does.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add README.md
