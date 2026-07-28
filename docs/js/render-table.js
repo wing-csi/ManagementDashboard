@@ -59,7 +59,8 @@ export function renderOverview(cur) {
     const p = personOf(t.author, state.personIndex);
     by[p] = (by[p] || 0) + 1;
   }
-  const ce = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  // 唔截頭 N — 貢獻少嘅人一樣要見到,% 加埋先夠 100
+  const ce = Object.entries(by).sort((a, b) => b[1] - a[1]);
   const total = ce.reduce((s, [, c]) => s + c, 0);
   const AV = ['#24407E', '#3D67B1', '#5F8CC6', '#2E6B5E', '#B07A1F', '#6D5A8E'];
   $('ovContribs').innerHTML = ce.map(([n, c], i) => `<div class="contrib${n === state.person ? ' is-selected' : ''}">

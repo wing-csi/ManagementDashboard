@@ -16,6 +16,7 @@ Run:  python -m pytest scripts/test_frontend_people.py -v
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -115,6 +116,35 @@ def test_contributors_stay_team_wide(people_page, server):
     assert "Tony" in names and "Wing" in names
     assert page.eval_on_selector_all(
         "#ovContribs .contrib.is-selected", "els => els.length") == 1
+
+
+def test_contributors_are_not_truncated(page, server):
+    """A nine-person window renders nine cards, each a % of the whole window.
+
+    Its own fixture: the shared one has two people, so it cannot tell a
+    full list apart from a top-N cut. Nine equal contributors also pin the
+    percentage denominator — a top-6 cut would read 16.7%, not 11.1%.
+    """
+    data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    proto = data["tasks"][0]
+    data["people"] = {}
+    data["tasks"] = [
+        {**proto, "id": str(i), "url": f"https://example.test/{i}",
+         "author": f"dev{i:02d}"}
+        for i in range(1, 10)
+    ]
+    page.route("**/data/metrics.json", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps(data, ensure_ascii=False)))
+
+    open_dashboard(page, server)
+    names = page.eval_on_selector_all(
+        "#ovContribs .contrib .nm span[title]", "els => els.map(e => e.title)")
+    assert sorted(names) == [f"dev{i:02d}" for i in range(1, 10)]
+
+    pcts = page.eval_on_selector_all(
+        "#ovContribs .contrib .pc", "els => els.map(e => e.textContent)")
+    assert all(p.startswith("11.1%") for p in pcts), pcts
 
 
 def test_scope_notes_appear_only_when_filtered(people_page, server):
