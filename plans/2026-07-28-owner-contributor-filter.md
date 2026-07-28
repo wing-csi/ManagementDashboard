@@ -607,10 +607,15 @@ git commit -m "feat: people.js identity index, with playwright wired into CI"
 
 **Files:**
 - Modify: `docs/js/data.js` (add both helpers; use in `tasksBetween` at `:32`)
-- Modify: `docs/js/aggregate.js:121`, `:135`
+- Modify: `docs/js/aggregate.js:122`, `:136`
 - Modify: `docs/js/render-kpi.js:220`
 - Modify: `docs/js/render-project.js:35`, `:76`, `:92`
-- Modify: `docs/js/render-table.js:20`, `:45`, `:77`
+- Modify: `docs/js/render-table.js:22`, `:45`, `:76`
+
+> Line numbers verified against `f530f36`. Commit `cb7d6f1` (concurrent, another
+> session) grew `renderDefects` and shifted these. If they have drifted again,
+> re-locate with `grep -rn "state.repo !== 'all'" docs/js/` — there must be
+> exactly nine hits plus the inline one at `render-table.js:45`.
 
 **Interfaces:**
 - Consumes: `state` from `docs/js/data.js`.
@@ -664,15 +669,15 @@ In `docs/js/data.js:32`, inside `tasksBetween`:
 ```
 
 In `docs/js/aggregate.js`, add `repoInScope` to the import from `./data.js`, then
-at `:121` and `:135` replace `if (state.repo !== 'all' && repo !== state.repo) continue;` with:
+at `:122` and `:136` replace `if (state.repo !== 'all' && repo !== state.repo) continue;` with:
 
 ```js
     if (!repoInScope(repo)) continue;
 ```
 
 Apply the identical replacement at `docs/js/render-kpi.js:220`,
-`docs/js/render-project.js:35`, `:76`, `:92`, and `docs/js/render-table.js:20`
-and `:77`, adding `repoInScope` to each file's import from `./data.js`.
+`docs/js/render-project.js:35`, `:76`, `:92`, and `docs/js/render-table.js:22`
+and `:76`, adding `repoInScope` to each file's import from `./data.js`.
 
 In `docs/js/render-table.js:45` the condition is inline inside a `.filter()`:
 

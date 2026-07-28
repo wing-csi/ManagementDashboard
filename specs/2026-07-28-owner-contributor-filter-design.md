@@ -171,8 +171,9 @@ the dropdown looks exactly as it does today.
 currently test `state.repo !== 'all' && repo !== state.repo` directly, and every
 one of them would silently match nothing under an owner value:
 
-`data.js:32` · `aggregate.js:121` · `aggregate.js:135` · `render-kpi.js:220` ·
-`render-project.js:35, :76, :92` · `render-table.js:20, :45, :77`
+`data.js:32` · `aggregate.js:122` · `aggregate.js:136` · `render-kpi.js:220` ·
+`render-project.js:35, :76, :92` · `render-table.js:22, :45, :76`
+(verified at `f530f36`; find them with `grep -rn "state.repo !== 'all'" docs/js/`)
 
 All ten are replaced with one exported predicate `repoInScope(repo)`, plus
 `singleRepo()` (returns a repo name or `null`) to drive the branch-select
