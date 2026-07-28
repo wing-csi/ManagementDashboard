@@ -12,14 +12,14 @@ permissions:
   contents: read
 
 jobs:
-  collect-deploy:
+  collect-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Run tests
         run: |
-          pip install pytest -q
+          pip install pytest pyyaml -q
           python3 -m pytest scripts/ -q
 
       - name: Collect metrics
@@ -31,3 +31,26 @@ jobs:
           # 每加一個 token 都要喺度加一行
           BEN_GH_METRICS_TOKEN: ${{ secrets.BEN_GH_METRICS_TOKEN }}
         run: python3 scripts/collect_github.py --config config.toml --out /tmp/metrics.json
+
+      - name: Checkout private data repo
+        if: github.event_name != 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          repository: wing-csi/ManagementDashboard-data
+          token: ${{ secrets.DATA_REPO_PAT }}
+          path: data-repo
+
+      - name: Publish metrics to private data repo
+        if: github.event_name != 'pull_request'
+        working-directory: data-repo
+        run: |
+          cp /tmp/metrics.json metrics.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add metrics.json
+          if git diff --staged --quiet; then
+            echo "metrics unchanged — nothing to publish"
+          else
+            git commit -m "chore: update metrics"
+            git push
+          fi
