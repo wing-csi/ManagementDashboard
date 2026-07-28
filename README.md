@@ -25,12 +25,12 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
    - `config.toml` 對應 repo 加:`token_env = "GH_TOKEN_CRM"` — 其他 repos 照用預設 token
    - env 缺失會即刻報錯,唔會靜靜 fallback 用錯 token
 4. 改 [`config.toml`](https://github.com/wing-csi/ManagementDashboard/blob/main/config.toml) 加返你嘅 repos
-5. **唔使開 Pages** — Phase 0 已經將 publish 步驟由 `collect.yml` 拎走,而家淨係每日跑 test + collect 做驗證,結果寫入 CI runner 嘅 `/tmp`,CI 呢邊唔會再 publish 出街。但**停用 Pages 本身仲要人手做**:repo Settings → Pages → Source 揀 None,呢步未必做咗,自己查:
+5. **唔使開 Pages** — Phase 0 已經將 publish 步驟由 `collect.yml` 拎走;而家 CI 每日跑 test + collect,結果先寫入 CI runner 嘅 `/tmp`,再 push 去私有 data repo(`wing-csi/ManagementDashboard-data`),唔會出公海。但**停用 Pages 本身仲要人手做**:repo Settings → Pages → Source 揀 None,呢步未必做咗,自己查:
    ```bash
    curl -s -o /dev/null -w "%{http_code}\n" https://wing-csi.github.io/ManagementDashboard/data/metrics.json
    ```
    `404` = 已停用;`200` = 仲喺度出緊街,要即刻去 repo Settings 關 Pages。想睇 dashboard,睇下面「Private 模式」個本地流程:本機生成 `metrics.json` + 起 http server。
-6. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新(淨係驗證,唔會幫你出 dashboard)
+6. 手動 run 一次 `collect` → [Actions tab](https://github.com/wing-csi/ManagementDashboard/actions/workflows/collect.yml) → Run workflow,之後每日自動更新(結果會 push 去私有 data repo,但唔會幫你自動起本機 dashboard,睇下面「Private 模式」)
 
 > 步驟 3、4、6 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
 

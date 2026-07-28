@@ -18,8 +18,8 @@
 # `git add` it again. Do not restore this workflow's commit-back step.
 #
 # Planned replacement: authenticated hosting (so metrics never need to be
-# committed into the public repo at all) is planned for Phase 1 — see
-# specs/2026-07-27-dashboard-enhancements-design.md.
+# committed into the public repo at all) is cancelled (已取消) — Phase 1 is
+# the private data repo instead. See specs/2026-07-27-dashboard-enhancements-design.md.
 
 name: collect
 
