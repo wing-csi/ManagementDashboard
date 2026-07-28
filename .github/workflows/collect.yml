@@ -54,3 +54,20 @@ jobs:
             git commit -m "chore: update metrics"
             git push
           fi
+
+      - name: Deploy dashboard to Cloudflare Pages
+        if: github.event_name != 'pull_request'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN secret is not set — cannot deploy to Cloudflare Pages"
+            exit 1
+          fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID secret is not set — cannot deploy to Cloudflare Pages"
+            exit 1
+          fi
+          cp /tmp/metrics.json docs/data/metrics.json
+          npx --yes wrangler@4 pages deploy docs --project-name=management-dashboard --branch=main
