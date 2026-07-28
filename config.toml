@@ -109,6 +109,7 @@ sop_paths = []
 [[repos]]
 name = "benegg/BoostBank-ReactNative-SMEApp"
 token_env = "BEN_GH_METRICS_TOKEN"
+owner = "Wing"                 # 項目負責人;repo select 會有「按負責人」分組
 sop_paths = []
 # main 排首名:共享 commits 歸 main,兩條工作 branch 嘅獨有 commits 各自入帳
 branches = ["main", "Refactor", "product-selection-update"]
@@ -116,6 +117,15 @@ branches = ["main", "Refactor", "product-selection-update"]
 
 # [[repos]]
 # name = "wing-csi/another-repo"
+
+# ---- 身份合併(一個人有幾個 GitHub / git 身份)----
+# PR 用 GitHub login,但冇 link GitHub 帳號嘅 commit 會 fallback 去 git display
+# name,所以同一個人可以出現兩次。唔合併嘅話,per-person filter 會少計。
+# 格式:正式名 = [佢所有身份]。冇列出嘅身份照原樣顯示。
+# 驗證好嚴:一個身份同時屬於兩個人、空 list、非字串,都會令成個收集失敗 —
+# 錯咗嘅 alias 會靜靜哋拆散或者夾埋人哋嘅工作量,比收唔到數更差。
+[people]
+Wing = ["wing-csi", "wing2036"]
 
 # ---- 分級規則(priority:label → trailer → author → rules)----
 

@@ -406,6 +406,68 @@ python3 -m http.server -d docs 8000
 | `classify.no_evidence_level` | `""` | 零證據時嘅預設 level(`"L1"` 或留空 = 未分級) |
 | `classify.author_levels` | `{}` | author login → level |
 | `classify.rules` | Claude Code 兩條 | 子字串 match → level,由上至下 |
+| `people` | `{}` | 身份合併:`正式名 = [身份...]`(見下) |
+| `repos[].owner` | — | 項目負責人;repo select 會多一組「按負責人」(見下) |
+
+## 負責人 / 貢獻者 filter
+
+masthead 多咗個**貢獻者** `<select>`,揀咗之後成個 dashboard 收窄到嗰個人。
+另外 repo select 會按 `owner` 分組,所以「邊個做嘅」同「邊個孭嘅項目」係兩條
+獨立嘅軸,可以夾埋用(例:Wing 嘅項目、Tony 做嘅嘢)。
+
+### `[people]` — 身份合併(必要)
+
+一個人可以有幾個身份:PR 用 GitHub login,但**冇 link GitHub 帳號嘅 commit 會
+fallback 去 git display name**(`collect_github.py:515-517`),所以同一個人會喺
+名單出現兩次。實際數據入面 `wing-csi`(375 tasks)同 `wing2036`(78 tasks)
+就係同一個人 — 唔合併嘅話,揀 `wing-csi` 會靜靜哋少計 78 個 task。
+
+```toml
+[people]
+Wing = ["wing-csi", "wing2036"]
+```
+
+冇列出嘅身份照原樣做一個人。**驗證好嚴,以下情況會令成個收集失敗**(exit 非零、
+講明邊個出事、而且喺寫 `metrics.json` 之前就停):同一個身份列咗喺兩個人下面、
+空 list、或者非字串。錯咗嘅 alias 會靜靜哋拆散或者夾埋人哋嘅工作量,
+比收唔到數更差。
+
+Alias 係**宣告**出嚟,唔係估:`metrics.json` 冇 author email 可以夾。
+
+### `repos[].owner` — 項目負責人
+
+```toml
+[[repos]]
+name = "benegg/BoostBank-ReactNative-SMEApp"
+owner = "Wing"        # 寫正式名或者佢任何一個身份都得
+```
+
+寫錯名(例 `"Wng"`)只會出 **warning**,唔會 fail — 因為「負責人從來唔 commit」
+係好正常嘅情況(例如經理)。冇任何 repo 設 `owner` 嘅話,「按負責人」嗰組唔會出現。
+
+### 揀咗人之後,邊啲數字唔會跟住變
+
+有啲區塊根本冇「人」呢個維度。與其扮到有,不如講清楚:
+
+| 區塊 | 行為 |
+|---|---|
+| 主 KPI、水平分佈、每週圖、異常提醒、品質四格、commit types、月度活躍、最近 Tasks | 跟住收窄 |
+| DORA Lead Time / MTTR | 跟住收窄(本身就係 task 計) |
+| **變更失敗率** | 顯示 `–`。佢係「個人 revert ÷ 全 repo 部署次數」,分子分母唔同範圍,唔係一個比率 |
+| 部署頻率、品質 RAG、項目進度、Defect 追蹤、語言構成 | **維持全 repo 數字**,並標示「全 repo 範圍」 |
+| 貢獻者 | 維持全隊,只係將揀咗嗰個 highlight — 佢係比較視角,亦係揀人嘅入口 |
+
+eyebrow 會加上「· 負責人 X」,免得 filter 咗嘅畫面被當成全隊數字。
+
+### 分享連結
+
+揀完人個 URL 會變成 `?owner=Wing`,可以直接 bookmark 或者傳俾人。
+`?owner=` 係**唔可信輸入**:淨係攞去同已知名單比對,配唔到就靜靜哋當「全部成員」,
+永遠唔會 render 出嚟。舊 bookmark 指住已經冇咗嘅人,只會退回全部,唔會報錯。
+
+> `metrics.json` 要 collector 行過先有 `people`。舊數據冇呢個 key 嘅時候,
+> dropdown 會列原始 author 名(`wing-csi` 同 `wing2036` 分開兩行)—
+> 呢個係設計上嘅向後兼容 fallback,唔係 bug。
 
 ## 本地跑
 
