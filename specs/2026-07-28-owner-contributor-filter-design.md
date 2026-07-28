@@ -36,11 +36,17 @@ get separate axes (§5.2, §5.3).
 
 ## 2. Confirmed data problem: split identities
 
-The live `metrics.json` holds **2,048 tasks across 18 distinct authors**. Two of
-those authors are the same human:
+The live `metrics.json` held **2,048 tasks across 18 distinct authors** when this
+was written (the dataset grows nightly — it was 2,054 a few hours later, so treat
+every count here as a dated snapshot, not an invariant). Two of those authors are
+the same human:
 
 - `wing-csi` — 375 tasks (repo-owner account)
 - `wing2036` — 78 tasks (this machine's collaborator credential)
+
+Verified end-to-end after implementation: with the alias declared, the two
+collapse into a single `Wing` entry whose count is exactly their sum, while the
+Author column still shows which account did each task.
 
 `'Shane'` (9 tasks) is a raw git commit name, not a GitHub login:
 [`collect_github.py:515-517`](../scripts/collect_github.py) falls back to

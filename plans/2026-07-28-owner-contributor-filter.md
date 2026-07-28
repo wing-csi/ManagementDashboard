@@ -726,7 +726,13 @@ not shift.
 - [ ] **Step 1: Create the people fixture**
 
 Create `scripts/fixtures/metrics-fixture-people.json` — two repos, two humans,
-one of them under two identities:
+one of them under two identities.
+
+> **`deployments` / `releases` / `tags` are date-only `YYYY-MM-DD`**, not full
+> timestamps — the collector truncates with `createdAt[:10]`
+> (`collect_github.py:674`). A full ISO string here makes `toDate()` produce an
+> Invalid Date (it appends `T00:00:00Z`), silently dropping the deploy from the
+> window so 變更失敗率 reads `–` even before any person is selected.
 
 ```json
 {
@@ -743,7 +749,7 @@ one of them under two identities:
   {"date": "2026-07-17", "repo": "acme/beta", "author": "Tony", "id": "3", "kind": "pr", "branch": "main", "title": "revert: beta one", "level": "L1", "method": "rule", "check": null, "additions": 5, "deletions": 60, "url": "https://example.test/4", "rework": 0, "violations": [], "lead_hours": 2, "ci": "fail"}
  ],
  "repo_meta": {
-  "acme/alpha": {"owner": "Wing", "disk_kb": 1024, "languages": {"items": [{"name": "Python", "bytes": 5000}]}, "deployments": ["2026-07-20T00:00:00Z"], "releases": [], "tags": [], "closed_unmerged": [], "issues": null},
+  "acme/alpha": {"owner": "Wing", "disk_kb": 1024, "languages": {"items": [{"name": "Python", "bytes": 5000}]}, "deployments": ["2026-07-20"], "releases": [], "tags": [], "closed_unmerged": [], "issues": null},
   "acme/beta": {"disk_kb": 512, "languages": {"items": [{"name": "JavaScript", "bytes": 2000}]}, "deployments": [], "releases": [], "tags": [], "closed_unmerged": [], "issues": null}
  },
  "errors": []

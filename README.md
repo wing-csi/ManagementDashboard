@@ -419,8 +419,9 @@ masthead 多咗個**貢獻者** `<select>`,揀咗之後成個 dashboard 收窄�
 
 一個人可以有幾個身份:PR 用 GitHub login,但**冇 link GitHub 帳號嘅 commit 會
 fallback 去 git display name**(`collect_github.py:515-517`),所以同一個人會喺
-名單出現兩次。實際數據入面 `wing-csi`(375 tasks)同 `wing2036`(78 tasks)
-就係同一個人 — 唔合併嘅話,揀 `wing-csi` 會靜靜哋少計 78 個 task。
+名單出現兩次。實際數據入面 `wing-csi`(repo owner 帳號)同 `wing2036`
+(呢部機嘅 collaborator credential)就係同一個人,兩邊各有幾百 / 幾十個 task —
+唔合併嘅話,揀 `wing-csi` 會靜靜哋漏咗 `wing2036` 嗰批,而且冇任何提示。
 
 ```toml
 [people]
