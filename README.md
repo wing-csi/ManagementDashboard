@@ -282,21 +282,33 @@ AIFlowTesting 本身已經跑緊 coverage + bandit(SOP Phase 5),加一個 step �
 
 **被追蹤 repo 係 private** — 必須 fine-grained PAT(Contents: Read + Pull requests: Read,Repository access 揀埋嗰個 repo)存做 `GH_METRICS_TOKEN`。留意 fine-grained PAT 只揀到**你自己或你所屬 org** 名下嘅 repo — 追第三者個人帳號嘅 private repo(你係 collaborator)要改用 classic PAT(`repo` scope),或者將 repo 搬入共同 org。
 
-**Publish pipeline 已經停用,但 Pages 本身要人手關** — 唔理 hub repo 本身 public 定 private,`collect.yml` 而家淨係每日自動跑 test + collect 做驗證,產出寫入 CI runner 嘅 `/tmp`,CI 呢邊已經冇任何一步會 publish 出街。但 repo Settings → Pages 個開關係獨立嘅人手步驟,Phase 0 冇自動幫你關,要自己去 Settings → Pages → Source 揀 None,再用下面指令確認:
-```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://wing-csi.github.io/ManagementDashboard/data/metrics.json
-```
-`404` = 已停用、冇曝露;`200` = 舊嘅 published 數據仲喺度,要即刻去 Settings 關 Pages。認證 host(Worker,留返 Phase 1)未出之前,睇 dashboard 一律靠本機生成數據 + 本機起 server:
+**Pages publish pipeline 已經停用,GitHub Pages 開關本身要人手關** — 呢個係「hub repo 唔好經 Pages 曝露 private repo 資料」嗰道防線,做法見上面 Setup 步驟 5(curl 查 404/200)。留意呢度講嘅係 hub 呢個 repo 嘅 Pages,同下面講嘅「metrics 私有 data repo」係兩回事。
 
+**Metrics 數據而家收埋喺另一個 private repo** — `wing-csi/ManagementDashboard-data`。`collect.yml` 每日自動跑 test + collect 之後,會多一步將 `metrics.json` push 落嗰個 private repo(唔會再經 hub 呢邊嘅 Pages 出街)。認證 host / Worker 呢類第三方方案已經取消 —— Phase 1 淨係用 GitHub 生態(private repo + collaborator 權限),唔加第三方服務。想睇 dashboard,你要先係 `ManagementDashboard-data` 嘅 collaborator,問維護者(wing-csi)攞 access。
+
+**第一次(得做一次)—— clone 落嚟,擺喺呢個 repo 隔籬**(即係 `../ManagementDashboard-data`,唔係入面):
 ```bash
-export GH_METRICS_TOKEN=github_pat_xxx
-python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.json
+git clone https://github.com/wing-csi/ManagementDashboard-data.git ../ManagementDashboard-data
+```
+
+**之後日常刷新,三行搞掂**:
+```bash
+git -C ../ManagementDashboard-data pull
+python3 scripts/sync_data.py
 python3 -m http.server -d docs 8000   # http://localhost:8000
 ```
 
-`docs/index.html` 而家用 ES modules,直接雙擊個檔案用 `file://` 打開會俾瀏覽器 CORS 擋晒,一定要用返上面嗰個 http server。
+`docs/index.html` 用緊 ES modules,直接雙擊個檔案用 `file://` 打開會俾瀏覽器 CORS 擋晒,一定要用返上面嗰個 http server。
 
-`docs/data/metrics.json` 已經加咗入 `.gitignore`,唔會再入 git history —— 呢個 repo 係 public,而呢個檔案可能含 private repo 嘅 commit titles、branch 名,千祈唔好手動 `git add -f` 或者用其他方式將佢 commit 返入去。
+**唔使再自己手動跑 collector** — CI 而家每日 05:00 HKT 自動幫 data repo 刷新一次。想睇仲新鮮過 nightly 嗰份數據,人手跑都仲得,一樣要 `GH_METRICS_TOKEN`(追埋 benegg 嗰堆 repo 就仲要 `BEN_GH_METRICS_TOKEN`):
+```bash
+export GH_METRICS_TOKEN=github_pat_xxx
+export BEN_GH_METRICS_TOKEN=github_pat_xxx   # 冇追 benegg repos 可以唔設
+python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.json
+python3 -m http.server -d docs 8000
+```
+
+`docs/data/metrics.json` 呢個 public repo 一直加咗入 `.gitignore`,千祈唔好手動 `git add -f` 或者用其他方式將佢 commit 返入去 —— 佢可能含 private repo 嘅 commit titles、branch 名。
 
 留意:2026-07-27 之前嘅歷史 commit(嗰堆 `chore: update metrics [skip ci]`)仍然喺 git history 入面帶住呢個檔案 —— 呢個 repo public,所以歷史數據依然可以經 git history 讀到;清 history(rewrite / squash)係刻意留返做未做嘅 follow-up,唔係今次 Phase 0 範圍。
 
@@ -324,13 +336,20 @@ python3 -m http.server -d docs 8000   # http://localhost:8000
 
 ## 本地跑
 
+日常流程(CI 已經每日 05:00 HKT 幫手刷新私有 data repo,呢度只係拉最新數據落嚟睇):
+
 ```bash
-export GH_METRICS_TOKEN=github_pat_xxx
-python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.json
+git -C ../ManagementDashboard-data pull
+python3 scripts/sync_data.py
 python3 -m http.server -d docs 8000   # 開 http://localhost:8000
 ```
 
-`docs/index.html` 用緊 ES modules,唔可以直接雙擊個檔案用 `file://` 開嚟睇(瀏覽器 CORS 擋晒),一定要用返上面個 http server。`docs/data/metrics.json` 已經 gitignore,唔會亦唔應該 commit 返入呢個 public repo。
+第一次冇 `../ManagementDashboard-data` 呢個目錄,要先 clone 一次(要 collaborator 權限,詳情見上面「Private 模式」):
+```bash
+git clone https://github.com/wing-csi/ManagementDashboard-data.git ../ManagementDashboard-data
+```
+
+`docs/index.html` 用緊 ES modules,唔可以直接雙擊個檔案用 `file://` 開嚟睇(瀏覽器 CORS 擋晒),一定要用返上面個 http server。`docs/data/metrics.json` 已經 gitignore,唔會亦唔應該 commit 返入呢個 public repo。想自己跑 collector 攞新過 nightly 嘅數據,做法同所需 token 見上面「Private 模式」。
 
 測試(唔使 network):`python3 -m pytest scripts/ -q`
 
