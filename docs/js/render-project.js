@@ -1,4 +1,4 @@
-import { state, $, esc, toDate } from './data.js';
+import { state, $, esc, toDate, repoInScope } from './data.js';
 import { issuesInScope } from './aggregate.js';
 
 const PRIORITY_RE = [
@@ -32,7 +32,7 @@ export function renderProjects() {
   chips.innerHTML = '';
   const rm = state.data.repo_meta || {};
   for (const repo of (state.data.repos || [])) {
-    if (state.repo !== 'all' && repo !== state.repo) continue;
+    if (!repoInScope(repo)) continue;
     const iss = (rm[repo] || {}).issues;
     const plan = (rm[repo] || {}).plan;
     const el = document.createElement('span');
@@ -73,7 +73,7 @@ export function renderProjects() {
     msBox.appendChild(row);
   }
   for (const [repo, m] of Object.entries(rm)) {
-    if (state.repo !== 'all' && repo !== state.repo) continue;
+    if (!repoInScope(repo)) continue;
     const plan = m.plan;
     if (!plan || !plan.sections) continue;
     for (const s of plan.sections) {
@@ -89,7 +89,7 @@ export function renderProjects() {
 
   const planItems = [];
   for (const [repo, m] of Object.entries(rm)) {
-    if (state.repo !== 'all' && repo !== state.repo) continue;
+    if (!repoInScope(repo)) continue;
     const plan = m.plan;
     if (!plan || !plan.open_tasks) continue;
     for (const t of plan.open_tasks) {

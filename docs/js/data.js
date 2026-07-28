@@ -5,6 +5,26 @@ export const $ = (id) => document.getElementById(id);
 export const pct = (num, den, dp = 1) => (den > 0 ? ((num / den) * 100).toFixed(dp) : null);
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* ---------------- repo scope ----------------
+ * state.repo 可以係 'all'、一個 repo 名,或者 'owner:<Person>'。每個 consumer
+ * 都要問呢個 predicate,唔好直接比較 state.repo — 咁先唔會有某個 call site
+ * 靜靜哋漏咗 owner 呢種寫法。
+ */
+export const OWNER_PREFIX = 'owner:';
+export function repoInScope(repo) {
+  if (state.repo === 'all') return true;
+  if (state.repo.startsWith(OWNER_PREFIX)) {
+    const person = state.repo.slice(OWNER_PREFIX.length);
+    return ((state.data.repo_meta || {})[repo] || {}).owner === person;
+  }
+  return repo === state.repo;
+}
+/** 揀咗嘅 repo 名;跨越多過一個 repo 嘅時候回 null。 */
+export function singleRepo() {
+  if (state.repo === 'all' || state.repo.startsWith(OWNER_PREFIX)) return null;
+  return state.repo;
+}
+
 /* ---------------- data loading ---------------- */
 export class LoadError extends Error {
   constructor(status) {
@@ -29,7 +49,7 @@ export const refDate = () => toDate(state.data.generated_at.slice(0, 10));
 
 export function tasksBetween(fromMs, toMs) {
   return state.data.tasks.filter((t) => {
-    if (state.repo !== 'all' && t.repo !== state.repo) return false;
+    if (!repoInScope(t.repo)) return false;
     if (state.branch !== 'all' && t.branch !== state.branch) return false;
     const ms = toDate(t.date).getTime();
     return ms >= fromMs && ms < toMs;

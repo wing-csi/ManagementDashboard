@@ -1,4 +1,4 @@
-import { state, toDate, refDate } from './data.js';
+import { state, toDate, refDate, repoInScope } from './data.js';
 
 export const LEVELS = ['L1', 'L2', 'L3', 'L4', 'L5'];
 export const AI_LOC_LEVELS = new Set(['L2', 'L3', 'L4', 'L5']);
@@ -119,7 +119,7 @@ export function metaInWindow() {
   const inWin = (d) => { const ms = toDate(d).getTime(); return ms >= from && ms < end; };
   const out = { deployments: 0, releases: 0, tags: 0, closedUnmerged: 0, quality: {} };
   for (const [repo, m] of Object.entries(rm)) {
-    if (state.repo !== 'all' && repo !== state.repo) continue;
+    if (!repoInScope(repo)) continue;
     out.deployments += (m.deployments || []).filter(inWin).length;
     out.releases += (m.releases || []).filter(inWin).length;
     out.tags += (m.tags || []).filter(inWin).length;
@@ -133,7 +133,7 @@ export function issuesInScope() {
   const rm = state.data.repo_meta || {};
   const out = { open: [], openTotal: 0, closedTotal: 0, milestones: [], hasData: false };
   for (const [repo, m] of Object.entries(rm)) {
-    if (state.repo !== 'all' && repo !== state.repo) continue;
+    if (!repoInScope(repo)) continue;
     const iss = m.issues;
     if (!iss) continue;
     out.hasData = true;

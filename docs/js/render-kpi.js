@@ -1,6 +1,6 @@
 /* Chart.js 4.4.1 is loaded globally from the CDN <script> in index.html */
 
-import { state, $, pct, esc, windowTasks } from './data.js';
+import { state, $, pct, esc, windowTasks, repoInScope } from './data.js';
 import {
   LEVELS, META, UNTAGGED_COLOR, INK, VIOLATION_META, median, fmtHours,
   statsFromTasks, weekL3pct, fillGaps, metaInWindow,
@@ -217,7 +217,7 @@ export function renderRag() {
   row.innerHTML = '';
   let grey = 0, shown = 0;
   for (const repo of (state.data.repos || [])) {
-    if (state.repo !== 'all' && repo !== state.repo) continue;
+    if (!repoInScope(repo)) continue;
     const r = repoRag(repo);
     shown++;
     if (r.label === '資料不足') grey++;
