@@ -3,7 +3,7 @@
 一個中央 repo,用 config 連接任意數量嘅 GitHub repos,經 API 讀取 commits + merged PRs,自動判別每個 task 嘅 AI 自動化水平(L1–L5),再出合併 dashboard。目標 repo **唔使改任何嘢**。
 
 ```
-config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→author→rules)──▶ metrics.json ──▶ dashboard(本機睇,經 private data repo 攞 metrics.json;認證 host 已取消)
+config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→author→rules)──▶ metrics.json ──▶ dashboard(線上 https://management-dashboard.pages.dev 經 Cloudflare Access 登入;或本機經 private data repo)
                 (commits + merged PRs)
 ```
 
@@ -277,6 +277,27 @@ Collector 會對每個 task 做紅線檢查,dashboard 異常提醒逐類匯總�
 ```
 
 AIFlowTesting 本身已經跑緊 coverage + bandit(SOP Phase 5),加一個 step 將結果寫入呢個 file commit 返 repo 就接通。冇呢個 file,RAG 淨用 CI pass rate 判,coverage / security 明細留空。
+
+## 線上睇(Cloudflare Pages + Access)
+
+Dashboard 已經 host 喺 **https://management-dashboard.pages.dev** — 開個 URL,輸入你嘅
+email,收一封一次性驗證碼(One-time PIN)郵件,入碼就睇到。唔使密碼、唔使裝任何嘢。
+只有名單內嘅 email 先入到;`/data/metrics.json` 同埋所有 preview URL 一樣受保護,
+未登入直接開只會見到 Cloudflare 登入頁。
+
+- **數據更新**:同 private data repo 同一條 nightly pipeline(`collect.yml` 最尾一步
+  用 wrangler 直接 upload `docs/`,每日 05:00 HKT)。頁面數據以 header 嘅
+  `generated_at` 為準。
+- **加人 / 減人**:Cloudflare Zero Trust → Access → Applications → 個 dashboard app
+  → 改 policy 嘅 email 名單,即時生效,唔使重新 deploy。
+- **同 Phase 1 嘅關係**:Phase 1「淨用 GitHub、唔加第三方」嘅約束由
+  `specs/2026-07-28-phase-2-cloudflare-pages-access-design.md` 正式取代 —
+  metrics 而家會存放喺 Cloudflare(Access 後面,唔公開)。下面「Private 模式」
+  嘅本地流程照用得,係冇網絡時嘅 fallback。
+- **CI 紅咗、step 叫 `Deploy dashboard to Cloudflare Pages`**:多數係
+  `CLOUDFLARE_API_TOKEN` 過期或者未設 — 去 repo Settings → Secrets and variables
+  → Actions 換一個新 token(Cloudflare My Profile → API Tokens 開,權限只需要
+  Account / Cloudflare Pages / Edit)。
 
 ## Private 模式
 
