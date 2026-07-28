@@ -3,7 +3,7 @@
 一個中央 repo,用 config 連接任意數量嘅 GitHub repos,經 API 讀取 commits + merged PRs,自動判別每個 task 嘅 AI 自動化水平(L1–L5),再出合併 dashboard。目標 repo **唔使改任何嘢**。
 
 ```
-config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→author→rules)──▶ metrics.json ──▶ dashboard(線上 https://management-dashboard.pages.dev 經 Cloudflare Access 登入;或本機經 private data repo)
+config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→author→rules)──▶ metrics.json ──▶ dashboard(線上 https://management-dashboard-emj.pages.dev 經 Cloudflare Access 登入;或本機經 private data repo)
                 (commits + merged PRs)
 ```
 
@@ -280,7 +280,7 @@ AIFlowTesting 本身已經跑緊 coverage + bandit(SOP Phase 5),加一個 step �
 
 ## 線上睇(Cloudflare Pages + Access)
 
-Dashboard 已經 host 喺 **https://management-dashboard.pages.dev** — 開個 URL,輸入你嘅
+Dashboard 已經 host 喺 **https://management-dashboard-emj.pages.dev** — 開個 URL,輸入你嘅
 email,收一封一次性驗證碼(One-time PIN)郵件,入碼就睇到。唔使密碼、唔使裝任何嘢。
 只有名單內嘅 email 先入到;`/data/metrics.json` 同埋所有 preview URL 一樣受保護,
 未登入直接開只會見到 Cloudflare 登入頁。

@@ -8,7 +8,7 @@
 Put the dashboard online at a stable URL with **real authentication**, so the owner and
 two named colleagues can view live data from any device without running anything locally.
 
-URL: `https://management-dashboard.pages.dev` (default Pages subdomain; a custom domain
+URL: `https://management-dashboard-emj.pages.dev` (default Pages subdomain; a custom domain
 can be attached later without changing anything in this design).
 
 ## Decision: this supersedes the "no third-party services" constraint
@@ -32,7 +32,7 @@ Daily 05:00 HKT — existing collect.yml
     └─▶ NEW: copy into docs/data/ (CI runner only) and
              wrangler pages deploy docs/ → Cloudflare Pages project "management-dashboard"
                                      │
-Browser ─▶ https://management-dashboard.pages.dev
+Browser ─▶ https://management-dashboard-emj.pages.dev
              └─▶ Cloudflare Access login page (One-time PIN by email)
                    allowed: wingpoon1990@gmail.com,
                             wing.poon@chinasofti.com,
@@ -56,8 +56,8 @@ instructions; the API token value is never handled by the agent):
    because the deployed content includes `metrics.json` which is deliberately not in
    git). The initial upload is a **single placeholder file** — no real data.
 2. Enable Zero Trust (free plan, pick a team name).
-3. Create an Access application covering **both** `management-dashboard.pages.dev`
-   (production) and `*.management-dashboard.pages.dev` (preview URLs).
+3. Create an Access application covering **both** `management-dashboard-emj.pages.dev`
+   (production) and `*.management-dashboard-emj.pages.dev` (preview URLs).
 4. Access policy: Allow → Include → Emails: the three addresses above.
    Login method: **One-time PIN only** (no IdP, nothing to install).
 5. Create an API token with the **"Cloudflare Pages — Edit"** template (least privilege),
@@ -104,10 +104,34 @@ No changes.
 - API token is Pages-edit only: leak/expiry affects deploys, nothing else.
   Token expiry surfaces as a loud CI failure, same as `DATA_REPO_PAT` expiry.
 
+## As-built notes (2026-07-28, Cloudflare setup)
+
+Two things differ from this design as originally written. Both are recorded here rather
+than silently absorbed:
+
+1. **Hostname carries a suffix.** `management-dashboard.pages.dev` was already taken
+   globally, so Cloudflare assigned **`management-dashboard-emj.pages.dev`**. The Pages
+   *project* name is still `management-dashboard`, so the workflow's
+   `--project-name=management-dashboard` is unaffected. All docs now use the real host.
+2. **Access is two applications, not one.** The Cloudflare dashboard locks the
+   Pages-managed app's destination to the preview wildcard, so:
+   - `*.management-dashboard-emj.pages.dev` (previews) — app auto-created by the Pages
+     "Restrict previews" toggle, policy **"Allow Members - Cloudflare Pages"** (account
+     members only, i.e. currently just the account owner).
+   - `management-dashboard-emj.pages.dev` (production) — separate self-hosted app,
+     policy **"Dashboard viewers"** = the three allowlisted emails, One-time PIN.
+
+   Consequence: the two colleague addresses can open **production only**, not preview
+   URLs. That is more restrictive, not less, and the CI deploys with `--branch=main`
+   (production) so no preview URL is produced by this pipeline. If preview access is
+   ever wanted for them, attach the "Dashboard viewers" policy to the preview app too.
+
+Access team domain: `summer-mud-0e86.cloudflareaccess.com`.
+
 ## Verification checklist (definition of done)
 
-- [ ] Unauthenticated `https://management-dashboard.pages.dev/` → Access login page, not the dashboard.
-- [ ] Unauthenticated `https://management-dashboard.pages.dev/data/metrics.json` → blocked the same way.
+- [x] Unauthenticated `https://management-dashboard-emj.pages.dev/` → Access login page, not the dashboard. **Verified 2026-07-28: 302 → `summer-mud-0e86.cloudflareaccess.com`.**
+- [x] Unauthenticated `https://management-dashboard-emj.pages.dev/data/metrics.json` → blocked the same way. **Verified 2026-07-28: 302 → same login.**
 - [ ] Login with an allowlisted email (OTP) → dashboard renders with real data, no console errors.
 - [ ] An email outside the allowlist cannot get in.
 - [ ] `workflow_dispatch` run of `collect` is green end-to-end and the site shows the fresh `generated_at`.

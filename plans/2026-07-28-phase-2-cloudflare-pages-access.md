@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Task 3 requires the human user (Cloudflare dashboard clicks) — do not attempt it with a subagent.
 
-**Goal:** Host the dashboard at `https://management-dashboard.pages.dev` behind Cloudflare Access (email one-time PIN, 3-address allowlist), refreshed by the existing nightly CI.
+**Goal:** Host the dashboard at `https://management-dashboard-emj.pages.dev` behind Cloudflare Access (email one-time PIN, 3-address allowlist), refreshed by the existing nightly CI.
 
 **Architecture:** The existing `collect.yml` gains one final step that copies the freshly collected `metrics.json` into the runner's `docs/data/` and direct-uploads `docs/` to a Cloudflare Pages project with `wrangler`. Access protects the whole hostname; the frontend is unchanged. See `specs/2026-07-28-phase-2-cloudflare-pages-access-design.md` (approved).
 
@@ -201,7 +201,7 @@ In the fenced block near the top of `README.md`, replace the trailing parentheti
 
 with
 
-`dashboard(線上 https://management-dashboard.pages.dev 經 Cloudflare Access 登入;或本機經 private data repo)`
+`dashboard(線上 https://management-dashboard-emj.pages.dev 經 Cloudflare Access 登入;或本機經 private data repo)`
 
 - [ ] **Step 2: Add the hosted-viewing section**
 
@@ -210,7 +210,7 @@ Insert a new `##` section immediately before `## Private 模式`:
 ```markdown
 ## 線上睇(Cloudflare Pages + Access)
 
-Dashboard 已經 host 喺 **https://management-dashboard.pages.dev** — 開個 URL,輸入你嘅
+Dashboard 已經 host 喺 **https://management-dashboard-emj.pages.dev** — 開個 URL,輸入你嘅
 email,收一封一次性驗證碼(One-time PIN)郵件,入碼就睇到。唔使密碼、唔使裝任何嘢。
 只有名單內嘅 email 先入到;`/data/metrics.json` 同埋所有 preview URL 一樣受保護,
 未登入直接開只會見到 Cloudflare 登入頁。
@@ -254,12 +254,12 @@ the verification at each step is the ground truth, not the exact click path.
   content includes a gitignored file). Project name: exactly `management-dashboard`.
   Upload a single throwaway `index.html` containing just the word `placeholder`
   (create it locally; never upload real data here). Deploy.
-  **Verify:** `https://management-dashboard.pages.dev` shows "placeholder".
+  **Verify:** `https://management-dashboard-emj.pages.dev` shows "placeholder".
 - [ ] **M2 — Zero Trust team.** one.dash.cloudflare.com → if prompted, pick any team
   name (free plan, 50 seats). **Verify:** Zero Trust dashboard opens.
 - [ ] **M3 — Access application.** Zero Trust → Access → Applications → Add an
   application → **Self-hosted**. Name: `ManagementDashboard`. Add BOTH domains:
-  `management-dashboard.pages.dev` and `*.management-dashboard.pages.dev`
+  `management-dashboard-emj.pages.dev` and `*.management-dashboard-emj.pages.dev`
   (production + preview URLs). (If instead enabled via Pages project → Settings →
   Access Policy toggle: it auto-creates the app for preview URLs — then EDIT it in
   Zero Trust to add the production hostname too.)
@@ -268,7 +268,7 @@ the verification at each step is the ground truth, not the exact click path.
   Login method: One-time PIN (default). Remove/avoid any broader rule
   (e.g. "everyone with account email domain").
 - [ ] **M5 — Verify the gate BEFORE any real data exists.** In a private/incognito
-  window open `https://management-dashboard.pages.dev` → must show the Cloudflare
+  window open `https://management-dashboard-emj.pages.dev` → must show the Cloudflare
   Access login page, NOT "placeholder". Then log in with `wingpoon1990@gmail.com`
   (OTP email) → now shows "placeholder". A non-allowlisted email must be rejected.
   **Do not proceed to Task 4 until this passes.**
@@ -308,8 +308,8 @@ and re-run: `gh workflow run collect.yml`.
 - [ ] **Step 3: Verify the spec's definition-of-done checklist**
 
 ```bash
-curl -sI https://management-dashboard.pages.dev/ | head -5
-curl -sI https://management-dashboard.pages.dev/data/metrics.json | head -5
+curl -sI https://management-dashboard-emj.pages.dev/ | head -5
+curl -sI https://management-dashboard-emj.pages.dev/data/metrics.json | head -5
 ```
 
 Expected: both return a 302 redirect to `*.cloudflareaccess.com` (NOT 200).
