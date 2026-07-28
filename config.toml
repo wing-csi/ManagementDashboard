@@ -97,6 +97,14 @@ name = "benegg/BOCPT-EE-APP-EMBED-WEB"
 token_env = "BEN_GH_METRICS_TOKEN"
 sop_paths = []
 
+# Smart Patient Tracking Dashboard — benegg 入面第一個行 PR flow 嘅 repo,
+# 而且 source branch 係 codex/*(agent 生成嘅痕跡)→ 留返俾 smart inference 判,
+# 唔預設 level;睇實際判成點先決定使唔使 override
+[[repos]]
+name = "benegg/HA-SPDT-NFP0394"
+token_env = "BEN_GH_METRICS_TOKEN"
+sop_paths = []
+
 [[repos]]
 name = "benegg/BoostBank-ReactNative-SMEApp"
 token_env = "BEN_GH_METRICS_TOKEN"
