@@ -87,7 +87,7 @@ Bar = 該週 task 數(按 level 疊,週一起計,冇數嘅週補零);黑線 = �
 |---|---|---|---|
 | RAG 燈 | 紅:security critical>0 或 CI pass<75%;黃:high>0 或 CI pass<90%;綠:其餘;灰:無 CI checks 又無 quality file | repo 健康一眼睇 | CI pass rate = rollup SUCCESS 嘅 PR ÷ 有 rollup 嘅 PR;coverage / security 數字嚟自 `quality_file` |
 | 修復佔比 | title match `^(fix|hotfix|revert)\b` 嘅 tasks ÷ 全部 × 100 | 工作有幾多係執手尾 | 量度**工作構成**,唔係「AI 錯誤率」— fix 修嘅可能係任何 level 引入嘅問題 |
-| PR 打回率 | 收過 ≥1 個 merge 之前嘅 human `CHANGES_REQUESTED` 嘅 PR ÷ **有人 review 過**嘅 PR × 100 | 字面意義嘅「被打回重做」 | 直接嚟自 GitHub review 記錄,冇得靠估;merge 之後先嚟嘅 CHANGES_REQUESTED 唔算(code 已經出咗,冇嘢返工過);分母淨計**有人 review 過**嘅 PR — 冇人睇過嘅 PR 根本冇得被打回,計落分母只會令個率虛低,作者 review 自己個 PR 唔算;冇 PR flow 顯示「無 PR」 |
+| PR 打回率 | 收過 ≥1 個 merge 之前嘅 human `CHANGES_REQUESTED` 嘅 PR ÷ **有人 review 過**嘅 PR × 100 | 字面意義嘅「被打回重做」 | 直接嚟自 GitHub review 記錄,冇得靠估;merge 之後先嚟嘅 CHANGES_REQUESTED 唔算(code 已經出咗,冇嘢返工過);分母淨計**有人 review 過**嘅 PR — 冇人睇過嘅 PR 根本冇得被打回,計落分母只會令個率虛低,作者 review 自己個 PR 唔算;冇 PR flow 顯示「無 PR」,有 PR 但全部未經人 review 就顯示「此範圍內無經 review 嘅 PR」——即係話成個 repo merge 晒啲嘢都冇人睇過 |
 | 平均返工輪數 | 被打回 PR 嘅打回**輪數**中位數 | 一個 PR 被踢返嚟幾多轉 | 一輪 = 中間冇新 push 嘅一批打回;兩個 reviewer 打回同一個 push 算一輪 |
 | 返工周轉時間 | 第一次打回 → merge 嘅中位時數 | 返工要幾耐先搞掂 | 量度成段返工期,唔係最後一輪 |
 | PR 接受率 | merged ÷ (merged + window 內 close 咗冇 merge) × 100 | 提出嘅改動有幾多被接納 | |

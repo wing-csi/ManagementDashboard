@@ -18,6 +18,7 @@ from collect_github import (  # noqa: E402
     collect_commits,
     collect_issues,
     collect_prs,
+    extract_signals,
     load_config,
     normalize_level,
     rework_rounds,
@@ -353,7 +354,7 @@ def test_verify_l4_claim_with_review_churn_is_suspect():
                   reviews=(("CHANGES_REQUESTED", "bob", "User"),),
                   files=("tests/test_app.py",))
     assert t.level == "L4" and t.check == "suspect:human-gates-observed"
-    assert t.rework == 1  # 被打回次數傳到 task
+    assert t.rework == 1  # 被打回輪數傳到 task
 
 
 def test_two_reviewers_on_the_same_push_is_one_round():
@@ -438,6 +439,20 @@ def test_dismissed_rejection_is_still_counted():
                   dismissed=(("CHANGES_REQUESTED", "bob", "User", "2026-05-02T10:00:00Z"),),
                   pushes=("2026-05-01T09:00:00Z",))
     assert t.rework == 1
+
+
+def test_dismissed_rejection_still_counts_as_changes_requested():
+    # Same fact pattern as test_dismissed_rejection_is_still_counted, but
+    # pinning the extract_signals()/PrSignals half of the redefinition
+    # directly — infer_level and verify_claim both read changes_requested,
+    # not t.rework, as their evidence of a human gate.
+    node = pr_node(labels=("ai-level/L3",), commits=(CLAUDE_FOOTER,),
+                    merged="2026-05-10T10:00:00Z",
+                    dismissed=(("CHANGES_REQUESTED", "bob", "User",
+                                "2026-05-02T10:00:00Z"),),
+                    pushes=("2026-05-01T09:00:00Z",))
+    sig = extract_signals(node, CFG)
+    assert sig.changes_requested >= 1
 
 
 def test_dismissed_approval_is_not_counted_as_rework():

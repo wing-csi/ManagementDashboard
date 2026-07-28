@@ -126,3 +126,17 @@ def test_rework_sub_reports_no_prs_when_scope_has_none(page, server):
     _serve(page, data)
     dash = open_dashboard(page, server)
     assert dash.text_content("#qReworkSub").strip() == "此範圍內無 PR"
+
+
+def test_rework_card_reads_dash_when_every_pr_is_unreviewed(page, server):
+    """Middle empty state: PRs exist but none of them received a human review,
+    so reviewedPRs is 0. This must read '–' with the un-reviewed message —
+    distinct from both '此範圍內無 PR' (no PRs at all, tested above) and from
+    an actual 0%, which would wrongly claim a measured rate of zero rework."""
+    data = _load_fixture()
+    for t in data["tasks"]:
+        t["reviewed"] = False
+    _serve(page, data)
+    dash = open_dashboard(page, server)
+    assert dash.text_content("#qRework").strip() == "–"
+    assert "此範圍內無經 review 嘅 PR" in dash.text_content("#qReworkSub")
