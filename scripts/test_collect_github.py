@@ -957,3 +957,62 @@ def test_load_config_without_people_is_empty(tmp_path):
     cfg_file = tmp_path / "config.toml"
     cfg_file.write_text('[[repos]]\nname = "wing/abci"\n')
     assert load_config(cfg_file)["people"] == {}
+
+
+# ---------------------------------------------------------------- owner
+
+def test_resolve_owner_undeclared_is_none():
+    from collect_github import resolve_owner
+    assert resolve_owner({"name": "wing/abci"}, {}) is None
+
+
+def test_resolve_owner_passes_through_canonical_name():
+    from collect_github import resolve_owner
+    people = {"Wing": ["wing-csi", "wing2036"]}
+    assert resolve_owner({"name": "wing/abci", "owner": "Wing"}, people) == "Wing"
+
+
+def test_resolve_owner_maps_identity_to_canonical():
+    from collect_github import resolve_owner
+    people = {"Wing": ["wing-csi", "wing2036"]}
+    assert resolve_owner({"name": "wing/abci", "owner": "wing2036"}, people) == "Wing"
+
+
+def test_resolve_owner_unknown_name_passes_through():
+    """An owner who never commits is legitimate (e.g. a manager)."""
+    from collect_github import resolve_owner
+    assert resolve_owner({"name": "wing/abci", "owner": "Alice"}, {}) == "Alice"
+
+
+def test_build_output_emits_people_and_owner():
+    from collect_github import build_output
+    cfg = {
+        "window_days": 90, "mode": "auto",
+        "repos": [{"name": "wing/abci", "owner": "wing2036"},
+                  {"name": "wing/other"}],
+        "people": {"Wing": ["wing-csi", "wing2036"]},
+    }
+    repo_meta = {"wing/abci": {}, "wing/other": {}}
+    out = build_output(cfg, [], repo_meta, [], "2026-07-28T05:00:00+00:00")
+    assert out["schema_version"] == 2
+    assert out["people"] == {"Wing": ["wing-csi", "wing2036"]}
+    assert out["repo_meta"]["wing/abci"]["owner"] == "Wing"
+    assert "owner" not in out["repo_meta"]["wing/other"]
+
+
+def test_build_output_omits_people_key_when_unconfigured():
+    from collect_github import build_output
+    cfg = {"window_days": 90, "mode": "auto",
+           "repos": [{"name": "wing/abci"}], "people": {}}
+    out = build_output(cfg, [], {"wing/abci": {}}, [], "2026-07-28T05:00:00+00:00")
+    assert out["people"] == {}
+    assert out["repos"] == ["wing/abci"]
+
+
+def test_build_output_warns_on_unknown_owner(capsys):
+    from collect_github import build_output
+    cfg = {"window_days": 90, "mode": "auto",
+           "repos": [{"name": "wing/abci", "owner": "Wng"}],
+           "people": {"Wing": ["wing-csi"]}}
+    build_output(cfg, [], {"wing/abci": {}}, [], "2026-07-28T05:00:00+00:00")
+    assert "Wng" in capsys.readouterr().err

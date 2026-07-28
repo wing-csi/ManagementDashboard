@@ -918,6 +918,59 @@ def parse_people(raw: dict) -> dict[str, list[str]]:
     return people
 
 
+def resolve_owner(repo_cfg: dict, people: dict[str, list[str]]) -> str | None:
+    """Canonical person name for a repo's declared owner, or None.
+
+    Accepts either a canonical name or any of that person's identities, so
+    `owner = "wing2036"` and `owner = "Wing"` mean the same thing.
+    """
+    declared = repo_cfg.get("owner")
+    if not declared:
+        return None
+    if declared in people:
+        return declared
+    for person, identities in people.items():
+        if declared in identities:
+            return person
+    return declared
+
+
+def build_output(cfg: dict, tasks: list, repo_meta: dict,
+                 errors: list[str], generated_at: str) -> dict:
+    """Assemble the metrics.json payload.
+
+    schema_version stays at 2: `people` and `repo_meta[r].owner` are both
+    optional, so old data and old frontends degrade gracefully in either
+    direction.
+    """
+    known = set(cfg["people"]) | {i for ids in cfg["people"].values() for i in ids}
+    task_authors = {t.author for t in tasks if t.author}
+    for repo_cfg in cfg["repos"]:
+        owner = resolve_owner(repo_cfg, cfg["people"])
+        if owner is None:
+            continue
+        meta = repo_meta.get(repo_cfg["name"])
+        if meta is None:
+            continue
+        meta["owner"] = owner
+        if owner not in known and owner not in task_authors:
+            # Not fatal: an owner who never commits is legitimate. But this is
+            # also exactly how a typo looks, so say so.
+            print(f"  ! warning: {repo_cfg['name']}: owner {owner!r} matches no "
+                  "known person or task author", file=sys.stderr)
+    return {
+        "schema_version": 2,
+        "generated_at": generated_at,
+        "window_days": cfg["window_days"],
+        "mode": cfg["mode"],
+        "repos": [r["name"] for r in cfg["repos"]],
+        "people": cfg["people"],
+        "tasks": [asdict(t) for t in tasks],
+        "repo_meta": repo_meta,
+        "errors": errors,
+    }
+
+
 def load_config(path: Path) -> dict:
     with path.open("rb") as f:
         raw = tomllib.load(f)
@@ -981,16 +1034,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     tasks.sort(key=lambda t: t.date, reverse=True)
-    output = {
-        "schema_version": 2,
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "window_days": cfg["window_days"],
-        "mode": cfg["mode"],
-        "repos": [r["name"] for r in cfg["repos"]],
-        "tasks": [asdict(t) for t in tasks],
-        "repo_meta": repo_meta,
-        "errors": errors,
-    }
+    output = build_output(
+        cfg, tasks, repo_meta, errors,
+        datetime.now(timezone.utc).isoformat(timespec="seconds"))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(output, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
