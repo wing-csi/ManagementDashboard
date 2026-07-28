@@ -48,12 +48,14 @@ export function statsFromTasks(list) {
     if (t.kind === 'pr') {
       s.prTotal++;
       // 打回率 分母係「有人 review 過」嘅 PR — 冇人 review 過嘅 PR 根本冇得被打回,
-      // 擺入分母只會令個率虛低。
-      if (t.reviewed) s.reviewedPRs++;
-      if ((t.rework || 0) > 0) {
-        s.reworkPRs++;
-        s.reworkRounds.push(t.rework);
-        if (t.rework_hours != null) s.reworkTurnarounds.push(t.rework_hours);
+      // 擺入分母只會令個率虛低。嵌套嘅 if 確保 reworkPRs <= reviewedPRs 成立。
+      if (t.reviewed) {
+        s.reviewedPRs++;
+        if ((t.rework || 0) > 0) {
+          s.reworkPRs++;
+          s.reworkRounds.push(t.rework);
+          if (t.rework_hours != null) s.reworkTurnarounds.push(t.rework_hours);
+        }
       }
       if (t.ci) { s.ciTotal++; if (t.ci === 'pass') s.ciPass++; }
       if (t.lead_hours != null) { s.leads.push(t.lead_hours); if (isFix) s.fixLeads.push(t.lead_hours); }
