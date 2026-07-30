@@ -252,11 +252,13 @@ one column below. Six rows become 3+3 — roughly half the vertical space and ha
 the horizontal sweep.
 
 `renderSpectrum()` appends rows in a fixed order (L1…L5, then untagged) at
-[render-kpi.js:63](../docs/js/render-kpi.js). CSS grid fills row-major, so a
-two-column grid yields the column pairing L1/L4, L2/L5, L3/untagged. This is
-acceptable — each row is self-labelled — and requires **no JS change**. Do not
-use `grid-auto-flow: column` to "fix" the ordering: it would break the
-single-column fallback.
+[render-kpi.js:63](../docs/js/render-kpi.js). CSS grid fills row-major, so the
+six rows pair up **L1|L2, L3|L4, L5|未分級** — plain left-to-right reading
+order, and no JS change needed. (An earlier draft of this section predicted
+L1/L4, L2/L5, L3/untagged; that is what `grid-auto-flow: column` would give.
+Verified against the render: row-major is what ships, and it reads better.) Do
+not switch to `grid-auto-flow: column` — it would break the single-column
+fallback below 1100px.
 
 ### 4.4 Contributor cards
 

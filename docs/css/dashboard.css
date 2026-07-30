@@ -285,12 +285,18 @@ h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
   white-space: nowrap;
   color: var(--ink);
 }
-.legend { margin-top: 18px; display: grid; gap: 8px; }
+/* Two columns above 1100px: halves the vertical space and the label-to-value
+   eye travel. Grid fills row-major, so the six rows pair up L1|L2, L3|L4,
+   L5|未分級 — left-to-right reading order, which is what you want. Do NOT
+   reach for grid-auto-flow:column; it breaks the single-column fallback. */
+.legend { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px 40px; }
 .legend .row {
   display: grid;
-  grid-template-columns: 44px 96px 1fr 52px 62px;
+  /* fixed bar column: 1fr stretched the track to 988px and stranded the
+     count and percentage at the far right of the card */
+  grid-template-columns: 34px 76px 200px 40px 52px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 8px; vertical-align: -1px; }
 .lv { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
@@ -378,18 +384,20 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .ms-row .p { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); text-align: right; }
 .overview, .defects { margin-bottom: 14px; }
 .ov-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; }
-.ov-row { display: grid; grid-template-columns: 92px 1fr 76px; gap: 10px; align-items: center; margin-bottom: 7px; }
+.ov-row { display: grid; grid-template-columns: 92px 200px 76px; gap: 10px; align-items: center; margin-bottom: 7px; }
 .ov-row .t { font-size: 12px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov-row .n { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: right; }
 .ov-sub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
 .contribs { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
-.contrib { background: var(--card2, #F1F4F9); border-radius: 10px; padding: 12px 14px; }
+/* was the one element not using the bordered-card language */
+.contrib { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
 .contrib .nm { font-size: 13px; font-weight: 700; color: var(--ink); display: flex; gap: 8px; align-items: center; }
 .contrib .av { width: 24px; height: 24px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-family: var(--font-mono); flex: none; }
 .contrib .ct { font-family: var(--font-mono); font-size: 18px; margin-top: 6px; }
 .contrib .pc { font-size: 11px; color: var(--muted); }
 .typechip { display: inline-block; font-family: var(--font-mono); font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-right: 7px; background: #E4E9F2; color: #3A4E78; }
 .sevdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+@media (max-width: 1100px) { .legend { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .ov-grid { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .proj-duo { grid-template-columns: 1fr; } .ms-row { grid-template-columns: 110px 1fr 100px; } }
 .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; margin-bottom: 18px; }
@@ -405,7 +413,7 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .table-note { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 10px; }
 .quality { margin-bottom: 14px; }
 .qgrid { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 28px; align-items: start; }
-.qrow { display: grid; grid-template-columns: 44px 1fr 96px; gap: 12px; align-items: center; margin-bottom: 8px; }
+.qrow { display: grid; grid-template-columns: 44px 200px 96px; gap: 12px; align-items: center; margin-bottom: 8px; }
 .qrow .p { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: right; }
 .rework { color: var(--warn); font-family: var(--font-mono); font-size: 11px; margin-left: 6px; }
 .qgrid { grid-template-columns: repeat(5, 1fr); }
@@ -446,7 +454,7 @@ footer {
   .qgrid { grid-template-columns: repeat(2, 1fr) !important; }
   .plan-duo { grid-template-columns: 1fr; }
   .plan-row { grid-template-columns: 90px 1fr 40px; }
-  .legend .row { grid-template-columns: 40px 76px 1fr 42px 52px; gap: 8px; }
+  .legend .row { grid-template-columns: 34px 68px 1fr 40px 50px; gap: 8px; }
   td.subject { max-width: 150px; }
   .table-scroll { overflow-x: auto; }
 }

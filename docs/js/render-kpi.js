@@ -74,6 +74,13 @@ export function renderSpectrum(cur) {
       <span class="p">${share.toFixed(1)}%${isU ? '*' : ''}</span>`;
     legend.appendChild(row);
   }
+
+  // 縮細版嘅 strip,擺入 hero card:個總數同佢嘅構成一齊睇到,唔使隔住 300px。
+  // 只計已分級 levels — hero 講嘅係 L3+ ÷ 已分級,加返未分級會同個分母唔一致。
+  $('heroSpark').innerHTML = LEVELS
+    .filter((l) => cur.byLevel[l] > 0)
+    .map((l) => `<span style="flex:${cur.byLevel[l]};background:${META[l].color}"></span>`)
+    .join('');
 }
 
 export function renderChart(weeklyRows) {
