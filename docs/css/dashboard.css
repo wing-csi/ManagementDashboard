@@ -84,8 +84,24 @@ body {
 }
 .chrome-inner { max-width: 1380px; margin: 0 auto; padding: 0 24px; }
 .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-/* the eyebrow sits beside the title now, not above it */
-.brand .eyebrow { margin-bottom: 0; }
+/* The eyebrow sits beside the title now, not above it. At 16px the title's
+   mono subtitle and the eyebrow are both muted mono and ran together into one
+   long string — 自動化水平儀 AI AUTONOMY GAUGE 14 REPOS · GITHUB TELEMETRY.
+   A rule separates them, using the bordered language the rest of the page
+   already speaks rather than inventing a divider glyph. */
+.brand .eyebrow {
+  margin-bottom: 0;
+  border-left: 1px solid var(--line-strong);
+  padding-left: 12px;
+}
+@media (max-width: 640px) {
+  /* Wrapped onto its own line the rule reads as a stray tick, so drop it. */
+  .brand .eyebrow { border-left: 0; padding-left: 0; }
+  /* The subtitle cannot share a line with a 26px title at this width, and as
+     an inline run it broke mid-phrase — 自動化水平儀 AI AUTONOMY / GAUGE.
+     Given its own line it wraps as a unit or not at all. */
+  .masthead h1 small { display: block; margin-left: 0; margin-top: 2px; }
+}
 
 /* ---------- header ---------- */
 .masthead {
@@ -519,7 +535,11 @@ footer {
 
 @media (max-width: 900px) {
   /* the hero cannot share a row at this width — it stacks and stays first */
-  .kpis { grid-template-columns: repeat(2, 1fr); }
+  /* Three, not two: there are exactly three non-hero cards, and two columns
+     stranded the third alone on its own row — the same orphan shape .qgrid
+     had. At 900px three columns still leave ~290px each, enough for a 32px
+     metric. */
+  .kpis { grid-template-columns: repeat(3, 1fr); }
   .kpi.hero { grid-column: 1 / -1; }
   .kpi.hero .value { font-size: var(--fs-display-sm); }
   .dora-strip { grid-template-columns: repeat(2, 1fr); }
@@ -543,6 +563,10 @@ footer {
    test_frontend_typography.py, which measures one tab at a time — the state a
    reader actually sees. */
 @media (max-width: 640px) {
+  /* Three columns of ~110px cannot hold a 32px metric plus its delta line, so
+     the cards stack outright here. Stacking also removes the orphan question
+     instead of trading it for a narrower one. */
+  .kpis { grid-template-columns: 1fr; }
   .qgrid { grid-template-columns: 1fr !important; }
   /* The three bar rows all carry a fixed 200px track, added deliberately so
      the label-to-value travel stops depending on card width. It has to give
