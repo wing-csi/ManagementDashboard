@@ -206,9 +206,12 @@ plain-language sub ("185 個已分級 task 之中,77 個由 agent 主導完成")
 The three secondary KPI cards **top-align their content** rather than stretching
 to hero height — the mockup revealed they otherwise read as under-filled.
 
-The existing `.warned` state ([dashboard.css:121](../docs/css/dashboard.css),
-applied when 分級覆蓋率 < 80%) needs a hero-specific colour: `--warn` `#A8751B`
-fails contrast on `--ink`. Use `#E0A93B` inside `.kpi.hero`.
+~~The existing `.warned` state needs a hero-specific colour.~~ **Withdrawn
+during implementation:** `.warned` is toggled at
+[render-kpi.js:33](../docs/js/render-kpi.js) on `#kpiCov` alone — the 分級覆蓋率
+card, which is a plain card, never the hero. A `.kpi.hero .value.warned` rule
+would be dead CSS for a state that cannot occur, so neither it nor the
+`--hero-warn` token ships.
 
 ### 3.4 DORA strip
 

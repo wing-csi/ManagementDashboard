@@ -52,11 +52,17 @@
   <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
 
     <section class="kpis">
-      <div class="card kpi">
-        <div class="label">L3+ 自動化佔比</div>
-        <div class="value" id="kpiL3">–</div>
-        <div class="delta" id="kpiL3d"></div>
-        <div class="sub">task 由 agent 主導完成的比例</div>
+      <div class="card kpi hero">
+        <div>
+          <div class="label">L3+ 自動化佔比 — 北極星</div>
+          <div class="value" id="kpiL3">–</div>
+          <div class="delta" id="kpiL3d"></div>
+        </div>
+        <div class="hero-spark" id="heroSpark"></div>
+        <div class="hero-foot">
+          <div class="sub">task 由 agent 主導完成的比例</div>
+          <span class="hero-tag">L3+L4+L5</span>
+        </div>
       </div>
       <div class="card kpi">
         <div class="label">出碼率(近似)</div>
@@ -78,26 +84,27 @@
       </div>
     </section>
 
-    <section class="kpis dora">
-      <div class="card kpi">
-        <div class="label">部署頻率<span class="scope-note" hidden>全 repo 範圍</span></div>
-        <div class="value" id="dDeploy">–</div>
-        <div class="sub" id="dDeploySub">–</div>
+    <div class="dora-lead">DORA</div>
+    <section class="dora-strip">
+      <div class="d">
+        <div class="dl">部署頻率<span class="scope-note" hidden>全 repo 範圍</span></div>
+        <div class="dv" id="dDeploy">–</div>
+        <div class="ds" id="dDeploySub">–</div>
       </div>
-      <div class="card kpi">
-        <div class="label">Lead Time(至 merge)</div>
-        <div class="value" id="dLead">–</div>
-        <div class="sub">PR 開 → merge 中位數</div>
+      <div class="d">
+        <div class="dl">Lead Time(至 merge)</div>
+        <div class="dv" id="dLead">–</div>
+        <div class="ds">PR 開 → merge 中位數</div>
       </div>
-      <div class="card kpi">
-        <div class="label">變更失敗率(proxy)</div>
-        <div class="value" id="dCfr">–</div>
-        <div class="sub">revert / hotfix ÷ 部署次數</div>
+      <div class="d">
+        <div class="dl">變更失敗率(proxy)</div>
+        <div class="dv" id="dCfr">–</div>
+        <div class="ds">revert / hotfix ÷ 部署次數</div>
       </div>
-      <div class="card kpi">
-        <div class="label">MTTR(proxy)</div>
-        <div class="value" id="dMttr">–</div>
-        <div class="sub">修復類 task 嘅 lead time 中位數</div>
+      <div class="d">
+        <div class="dl">MTTR(proxy)</div>
+        <div class="dv" id="dMttr">–</div>
+        <div class="ds">修復類 task 嘅 lead time 中位數</div>
       </div>
     </section>
 

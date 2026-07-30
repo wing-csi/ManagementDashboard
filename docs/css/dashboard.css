@@ -3,18 +3,25 @@
 :root {
   --paper: #F2F3EF;
   --card: #FFFFFF;
-  --ink: #191D1B;
-  --muted: #6A7370;
-  --line: #E2E4DD;
-  --track: #EFF0EA;
-  --l1: #CBD2D9;
-  --l2: #9FB6D1;
+  --ink: #161A18;
+  --muted: #667069;
+  --line: #DDE0D8;
+  --line-strong: #C7CCC2;
+  --track: #ECEEE7;
+  /* L1/L2 raised for legibility on white. They still sit under the WCAG 3:1
+     non-text threshold (1.77:1 and 2.51:1) — a deliberate trade: reaching 3:1
+     would force L2–L5 darker to stay distinguishable and destroy the
+     light-to-dark autonomy reading. Colour is kept redundant instead — every
+     legend row and strip segment is labelled in text. See spec §3.1. */
+  --l1: #B9C4CE;
+  --l2: #8AA6C6;
   --l3: #5F8CC6;
   --l4: #2E5EB8;
   --l5: #0A2F9C;
   --untagged: #DFE1D8;
   --alert: #C2452D;
   --warn: #A8751B;
+  --good: #2E7D4F;
   --radius: 10px;
   --font-display: 'Space Grotesk', 'Noto Sans TC', system-ui, sans-serif;
   --font-body: 'Noto Sans TC', -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
@@ -123,11 +130,15 @@ body {
 .stamp { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
 
 /* ---------- KPI ---------- */
+/* The hero takes the wide first column: the north star must not look like
+   MTTR. The other three size to content rather than stretching to hero
+   height, which otherwise leaves them visibly under-filled. */
 .kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 14px;
+  grid-template-columns: 1.75fr 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: start;
 }
 .card {
   background: var(--card);
@@ -138,18 +149,84 @@ body {
 .kpi .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .kpi .value {
   font-family: var(--font-display);
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.05;
 }
-.kpi .value .unit { font-size: 17px; font-weight: 500; color: var(--muted); margin-left: 2px; }
-.kpi .delta { font-family: var(--font-mono); font-size: 12px; margin-top: 6px; }
-.kpi .delta.up { color: var(--ink); }
+.kpi .value .unit { font-size: 16px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+.kpi .delta { font-family: var(--font-mono); font-size: 11.5px; margin-top: 5px; }
+.kpi .delta.up { color: var(--good); }
 .kpi .delta.down { color: var(--alert); }
 .kpi .delta.flat { color: var(--muted); }
-.kpi .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.kpi .sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 .kpi .value.warned { color: var(--warn); }
+
+/* ---------- hero KPI ---------- */
+.kpi.hero {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  padding: 18px 22px;
+  align-self: stretch;
+}
+.kpi.hero .label { color: #A9B2AD; font-size: 12px; }
+.kpi.hero .value { font-size: 66px; line-height: 0.95; margin-top: 2px; }
+.kpi.hero .value .unit { font-size: 26px; color: #A9B2AD; }
+/* No .warned rule here on purpose: render-kpi.js:33 only ever toggles that
+   class on #kpiCov, which is a plain card. A hero variant would be dead CSS. */
+.kpi.hero .delta { font-size: 12.5px; margin-top: 8px; }
+.kpi.hero .delta.up { color: #8FD3A6; }
+.kpi.hero .delta.down { color: #F0A090; }
+.kpi.hero .delta.flat { color: #A9B2AD; }
+.kpi.hero .sub { color: #A9B2AD; }
+.hero-spark { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 14px; }
+.hero-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-top: 6px; }
+.hero-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #A9B2AD;
+  border: 1px solid #3A423E;
+  border-radius: 3px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* ---------- DORA strip ----------
+   Four 109px cards compressed into one 72px row: present, clearly secondary. */
+.dora-lead {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.dora-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.dora-strip .d { padding: 11px 18px; border-left: 1px solid var(--line); }
+.dora-strip .d:first-child { border-left: 0; }
+.dora-strip .dl { font-size: 11px; color: var(--muted); margin-bottom: 1px; }
+.dora-strip .dv {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.dora-strip .dv .unit { font-size: 12.5px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+.dora-strip .ds { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 1px; }
 
 /* ---------- section cards ---------- */
 h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
@@ -331,7 +408,6 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .qrow { display: grid; grid-template-columns: 44px 1fr 96px; gap: 12px; align-items: center; margin-bottom: 8px; }
 .qrow .p { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: right; }
 .rework { color: var(--warn); font-family: var(--font-mono); font-size: 11px; margin-left: 6px; }
-.kpis.dora .value { font-size: 26px; }
 .qgrid { grid-template-columns: repeat(5, 1fr); }
 .rag { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; }
 .rag .chip-rag { font-family: var(--font-mono); font-size: 12px; display: flex; align-items: center; gap: 7px; cursor: help; }
@@ -360,7 +436,12 @@ footer {
 }
 
 @media (max-width: 900px) {
+  /* the hero cannot share a row at this width — it stacks and stays first */
   .kpis { grid-template-columns: repeat(2, 1fr); }
+  .kpi.hero { grid-column: 1 / -1; }
+  .kpi.hero .value { font-size: 52px; }
+  .dora-strip { grid-template-columns: repeat(2, 1fr); }
+  .dora-strip .d:nth-child(3) { border-left: 0; }
   .duo { grid-template-columns: 1fr; }
   .qgrid { grid-template-columns: repeat(2, 1fr) !important; }
   .plan-duo { grid-template-columns: 1fr; }
