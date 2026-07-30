@@ -71,7 +71,9 @@ def render_sections(page) -> dict[str, str]:
 
 def test_rendered_output_matches_baseline(page, server, fixture_data, request):
     page.goto(server, wait_until="networkidle")
-    page.wait_for_selector("#taskRows tr", timeout=10_000)
+    # state="attached", not the default "visible": #taskRows lives in the Tasks
+    # panel, which is hidden on load. This test asserts rendering, not navigation.
+    page.wait_for_selector("#taskRows tr", state="attached", timeout=10_000)
     actual = render_sections(page)
 
     for sid in SECTION_IDS:

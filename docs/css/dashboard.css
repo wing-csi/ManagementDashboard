@@ -32,19 +32,50 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.wrap { max-width: 1380px; margin: 0 auto; padding: 28px 24px 40px; }
+.wrap { max-width: 1380px; margin: 0 auto; padding: 18px 24px 40px; }
+
+/* ---------- sticky chrome ----------
+ * Filters used to scroll away after 100px, so changing repo / person while
+ * reading row 60 of the task table meant scrolling back to the top. */
+.chrome {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
+  box-shadow: 0 1px 0 var(--line), 0 8px 16px -14px rgba(0, 0, 0, 0.35);
+}
+.chrome-inner { max-width: 1380px; margin: 0 auto; padding: 0 24px; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+/* the eyebrow sits beside the title now, not above it */
+.brand .eyebrow { margin-bottom: 0; }
 
 /* ---------- header ---------- */
 .masthead {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  padding-bottom: 18px;
-  border-bottom: 2px solid var(--ink);
-  margin-bottom: 22px;
+  padding: 14px 0 12px;
 }
+
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 2px; border-bottom: 2px solid var(--ink); }
+.tab {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+.tab:hover { color: var(--ink); }
+.tab:focus-visible { outline: 2px solid var(--l4); outline-offset: -2px; }
+.tab[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -338,7 +369,13 @@ footer {
   td.subject { max-width: 150px; }
   .table-scroll { overflow-x: auto; }
 }
-@media print { .controls { display: none; } .card { border-color: #bbb; } }
+@media print {
+  .controls, .tabs { display: none; }
+  /* Tabs would otherwise hide three quarters of the report from the printer. */
+  [role="tabpanel"][hidden] { display: block !important; }
+  .chrome { position: static; box-shadow: none; }
+  .card { border-color: #bbb; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .bar-fill, .seg { transition: width 0.35s ease, flex-basis 0.35s ease; }
 }

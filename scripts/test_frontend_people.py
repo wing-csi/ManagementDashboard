@@ -41,7 +41,8 @@ def people_page(page):
 
 def open_dashboard(people_page, server, query: str = ""):
     people_page.goto(f"{server}/{query}", wait_until="networkidle")
-    people_page.wait_for_selector("#taskRows tr")
+    # state="attached": #taskRows sits in the Tasks panel, hidden until selected.
+    people_page.wait_for_selector("#taskRows tr", state="attached")
     return people_page
 
 
@@ -186,7 +187,8 @@ def test_owner_selection_disables_branch_select(people_page, server):
 
 def test_owner_chip_shows_on_project_progress(people_page, server):
     page = open_dashboard(people_page, server)
-    page.wait_for_selector("#projChips .chip-rag")
+    # state="attached": #projChips sits in the 項目 & 團隊 panel, hidden on load.
+    page.wait_for_selector("#projChips .chip-rag", state="attached")
     text = page.text_content("#projChips")
     assert "Wing" in text and "未指定" in text
 

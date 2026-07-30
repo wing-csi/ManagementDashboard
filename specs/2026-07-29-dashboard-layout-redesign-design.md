@@ -307,13 +307,19 @@ task table to the loaded rows — acceptable, and noted in the README.
 ## 7. Test impact
 
 `text_content()` and `eval_on_selector()` read hidden elements fine, so most
-assertions survive untouched. Three calls do not.
+assertions survive untouched. **Four** calls do not.
 
 | Call | Problem | Fix |
 |---|---|---|
 | [test_frontend_snapshot.py:74](../scripts/test_frontend_snapshot.py) | `wait_for_selector("#taskRows tr")` defaults to `state="visible"`; `#taskRows` is in the Tasks panel, hidden at load | `state="attached"` |
 | [test_frontend_people.py:44](../scripts/test_frontend_people.py) | Same | `state="attached"` |
 | [test_frontend_people.py:189](../scripts/test_frontend_people.py) | `wait_for_selector("#projChips .chip-rag")` — 項目 panel hidden | `state="attached"` |
+| [test_frontend_rework.py:41](../scripts/test_frontend_rework.py) | Same as the first. Missed in the original survey — its `open_dashboard()` helper gates every test in the module, so this single call failed nine tests | `state="attached"` |
+
+A second correction found during implementation: a geometry assertion cannot be
+made against a hidden panel either. `getBoundingClientRect()` returns 0 for any
+element inside `display: none`, so the bars regression guard (§1.2) must walk
+the tabs and measure whichever panel is showing.
 
 `state="attached"` is the correct fix rather than clicking the tab first: these
 tests assert *rendering*, not navigation. Tab activation gets its own test file.

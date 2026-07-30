@@ -7,6 +7,7 @@ import {
 } from './render-kpi.js';
 import { renderProjects } from './render-project.js';
 import { renderOverview, renderDefects, renderTable } from './render-table.js';
+import { initTabs } from './tabs.js';
 
 /** eyebrow 要講明而家係邊個嘅視角,否則 filtered dashboard 會被當成全隊數字。 */
 export function renderEyebrow() {
@@ -137,5 +138,11 @@ export function render() {
     state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : -1 };
     renderTable();
   }));
+  // 一個喺 hidden panel 入面 layout 嘅 canvas 量到 0x0。Chart.js 建構嗰陣就讀咗
+  // client box,所以每次 總覽 重新顯示都要叫佢再量一次。
+  document.addEventListener('tab:shown', (e) => {
+    if (e.detail.tab === 'overview') state.chart?.resize();
+  });
+  initTabs();
   render();
 })();

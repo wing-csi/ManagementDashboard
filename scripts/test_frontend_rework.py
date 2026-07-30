@@ -38,7 +38,10 @@ def rework_page(page):
 
 def open_dashboard(rework_page, server, query: str = ""):
     rework_page.goto(f"{server}/{query}", wait_until="networkidle")
-    rework_page.wait_for_selector("#taskRows tr")
+    # state="attached": #taskRows sits in the Tasks panel, hidden until selected.
+    # The quality cards these tests assert on are read with text_content(), which
+    # works on hidden elements — only the readiness wait needed changing.
+    rework_page.wait_for_selector("#taskRows tr", state="attached")
     return rework_page
 
 
