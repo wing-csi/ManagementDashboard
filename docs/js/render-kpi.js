@@ -3,7 +3,7 @@
 import { state, $, pct, esc, windowTasks, repoInScope } from './data.js';
 import {
   LEVELS, META, UNTAGGED_COLOR, INK, VIOLATION_META, median, fmtHours,
-  statsFromTasks, weekL3pct, fillGaps, metaInWindow,
+  statsFromTasks, weekL3pct, fillGaps, metaInWindow, defectsInScope,
 } from './aggregate.js';
 
 function setDelta(el, curr, prev, unit) {
@@ -210,6 +210,16 @@ export function renderDora(cur, meta) {
   $('dMttr').innerHTML = fmtHours(median(cur.fixLeads));
 }
 
+/** window 內全 repo 嘅 task 數 — 刻意唔受 person filter 影響。
+ *  同 repoRag() 一樣嘅 save/restore:repo 層面嘅分母唔可以變成某個人嘅。 */
+function repoWideTaskCount() {
+  const saved = state.person;
+  state.person = 'all';
+  const n = windowTasks().length;
+  state.person = saved;
+  return n;
+}
+
 function repoRag(repo) {
   const saved = state.repo;
   const savedPerson = state.person;
@@ -292,6 +302,27 @@ export function renderQuality(cur) {
       ? `${cur.prTotal} merged / ${meta.closedUnmerged} 個 close 咗冇 merge`
       : '此範圍內無 PR');
   $('qMeaning').textContent = (cur.meaningful / (state.windowDays / 7)).toFixed(1);
+
+  // 缺陷率 — window 內發現嘅缺陷 ÷ 同一個 window 交付嘅 task,加埋未修積壓。
+  // 分母用 repoWideTaskCount() 而唔係 cur.total:defect.md 冇 author 維度,
+  // 「全 repo 缺陷 ÷ 一個人嘅 task」就係 變更失敗率 舊版嗰個錯。所以揀咗人
+  // 之後個數唔會變,改為亮起「全 repo 範圍」。
+  const dfx = defectsInScope();
+  if (!dfx.hasData) {
+    // '–' 係「未設定」。一個實測 0.0% 係一個強好多嘅主張(呢個 window 交付
+    // 咗嘢而一個缺陷都冇),兩者一定要分得開。
+    $('qDefect').innerHTML = '–';
+    $('qDefectSub').textContent = '未有 repo 設定 defect_file';
+  } else {
+    const denom = repoWideTaskCount();
+    const dr = pct(dfx.found, denom);
+    $('qDefect').innerHTML = dr == null ? '–' : `${dr}<span class="unit">%</span>`;
+    const bits = [`${dfx.found} 個 ${state.windowDays} 日內發現 / ${denom} 個 task`,
+                  `${dfx.open} 個未修`];
+    if (dfx.undated) bits.push(`${dfx.undated} 個冇 found: 日期`);
+    if (dfx.truncated) bits.push('清單已截斷');
+    $('qDefectSub').textContent = bits.join(' · ');
+  }
   const box = $('qLevels');
   box.innerHTML = '';
   for (const l of LEVELS) {

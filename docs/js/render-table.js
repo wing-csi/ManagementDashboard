@@ -90,6 +90,18 @@ export function renderDefects() {
     }
     // plan-file defects: `- [ ] … #bug !P1 due:YYYY-MM-DD` lines in the repo's plan_file.
     // The parser only emits unticked tasks, so these are always Open.
+    // per-repo defect register (config: defect_file) — 第三個來源。issues 喺
+    // 呢個 org 冇數據,而 plan file 只會出未打勾嘅項目,所以呢度係唯一有
+    // 「已修」嗰半嘅來源。
+    const dfx = m.defects;
+    for (const i of (dfx?.items || []))
+      rows.push({
+        number: null, title: i.title, repo,
+        status: i.open ? 'Open' : 'Fixed',
+        url: `https://github.com/${repo}/blob/HEAD/${dfx.path}`,
+        labels: i.severity ? [i.severity] : [], assignees: [],
+        due: i.fixed || i.found,
+      });
     const plan = m.plan;
     for (const t of (plan?.open_tasks || []).filter((t) => t.bug))
       rows.push({

@@ -843,6 +843,80 @@ def parse_plan_markdown(text: str) -> dict | None:
             "sections": [s for s in sections if s["total"]][:12]}
 
 
+DEFECT_FOUND_RE = re.compile(r"\bfound:(\d{4}-\d{2}-\d{2})\b")
+DEFECT_FIXED_RE = re.compile(r"\bfixed:(\d{4}-\d{2}-\d{2})\b")
+DEFECT_CAP = 500
+
+
+def _clean_defect_title(text: str) -> str:
+    for rx in (DEFECT_FOUND_RE, DEFECT_FIXED_RE, PLAN_PRIO_RE, PLAN_BUG_RE):
+        text = rx.sub("", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
+
+
+def parse_defect_markdown(text: str) -> dict | None:
+    """Per-repo defect register: `- [ ]` 未修, `- [x]` 已修.
+
+    Deliberately not parse_plan_markdown. That parser feeds 完成度, 今日建議,
+    異常 tasks and the Defect 追蹤 table, and it keeps only *unticked* tasks —
+    a defect ratio needs both sides, so retaining ticked items there would put
+    four working surfaces at risk to serve one new card. The two share the
+    marker regexes and nothing else.
+
+    The checkbox is the single source of truth for status: a `- [ ]` sitting
+    under a 「已修」heading is still open. Headings are decoration, so two
+    signals can never contradict each other over one fact.
+
+    Inline markers: !P0-!P3 severity, found:YYYY-MM-DD, fixed:YYYY-MM-DD.
+    `found` is optional. An undated defect is kept, not dropped — it still
+    belongs in the open backlog, which is a snapshot and needs no date. It
+    cannot enter the windowed rate, and the frontend reports how many were
+    excluded; dropping it here would depress the rate where nobody can see it.
+
+    None when the file holds no checkboxes at all — the same guard
+    parse_plan_markdown uses. A missing or unrelated file must be able to read
+    as 「no register」rather than 「zero defects」.
+    """
+    items: list[dict] = []
+    truncated = False
+    for line in text.splitlines():
+        m = CHECKBOX_RE.match(line)
+        if not m:
+            continue
+        if len(items) >= DEFECT_CAP:
+            truncated = True
+            continue
+        raw = m.group(2)
+        m_found = DEFECT_FOUND_RE.search(raw)
+        m_fixed = DEFECT_FIXED_RE.search(raw)
+        m_pri = PLAN_PRIO_RE.search(raw)
+        items.append({
+            "title": _clean_defect_title(raw),
+            "severity": m_pri.group(1).upper() if m_pri else None,
+            "found": m_found.group(1) if m_found else None,
+            "fixed": m_fixed.group(1) if m_fixed else None,
+            "open": m.group(1) not in "xX",
+        })
+    if not items:
+        return None
+    return {"items": items, "truncated": truncated}
+
+
+def fetch_defect_file(client: GitHubClient, repo: str, path: str) -> dict | None:
+    """Defect register markdown maintained in the target repo.
+
+    None if missing, unreadable, or not a register — a repo without one is not
+    an error, it simply contributes nothing. Same contract as fetch_plan_file.
+    """
+    try:
+        defects = parse_defect_markdown(client.rest_raw(f"/repos/{repo}/contents/{path}"))
+    except CollectError:
+        return None
+    if defects:
+        defects["path"] = path
+    return defects
+
+
 def fetch_plan_file(client: GitHubClient, repo: str, path: str) -> dict | None:
     """Project plan markdown maintained in the target repo (None if missing/not a plan)."""
     try:
@@ -960,6 +1034,8 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
             meta["issues_error"] = issues_err
     if repo_cfg.get("plan_file"):
         meta["plan"] = fetch_plan_file(client, repo, repo_cfg["plan_file"])
+    if repo_cfg.get("defect_file"):
+        meta["defects"] = fetch_defect_file(client, repo, repo_cfg["defect_file"])
     return tasks, meta
 
 

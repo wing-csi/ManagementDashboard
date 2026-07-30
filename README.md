@@ -126,6 +126,27 @@ Bar = 該週 task 數(按 level 疊,週一起計,冇數嘅週補零);黑線 = �
 | 返工周轉時間 | 第一次打回 → merge 嘅中位時數 | 返工要幾耐先搞掂 | 量度成段返工期,唔係最後一輪 |
 | PR 接受率 | merged ÷ (merged + window 內 close 咗冇 merge) × 100 | 提出嘅改動有幾多被接納 | |
 | 有效 tasks / 週 | additions ≥10 行嘅 tasks ÷ 週數 | 撇除 typo 級改動嘅真實產出節奏 | 閾值 10 行寫死喺 dashboard,想改就改 `meaningful` 嗰行 |
+| 缺陷率 | window 內 `found:` 落喺窗口嘅缺陷 ÷ **全 repo** 同窗口 task 數 × 100;副標另外報未修積壓 | 每交付一批工作走出幾多缺陷 | 要 config 設 `defect_file`,冇設就顯示 `–`(唔係 0%)。分母永遠全 repo — defect.md 冇 author 維度,揀咗人只會亮「全 repo 範圍」,個數唔變 |
+
+### 缺陷登記冊 `defect.md`
+
+GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而佢 open / closed 都係 0),所以缺陷改為逐個 repo 手寫一個 markdown 登記冊,config 設 `defect_file = "docs/defects.md"`。
+
+```markdown
+# 未修
+- [ ] 匯出 CSV 中文亂碼 !P1 found:2026-07-14
+- [ ] 登入後 token 冇 refresh !P0 found:2026-07-20
+
+# 已修
+- [x] 資產統計金額用咗股數 !P1 found:2026-07-02 fixed:2026-07-05
+```
+
+- **打勾係狀態嘅唯一真相**。一個 `- [ ]` 就算擺喺「已修」標題下面都仍然算未修 — heading 純粹俾人分組,唔咁定義嘅話兩個訊號打交就冇得判。
+- 標記:`!P0`–`!P3` severity(沿用 plan file 同一條 regex)、`found:YYYY-MM-DD`、`fixed:YYYY-MM-DD`。
+- **`found:` 可以唔寫**。冇日期嘅項目照樣入未修積壓(積壓係快照,唔需要日期),但入唔到窗口比率,而卡上會講明「N 個冇 found: 日期」。默默截走會令個率虛低而你睇唔出。
+- 冇任何 checkbox 嘅檔案當「冇登記冊」處理,唔會當成「零缺陷」。
+- 上限 500 條,超過會喺卡上標「清單已截斷」。
+- Parser 係 [`parse_defect_markdown()`](scripts/collect_github.py),刻意獨立於 `parse_plan_markdown()` — 後者服務緊 完成度、今日建議、異常 tasks 同 Defect 追蹤,而且只保留未打勾嘅項目;為咗一張新卡去改佢嘅 return shape,等於將四個行緊嘅畫面一齊擺上枱。兩者只共用標記 regex。
 | 各 Level 修復佔比 | 該 level 入面 fix tasks ÷ 該 level tasks | 「自動化越高係咪越多手尾」嘅切面 | 樣本細時波動大 |
 
 ### 項目進度(Issues / Milestones)
@@ -153,6 +174,7 @@ Bar = 該週 task 數(按 level 疊,週一起計,冇數嘅週補零);黑線 = �
 |---|---|---|
 | GitHub Issues | issue 打 `bug` label(要**完全等於** `bug`,`bugs` / `type:bug` 唔會 match) | Open 同最近 closed 都入,狀態顯示「未修」/ Fixed;Assignee、Due 跟 issue |
 | Plan file | config 設 `plan_file`,markdown 寫**未打勾** checkbox 加 `#bug` | 只有未打勾嘅入表(所以永遠係「未修」);打勾即代表修好,會由表消失 |
+| 缺陷登記冊 | config 設 `defect_file`,見上面 `defect.md` 格式 | **唯一有「已修」嗰半嘅來源** — 打咗勾嘅項目照樣入表,標 Fixed;亦係 缺陷率 嘅數據來源 |
 
 **Plan file 寫法(直接 copy 改):**
 
@@ -341,6 +363,7 @@ Collector 會對每個 task 做紅線檢查,dashboard 異常提醒逐類匯總�
 | PR 接受率 | merged ÷ (merged + closed 未 merge) | 直接(揀咗人之後顯示 `–`,closed PR 冇 person 維度)|
 | 返工周轉時間 | 第一次打回 → merge 中位數 | 直接 |
 | 有效 tasks / 週 | 改動 ≥10 行嘅 tasks ÷ 週數 | 直接 |
+| 缺陷率 | window 內發現嘅缺陷 ÷ 全 repo 同窗口 task 數 | 直接,但取決於登記冊寫得幾齊 — 冇人記錄就會虛低 |
 | CI gate pass rate | PR 最後 commit 嘅 `statusCheckRollup` | 直接(要 repo 有 CI checks)|
 
 **Per-repo RAG**:品質卡頂部每個 repo 一粒燈,hover 見明細。規則:security critical >0 或 CI pass <75% → **RED**;high >0 或 CI pass <90% → **AMBER**;否則 **GREEN**;無 CI 又無 quality file → 灰色「資料不足」。
@@ -432,6 +455,7 @@ python3 -m http.server -d docs 8000
 | `repos[].branch` | default branch | 單條 branch(只影響 commits)|
 | `repos[].branches` | — | **多 branch 監察**:`["main", "develop"]` — 逐條掃,共享 commits 去重(首名 branch 優先);同時做「跨 branch 合併」紅線嘅放行名單(自動加埋 default branch)|
 | `repos[].plan_file` | — | project plan markdown 路徑;checkboxes 做完成度 scope,帶 `#bug` 嘅入 Defect 追蹤 |
+| `repos[].defect_file` | — | 缺陷登記冊 markdown 路徑(例 `docs/defects.md`);餵 缺陷率 同 Defect 追蹤。唔設就當呢個 repo 冇登記冊 |
 | `repos[].token_env` | `GH_METRICS_TOKEN` | 呢個 repo 改用另一個 env var 嘅 token(least privilege;workflow env 要傳入) |
 | `repos[].no_evidence_level` 等 | 跟全局 | 每個 repo 可獨立 override `no_evidence_level` / `sop_paths` / `rules` / `agent_authors`(例:已知 AI 輔助但冇 SOP convention 嘅 repo 設 `no_evidence_level = "L2"`、`sop_paths = []`) |
 | `classify.label_prefix` | `ai-level/` | PR label 前綴 |

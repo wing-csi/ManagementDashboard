@@ -167,6 +167,39 @@ export function metaInWindow() {
   return out;
 }
 
+/* ---------------- defect register(config: defect_file)----------------
+ * 每個 repo 手寫嘅 defect.md。存在嘅原因係 GitHub Issues 喺呢度冇訊號:
+ * 14 個 repo 得 1 個有 issues 數據,而佢 open 同 closed 都係 0。
+ *
+ * 呢個 function 只負責數,分母交返俾 caller — 而 caller 一定要用全 repo 嘅
+ * task 數。defect.md 冇 author 維度,所以「全 repo 缺陷 ÷ 一個人嘅 task」
+ * 就係 變更失敗率 舊版犯過嗰個錯:分子分母唔同範圍,唔係一個比率。
+ */
+export function defectsInScope() {
+  const end = refDate().getTime() + 864e5;
+  const from = end - state.windowDays * 864e5;
+  const rm = state.data.repo_meta || {};
+  const out = { found: 0, open: 0, undated: 0, truncated: false, hasData: false };
+  for (const [repo, m] of Object.entries(rm)) {
+    if (!repoInScope(repo)) continue;
+    const d = m.defects;
+    if (!d) continue;
+    out.hasData = true;
+    if (d.truncated) out.truncated = true;
+    for (const i of d.items || []) {
+      // 積壓係快照 — 一個 2019 年開到今日嘅 bug,正正就係佢要顯示嘅嘢,
+      // 所以唔受窗口限制。
+      if (i.open) out.open++;
+      // 冇 found: 日期入唔到窗口比率,但佢仍然係一個真嘅缺陷。靜靜哋掉咗
+      // 會令個率虛低而冇人見到,所以另外數低,由 UI 講明。
+      if (!i.found) { out.undated++; continue; }
+      const ms = toDate(i.found).getTime();
+      if (ms >= from && ms < end) out.found++;
+    }
+  }
+  return out;
+}
+
 export function issuesInScope() {
   const rm = state.data.repo_meta || {};
   const out = { open: [], openTotal: 0, closedTotal: 0, milestones: [], hasData: false };
