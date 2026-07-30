@@ -188,7 +188,9 @@ h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
 .lv { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
 .lv-name { font-size: 12.5px; color: var(--muted); }
 .bar-track { background: var(--track); border-radius: 4px; height: 8px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 4px; }
+/* display:block is load-bearing — a bare inline <span> ignores the inline width
+   the renderers set, which kept every bar in the dashboard at 0x0. */
+.bar-fill { display: block; height: 100%; border-radius: 4px; }
 .legend .n, .legend .p { font-family: var(--font-mono); font-size: 12px; text-align: right; }
 .legend .p { color: var(--muted); }
 
