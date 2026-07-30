@@ -14,7 +14,35 @@ export const INK = '#191D1B';
 export const PAGE_SIZE = 25;
 export const DEFECT_CAP = 10;
 export const FIX_RE = /^(fix|hotfix|revert)\b/i;
-export const FAIL_RE = /^(revert|hotfix)\b/i;
+
+/* ---------------- 回退 / 補救 訊號 ----------------
+ * 呢個 predicate 餵住「回退密度」。舊版係一個 title 前綴 /^(revert|hotfix)\b/,
+ * 兩個方向都錯:
+ *   · `hotfix` 前綴實際上係死碼。真正嘅 hotfix commit 叫
+ *     `fix: hotfix v2.6.0 — 21 bug fixes`(前綴係 fix),而 hotfix 工作係靠
+ *     branch 認嘅,唔係靠 subject line。實際資料 90 日窗口有 46 個 task 坐喺
+ *     hotfix/* 上面,前綴淨係捉到 3 個。
+ *   · `revert` 前綴又會掃入永遠冇出過生產嘅 churn — revert 一個 docs commit、
+ *     一個 dependency bump、或者一次撳錯咗嘅 branch merge。
+ * 所以改成「多訊號 union,減去非生產例外」。全部 regex 都冇 g flag,.test()
+ * 因此係 stateless 嘅。
+ */
+export const REVERT_RE = /^(revert|rollback)\b|撤回|回退/i;
+export const REMEDY_BRANCH_RE = /^(hotfix|patch|bugfix)\//i;
+export const REMEDY_TITLE_RE = /\b(hotfix|regression)\b/i;
+export const NON_SHIPPING_REVERT_RE =
+  /^revert[:\s]+["']?(docs|chore|style|test|ci|build)\b|^revert\b.*\bmerge branch\b/i;
+
+/** 呢個 task 係咪「補救之前嘅改動」而唔係推進新工作。 */
+export function isRemediation(t) {
+  const title = t.title || '';
+  // branch / subject 上嘅補救訊號各自獨立成立 — 例外名單淨係收窄 revert 訊號,
+  // 唔可以短路成個 predicate,唔係 hotfix branch 上一個 `Revert "docs: …"`
+  // 會連埋成單 hotfix 工作一齊唔計。
+  if (REMEDY_BRANCH_RE.test(t.branch || '')) return true;
+  if (REMEDY_TITLE_RE.test(title)) return true;
+  return REVERT_RE.test(title) && !NON_SHIPPING_REVERT_RE.test(title);
+}
 export const VIOLATION_META = {
   'direct-push-main': { label: '直接 push 到受監察 branch(冇 PR)', red: true },
   'forbidden-files': { label: 'commit 咗 .env / node_modules / __pycache__', red: true },
@@ -34,7 +62,7 @@ export function statsFromTasks(list) {
     untagged: 0, insTotal: 0, insAi: 0, suspects: 0,
     fixTasks: 0, prTotal: 0, reviewedPRs: 0, reworkPRs: 0,
     reworkRounds: [], reworkTurnarounds: [], fixByLevel: {},
-    failTasks: 0, meaningful: 0, ciPass: 0, ciTotal: 0, leads: [], fixLeads: [],
+    remedyTasks: 0, meaningful: 0, ciPass: 0, ciTotal: 0, leads: [], fixLeads: [],
     violationCounts: {},
     methods: {},
   };
@@ -42,7 +70,7 @@ export function statsFromTasks(list) {
     s.insTotal += t.additions || 0;
     const isFix = FIX_RE.test(t.title || '');
     if (isFix) s.fixTasks++;
-    if (FAIL_RE.test(t.title || '')) s.failTasks++;
+    if (isRemediation(t)) s.remedyTasks++;
     for (const v of (t.violations || [])) s.violationCounts[v] = (s.violationCounts[v] || 0) + 1;
     if ((t.additions || 0) >= 10) s.meaningful++;
     if (t.kind === 'pr') {

@@ -191,10 +191,22 @@ export function renderDora(cur, meta) {
     $('dDeploySub').textContent = `${state.windowDays} 日內(${src})· 平均每 ${(weeks / deployEvents).toFixed(1)} 週 1 次`;
   }
   $('dLead').innerHTML = fmtHours(median(cur.leads));
-  // 一個人嘅 revert ÷ 全 repo 部署次數 唔係一個比率 — 淨係喺全員視角先計
-  const cfr = (state.person === 'all' && deployEvents)
-    ? (cur.failTasks / deployEvents) * 100 : null;
-  $('dCfr').innerHTML = cfr == null ? '–' : Math.min(cfr, 100).toFixed(0) + '<span class="unit">%</span>';
+  // 回退密度 — 補救 task ÷ 同一個窗口同範圍內嘅全部 task。
+  //
+  // 舊版係「變更失敗率(proxy)」= revert/hotfix commit ÷ 部署事件,而佢唔係一個
+  // 比率:分子數 commit、分母數 git tag,一次失敗嘅 release 出五個 revert commit
+  // 就計成五次失敗;而且分母嘅 deployments||tags||releases fallback 係全 repo
+  // 加總之後才 short-circuit,所以只有兩個有 tag 嘅 repo 進到分母,分子卻橫跨
+  // 十四個。實際資料讀到 72%,而 DORA 連 low performer 都只係 46–60% —
+  // 要用 Math.min(…, 100) 夾住先唔會出 >100%,呢個 clamp 本身就係證據。
+  //
+  // 兩邊都係 task 之後,佢天然 ≤ 100%,亦唔再需要「淨係全員視角先計」:
+  // person filter 之下分子分母一齊收窄,比率照樣成立。
+  const rd = pct(cur.remedyTasks, cur.total, 0);
+  $('dCfr').innerHTML = rd == null ? '–' : `${rd}<span class="unit">%</span>`;
+  $('dCfrSub').textContent = cur.total
+    ? `${cur.remedyTasks} / ${cur.total} 個 task 係 revert / hotfix / regression`
+    : '此範圍內無 task';
   $('dMttr').innerHTML = fmtHours(median(cur.fixLeads));
 }
 

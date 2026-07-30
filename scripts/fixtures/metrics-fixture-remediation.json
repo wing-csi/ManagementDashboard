@@ -1,0 +1,24 @@
+{
+ "schema_version": 2,
+ "generated_at": "2026-07-28T05:00:00+00:00",
+ "window_days": 180,
+ "mode": "auto",
+ "repos": ["acme/alpha"],
+ "people": {"Wing": ["wing-csi"], "Tony": ["tony-liu"]},
+ "tasks": [
+  {"date": "2026-07-20", "repo": "acme/alpha", "author": "wing-csi", "id": "1", "kind": "pr", "branch": "main", "title": "feat: add checkout", "level": "L3", "method": "label", "check": null, "additions": 40, "deletions": 2, "url": "https://example.test/1", "reviewed": true, "rework": 0, "rework_hours": null, "violations": [], "lead_hours": 12, "ci": "pass"},
+  {"date": "2026-07-19", "repo": "acme/alpha", "author": "wing-csi", "id": "2", "kind": "pr", "branch": "main", "title": "Revert \"feat: add checkout\"", "level": "L1", "method": "label", "check": null, "additions": 2, "deletions": 40, "url": "https://example.test/2", "reviewed": true, "rework": 0, "rework_hours": null, "violations": [], "lead_hours": 3, "ci": "pass"},
+  {"date": "2026-07-18", "repo": "acme/alpha", "author": "wing-csi", "id": "3", "kind": "commit", "branch": "main", "title": "Revert \"docs: add force update design spec\"", "level": "L1", "method": "label", "check": null, "additions": 1, "deletions": 60, "url": "https://example.test/3", "violations": []},
+  {"date": "2026-07-17", "repo": "acme/alpha", "author": "wing-csi", "id": "4", "kind": "commit", "branch": "main", "title": "Revert \"chore(android): add Fresco animated-gif dependency\"", "level": "L1", "method": "label", "check": null, "additions": 1, "deletions": 4, "url": "https://example.test/4", "violations": []},
+  {"date": "2026-07-16", "repo": "acme/alpha", "author": "wing-csi", "id": "5", "kind": "commit", "branch": "main", "title": "Revert \"Merge branch 'feature/extra-fields' into feature/netcore\"", "level": "L1", "method": "label", "check": null, "additions": 3, "deletions": 120, "url": "https://example.test/5", "violations": []},
+  {"date": "2026-07-15", "repo": "acme/alpha", "author": "tony-liu", "id": "6", "kind": "commit", "branch": "hotfix/v2.6.1", "title": "fix 交易查詢 - 結算淨額", "level": "L1", "method": "label", "check": null, "additions": 12, "deletions": 3, "url": "https://example.test/6", "violations": []},
+  {"date": "2026-07-14", "repo": "acme/alpha", "author": "tony-liu", "id": "7", "kind": "commit", "branch": "main", "title": "fix: hotfix v2.6.0 — 21 bug fixes", "level": "L1", "method": "label", "check": null, "additions": 200, "deletions": 40, "url": "https://example.test/7", "violations": []},
+  {"date": "2026-07-13", "repo": "acme/alpha", "author": "tony-liu", "id": "8", "kind": "commit", "branch": "main", "title": "Fix: Regression bug fix v2", "level": "L1", "method": "label", "check": null, "additions": 30, "deletions": 8, "url": "https://example.test/8", "violations": []},
+  {"date": "2026-07-12", "repo": "acme/alpha", "author": "tony-liu", "id": "9", "kind": "commit", "branch": "main", "title": "fix:撤回", "level": "L1", "method": "label", "check": null, "additions": 4, "deletions": 9, "url": "https://example.test/9", "violations": []},
+  {"date": "2026-07-11", "repo": "acme/alpha", "author": "tony-liu", "id": "10", "kind": "commit", "branch": "main", "title": "chore: bump deps", "level": "L2", "method": "label", "check": null, "additions": 6, "deletions": 6, "url": "https://example.test/10", "violations": []}
+ ],
+ "repo_meta": {
+  "acme/alpha": {"owner": "Wing", "disk_kb": 1024, "languages": {"items": [{"name": "Python", "bytes": 5000}]}, "deployments": [], "releases": [], "tags": [], "closed_unmerged": [], "issues": null}
+ },
+ "errors": []
+}

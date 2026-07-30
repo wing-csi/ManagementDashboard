@@ -98,14 +98,24 @@ def test_switching_repo_resets_a_person_with_no_tasks(people_page, server):
     assert page.input_value("#personSel") == "all"
 
 
-# ------------------- sections with no person dimension -------------------
+# ---------------- person-scoped and team-wide sections ----------------
 
-def test_cfr_is_blanked_for_a_person(people_page, server):
-    """One person's reverts over the whole repo's deploys is not a rate."""
+def test_remediation_density_narrows_with_the_person_filter(people_page, server):
+    """回退密度 replaced 變更失敗率(proxy), which had to blank out here.
+
+    The old metric divided one person's reverts by the whole repo's deployment
+    count — numerator and denominator on different scopes, so not a rate, and
+    the card read '–' the moment a person was picked. 回退密度 is tasks ÷ tasks,
+    so the filter narrows both sides together and the value stays meaningful.
+
+    Fixture: `revert: beta one` is the only remediation task of 4 team-wide;
+    Wing's two tasks are both ordinary work. test_frontend_remediation.py
+    covers the classifier and the arithmetic in depth.
+    """
     page = open_dashboard(people_page, server)
-    assert page.text_content("#dCfr").strip() != "–"
+    assert page.text_content("#dCfr").strip() == "25%"
     page.select_option("#personSel", "Wing")
-    assert page.text_content("#dCfr").strip() == "–"
+    assert page.text_content("#dCfr").strip() == "0%"
 
 
 def test_contributors_stay_team_wide(people_page, server):

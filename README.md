@@ -76,8 +76,21 @@ scroll 到幾底都改到 repo / branch / 成員 / window,唔使碌返上去。
 |---|---|---|---|
 | 部署頻率 | 部署事件 ÷ 週數。事件來源 fallback:Deployments API → version tags(名 match `tag_pattern`,預設 `^v?\d`)→ Releases | 交付節奏 | < 1 次/週改顯示整數次數 +「平均每 X 週 1 次」;sub 註明來源 |
 | Lead Time(至 merge) | merged PR 嘅 (mergedAt − createdAt) 中位數,小時;≥48h 轉日 | 由開 PR 到落 main 嘅速度 | **唔係到 production**;solo self-merge 會好細,有真 review flow 先有比較意義 |
-| 變更失敗率(proxy) | `revert` / `hotfix` 前綴 tasks ÷ 部署事件 × 100 | 部署後要回滾嘅比例 | proxy — 冇 incident 系統下嘅近似;冇部署記錄顯示 – |
+| 回退密度 | 補救 tasks ÷ window 內全部 tasks × 100 | 幾多產出係用嚟補救之前嘅改動,而唔係推進新工作 | 分子分母都係 task,所以 person / repo filter 之下照樣成立。**唔好同 DORA 變更失敗率基準比** — 佢分母係部署次數 |
 | MTTR(proxy) | fix / hotfix / revert 前綴 **PR** 嘅 lead time 中位數 | 幾快落到修復 | 只計 PR;direct commit 嘅 fix 冇 lead time |
+
+**回退密度點樣認一個 task 係「補救」**([`isRemediation()`](docs/js/aggregate.js)):任何一個訊號成立就計 —
+title 以 `revert` / `rollback` 開頭、title 有 `hotfix` / `regression` / `撤回` / `回退`、
+或者 branch 係 `hotfix/*` / `patch/*` / `bugfix/*`。branch 訊號係必要嘅:真正嘅 hotfix commit
+叫 `fix: hotfix v2.6.0 — 21 bug fixes`,靠 title 前綴永遠捉唔到。
+
+例外(**唔算**補救):revert 一個 `docs` / `chore` / `style` / `test` / `ci` / `build` commit,
+或者 revert 一次撳錯咗嘅 `Merge branch …` — 呢啲係開發途中嘅 churn,冇出過生產。
+例外淨係收窄 revert 訊號:hotfix branch 上面一個 `Revert "docs: …"` 仍然計。
+
+已知限制:分不清「revert 一個已出生產嘅 feature」同「revert 一個未 release 嘅 feature」——
+collector 冇 task 對 release 嘅歸屬。真正嘅 DORA 變更失敗率需要 per-deployment 記錄,
+而 14 個 repo 之中只有 2 個有 tag、0 個有 Deployments API 記錄。
 
 ### 自動化水平分佈
 
@@ -323,7 +336,7 @@ Collector 會對每個 task 做紅線檢查,dashboard 異常提醒逐類匯總�
 |---|---|---|
 | 部署頻率 | window 內 Deployments → tags(預設全計)→ Releases fallback 鏈 ÷ 週數 | 直接;tag 有雜音先用 per-repo `tag_pattern` 收窄 |
 | Lead Time | PR `createdAt → mergedAt` 中位數 | 直接(**至 merge**,唔係至 production)|
-| 變更失敗率 | `revert:` / `hotfix:` tasks ÷ 部署次數 | **proxy** — 冇 incident 數據 |
+| 回退密度 | 補救 tasks ÷ 全部 tasks | 直接(比率兩邊都係 task);**唔係** DORA 變更失敗率 |
 | MTTR | 修復類 task 嘅 lead time 中位數 | **proxy** — 「幾快落到修復」|
 | PR 接受率 | merged ÷ (merged + closed 未 merge) | 直接(揀咗人之後顯示 `–`,closed PR 冇 person 維度)|
 | 返工周轉時間 | 第一次打回 → merge 中位數 | 直接 |
@@ -477,8 +490,7 @@ owner = "Wing"        # 寫正式名或者佢任何一個身份都得
 | 區塊 | 行為 |
 |---|---|
 | 主 KPI、水平分佈、每週圖、異常提醒、品質四格、commit types、月度活躍、最近 Tasks | 跟住收窄 |
-| DORA Lead Time / MTTR | 跟住收窄(本身就係 task 計) |
-| **變更失敗率** | 顯示 `–`。佢係「個人 revert ÷ 全 repo 部署次數」,分子分母唔同範圍,唔係一個比率 |
+| DORA Lead Time / MTTR / 回退密度 | 跟住收窄(本身就係 task 計) |
 | 部署頻率、品質 RAG、項目進度、Defect 追蹤、語言構成 | **維持全 repo 數字**,並標示「全 repo 範圍」 |
 | 貢獻者 | 維持全隊,只係將揀咗嗰個 highlight — 佢係比較視角,亦係揀人嘅入口 |
 
