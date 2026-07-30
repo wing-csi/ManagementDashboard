@@ -65,7 +65,7 @@ export function renderOverview(cur) {
   const AV = ['#24407E', '#3D67B1', '#5F8CC6', '#2E6B5E', '#B07A1F', '#6D5A8E'];
   $('ovContribs').innerHTML = ce.map(([n, c], i) => `<div class="contrib${n === state.person ? ' is-selected' : ''}">
       <div class="nm"><span class="av" style="background:${AV[i % 6]}">${esc(n[0].toUpperCase())}</span><span title="${esc(n)}">${esc(n)}</span></div>
-      <div class="ct">${c}<span style="font-size:11px;color:var(--muted)"> tasks</span></div>
+      <div class="ct">${c}<span style="font-size:var(--fs-xs);color:var(--muted)"> tasks</span></div>
       <div class="pc">${total ? ((c / total) * 100).toFixed(1) : 0}% of window</div>
     </div>`).join('') || '<div class="ov-sub">此範圍內無 tasks</div>';
 }
@@ -121,8 +121,8 @@ export function renderDefects() {
       <td><span class="sevdot" style="background:${sc}"></span>${sl}</td>
       <td class="subject" title="${esc(r.title)}">${esc(r.title)}</td>
       <td style="color:${r.status === 'Open' ? 'var(--alert)' : 'var(--muted)'};font-weight:${r.status === 'Open' ? 700 : 400}">${r.status === 'Open' ? '未修' : 'Fixed'}</td>
-      <td class="mono" style="font-size:11.5px">${esc((r.assignees || []).join(', ') || '–')}</td>
-      <td class="mono" style="font-size:11.5px">${esc(r.due || r.closed || '–')}</td>
+      <td class="mono" style="font-size:var(--fs-xs)">${esc((r.assignees || []).join(', ') || '–')}</td>
+      <td class="mono" style="font-size:var(--fs-xs)">${esc(r.due || r.closed || '–')}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" class="mono" style="color:var(--muted)">冇 defect — 開 issue 打 bug label,或者喺 plan file 寫 <code>- [ ] … #bug !P1 due:2026-08-01</code></td></tr>';
 }
@@ -155,7 +155,7 @@ export function renderTable() {
     <tr>
       <td class="mono">${r.date}</td>
       <td class="repo" title="${esc(r.repo)}">${esc(r.repo.split('/').pop())}</td>
-      <td class="mono" style="font-size:11.5px" title="${esc(r.author || '')}">${esc(r.author || '–')}</td>
+      <td class="mono" style="font-size:var(--fs-xs)" title="${esc(r.author || '')}">${esc(r.author || '–')}</td>
       <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.kind === 'pr' ? '#' + esc(r.id) : esc(r.id)}</a>${(r.rework || 0) > 0 ? `<span class="rework" title="被打回 ${r.rework} 輪">↩${r.rework}</span>` : ''}</td>
       <td class="branch" title="${esc(r.branch || '')}">${esc(r.branch || '–')}</td>
       <td class="subject" title="${esc(r.title)}">${typeChip(r.title)}${esc(r.title)}</td>

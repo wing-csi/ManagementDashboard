@@ -23,6 +23,37 @@
   --warn: #A8751B;
   --good: #2E7D4F;
   --radius: 10px;
+  /* Type scale. Was 19 sizes across 79 declarations, and 9 of them sat at
+     ≤13.5px separated by 0.5px steps — a step that small is below the
+     threshold at which a reader sees any difference, so nine numbers were
+     doing one number's job and producing no hierarchy for it.
+
+     Floored at 12px. The old floor was 9px (thead .arrow) with 10px on
+     .hero-tag / .dora-lead / .typechip. Every one of those passed WCAG AA on
+     contrast, which said nothing: AA sets no minimum text size. On a board-
+     level dashboard 10px is too small whatever the ratio.
+
+     繁中 carries more stroke density per em than Latin, so the same px value
+     reads smaller — 14px Latin passes for 16, 14px 繁中 is just 14. Hence the
+     body tier starting at 16 rather than 14, and line-height 1.6 not 1.5.
+
+     Pinned by scripts/test_frontend_typography.py. No font-size literal
+     survives outside this block — the scale is defined here or nowhere. */
+  --fs-xs: 12px;   /* was 9 / 10 / 10.5 / 11 */
+  --fs-sm: 14px;   /* was 11.5 / 12 / 12.5 / 13 / 13.5 */
+  --fs-md: 16px;   /* was 14 (body) / 15 */
+  --fs-lg: 18px;   /* was 16 / 18 */
+  --fs-xl: 22px;   /* was 21 */
+  /* Display tier. Named by role, not by step, because these are not a scale —
+     they are three jobs. Collapsing them further would flatten a hierarchy
+     that is doing real work: the hero has to win the page, the KPI values have
+     to win their cards, and the masthead has to sit under both. Tokenised so
+     the tier is defined in one place like the body scale, not so the values
+     can drift together. */
+  --fs-display: 66px;      /* hero north-star number */
+  --fs-display-sm: 52px;   /* hero below 900px, where it spans the row */
+  --fs-metric: 32px;       /* KPI card values */
+  --fs-title: 26px;        /* masthead h1, and the hero's unit suffix */
   --font-display: 'Space Grotesk', 'Noto Sans TC', system-ui, sans-serif;
   --font-body: 'Noto Sans TC', -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -34,8 +65,8 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--fs-md);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -70,7 +101,7 @@ body {
 .tabs { display: flex; gap: 2px; border-bottom: 2px solid var(--ink); }
 .tab {
   font-family: var(--font-display);
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--muted);
   background: none;
@@ -85,7 +116,7 @@ body {
 .tab[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
@@ -93,13 +124,13 @@ body {
 }
 .masthead h1 {
   font-family: var(--font-display);
-  font-size: 27px;
+  font-size: var(--fs-title);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 .masthead h1 small {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 400;
   color: var(--muted);
   margin-left: 10px;
@@ -108,7 +139,7 @@ body {
 .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .controls select {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--ink);
   background: var(--card);
   border: 1px solid var(--ink);
@@ -120,14 +151,14 @@ body {
 .badge-demo {
   display: none;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--warn);
   border: 1px dashed var(--warn);
   border-radius: 999px;
   padding: 4px 10px;
 }
 .badge-demo.on { display: inline-block; }
-.stamp { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.stamp { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); }
 
 /* ---------- KPI ---------- */
 /* The hero takes the wide first column: the north star must not look like
@@ -146,20 +177,20 @@ body {
   border-radius: var(--radius);
   padding: 18px 20px;
 }
-.kpi .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.kpi .label { font-size: var(--fs-sm); color: var(--muted); margin-bottom: 6px; }
 .kpi .value {
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: var(--fs-metric);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.05;
 }
-.kpi .value .unit { font-size: 16px; font-weight: 500; color: var(--muted); margin-left: 2px; }
-.kpi .delta { font-family: var(--font-mono); font-size: 11.5px; margin-top: 5px; }
+.kpi .value .unit { font-size: var(--fs-lg); font-weight: 500; color: var(--muted); margin-left: 2px; }
+.kpi .delta { font-family: var(--font-mono); font-size: var(--fs-sm); margin-top: 5px; }
 .kpi .delta.up { color: var(--good); }
 .kpi .delta.down { color: var(--alert); }
 .kpi .delta.flat { color: var(--muted); }
-.kpi .sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.kpi .sub { font-size: var(--fs-sm); color: var(--muted); margin-top: 2px; }
 .kpi .value.warned { color: var(--warn); }
 
 /* ---------- hero KPI ---------- */
@@ -172,12 +203,12 @@ body {
   padding: 18px 22px;
   align-self: stretch;
 }
-.kpi.hero .label { color: #A9B2AD; font-size: 12px; }
-.kpi.hero .value { font-size: 66px; line-height: 0.95; margin-top: 2px; }
-.kpi.hero .value .unit { font-size: 26px; color: #A9B2AD; }
+.kpi.hero .label { color: #A9B2AD; font-size: var(--fs-sm); }
+.kpi.hero .value { font-size: var(--fs-display); line-height: 0.95; margin-top: 2px; }
+.kpi.hero .value .unit { font-size: var(--fs-title); color: #A9B2AD; }
 /* No .warned rule here on purpose: render-kpi.js:33 only ever toggles that
    class on #kpiCov, which is a plain card. A hero variant would be dead CSS. */
-.kpi.hero .delta { font-size: 12.5px; margin-top: 8px; }
+.kpi.hero .delta { font-size: var(--fs-sm); margin-top: 8px; }
 .kpi.hero .delta.up { color: #8FD3A6; }
 .kpi.hero .delta.down { color: #F0A090; }
 .kpi.hero .delta.flat { color: #A9B2AD; }
@@ -186,7 +217,7 @@ body {
 .hero-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-top: 6px; }
 .hero-tag {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #A9B2AD;
@@ -200,7 +231,7 @@ body {
    Four 109px cards compressed into one 72px row: present, clearly secondary. */
 .dora-lead {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
@@ -217,19 +248,19 @@ body {
 }
 .dora-strip .d { padding: 11px 18px; border-left: 1px solid var(--line); }
 .dora-strip .d:first-child { border-left: 0; }
-.dora-strip .dl { font-size: 11px; color: var(--muted); margin-bottom: 1px; }
+.dora-strip .dl { font-size: var(--fs-xs); color: var(--muted); margin-bottom: 1px; }
 .dora-strip .dv {
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: var(--fs-xl);
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.15;
 }
-.dora-strip .dv .unit { font-size: 12.5px; font-weight: 500; color: var(--muted); margin-left: 2px; }
-.dora-strip .ds { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+.dora-strip .dv .unit { font-size: var(--fs-sm); font-weight: 500; color: var(--muted); margin-left: 2px; }
+.dora-strip .ds { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); margin-top: 1px; }
 
 /* ---------- section cards ---------- */
-h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
+h2 { font-size: var(--fs-md); font-weight: 700; letter-spacing: 0.01em; }
 .card-head {
   display: flex;
   justify-content: space-between;
@@ -238,7 +269,7 @@ h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
-.card-note { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.card-note { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); }
 
 /* ---------- spectrum (signature) ---------- */
 .spectrum-card { margin-bottom: 14px; }
@@ -258,7 +289,7 @@ h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   overflow: hidden;
   white-space: nowrap;
 }
@@ -280,7 +311,7 @@ h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
   transform: translateX(-50%);
   font-family: var(--font-mono);
   font-style: normal;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   white-space: nowrap;
   color: var(--ink);
@@ -299,13 +330,13 @@ h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
   gap: 10px;
 }
 .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 8px; vertical-align: -1px; }
-.lv { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
-.lv-name { font-size: 12.5px; color: var(--muted); }
+.lv { font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 500; }
+.lv-name { font-size: var(--fs-sm); color: var(--muted); }
 .bar-track { background: var(--track); border-radius: 4px; height: 8px; overflow: hidden; }
 /* display:block is load-bearing — a bare inline <span> ignores the inline width
    the renderers set, which kept every bar in the dashboard at 0x0. */
 .bar-fill { display: block; height: 100%; border-radius: 4px; }
-.legend .n, .legend .p { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+.legend .n, .legend .p { font-family: var(--font-mono); font-size: var(--fs-sm); text-align: right; }
 .legend .p { color: var(--muted); }
 
 /* ---------- chart + alerts ---------- */
@@ -317,15 +348,15 @@ h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
 .alerts .sig.red { background: var(--alert); }
 .alerts .sig.amber { background: var(--warn); }
 .alerts .sig.ink { background: var(--l4); }
-.alerts .t { font-size: 13px; font-weight: 700; }
-.alerts .d { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.alerts .empty { font-size: 12.5px; color: var(--muted); }
+.alerts .t { font-size: var(--fs-sm); font-weight: 700; }
+.alerts .d { font-size: var(--fs-sm); color: var(--muted); margin-top: 2px; }
+.alerts .empty { font-size: var(--fs-sm); color: var(--muted); }
 
 /* ---------- table ---------- */
 table { width: 100%; border-collapse: collapse; }
 thead th {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -337,25 +368,25 @@ thead th {
 }
 thead th.sortable { cursor: pointer; user-select: none; }
 thead th.sortable:hover { color: var(--ink); }
-thead th .arrow { font-size: 9px; margin-left: 3px; }
+thead th .arrow { font-size: var(--fs-xs); margin-left: 3px; }
 table { table-layout: fixed; width: 100%; }
 tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 thead th { overflow: hidden; text-overflow: ellipsis; }
 section.card:has(> table) { overflow-x: auto; }
 tbody tr:last-child td { border-bottom: none; }
-td.mono { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
-td.repo { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
-td.branch { font-family: var(--font-mono); font-size: 12px; color: var(--muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-td .tlink { font-family: var(--font-mono); font-size: 12px; color: var(--l4); text-decoration: none; }
+td.mono { font-family: var(--font-mono); font-size: var(--fs-sm); white-space: nowrap; }
+td.repo { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
+td.branch { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+td .tlink { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--l4); text-decoration: none; }
 td .tlink:hover { text-decoration: underline; }
-td.subject { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-td.lines { font-family: var(--font-mono); font-size: 12px; text-align: right; white-space: nowrap; }
+td.subject { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+td.lines { font-family: var(--font-mono); font-size: var(--fs-sm); text-align: right; white-space: nowrap; }
 td.lines .del { color: var(--muted); margin-left: 6px; }
 .chip {
   display: inline-block;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 500;
   border-radius: 999px;
   padding: 2px 9px;
@@ -367,56 +398,56 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .chip.L4 { background: var(--l4); color: #fff; }
 .chip.L5 { background: var(--l5); color: #fff; }
 .chip.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
-.flag { color: var(--warn); margin-left: 6px; font-size: 12px; cursor: help; }
-.vflag { color: var(--alert); margin-left: 6px; font-size: 11px; cursor: help; }
+.flag { color: var(--warn); margin-left: 6px; font-size: var(--fs-sm); cursor: help; }
+.vflag { color: var(--alert); margin-left: 6px; font-size: var(--fs-xs); cursor: help; }
 .lvlcell { white-space: nowrap; min-width: 96px; }
 .lvlcell .flag, .lvlcell .vflag { vertical-align: middle; display: inline-block; }
 .projects { margin-bottom: 14px; }
 .proj-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 16px; }
-.proj-h { font-size: 12px; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
-.proj-list { list-style: none; display: grid; gap: 9px; font-size: 13px; }
+.proj-h { font-size: var(--fs-sm); color: var(--muted); margin-bottom: 10px; font-weight: 700; }
+.proj-list { list-style: none; display: grid; gap: 9px; font-size: var(--fs-sm); }
 .proj-list li { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: baseline; }
-.proj-list .meta { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.proj-list .meta { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
 .proj-list .late { color: var(--alert); }
-.proj-list .empty { color: var(--muted); font-size: 12.5px; }
+.proj-list .empty { color: var(--muted); font-size: var(--fs-sm); }
 .ms-row { display: grid; grid-template-columns: 170px 1fr 120px; gap: 12px; align-items: center; margin-top: 8px; }
-.ms-row .t { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ms-row .p { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); text-align: right; }
+.ms-row .t { font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-row .p { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--muted); text-align: right; }
 .overview, .defects { margin-bottom: 14px; }
 .ov-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; }
 .ov-row { display: grid; grid-template-columns: 92px 200px 76px; gap: 10px; align-items: center; margin-bottom: 7px; }
-.ov-row .t { font-size: 12px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ov-row .n { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: right; }
-.ov-sub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
+.ov-row .t { font-size: var(--fs-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-row .n { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); text-align: right; }
+.ov-sub { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); margin-top: 8px; }
 .contribs { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
 /* was the one element not using the bordered-card language */
 .contrib { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
-.contrib .nm { font-size: 13px; font-weight: 700; color: var(--ink); display: flex; gap: 8px; align-items: center; }
-.contrib .av { width: 24px; height: 24px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-family: var(--font-mono); flex: none; }
-.contrib .ct { font-family: var(--font-mono); font-size: 18px; margin-top: 6px; }
-.contrib .pc { font-size: 11px; color: var(--muted); }
-.typechip { display: inline-block; font-family: var(--font-mono); font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-right: 7px; background: #E4E9F2; color: #3A4E78; }
+.contrib .nm { font-size: var(--fs-sm); font-weight: 700; color: var(--ink); display: flex; gap: 8px; align-items: center; }
+.contrib .av { width: 24px; height: 24px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-xs); font-family: var(--font-mono); flex: none; }
+.contrib .ct { font-family: var(--font-mono); font-size: var(--fs-lg); margin-top: 6px; }
+.contrib .pc { font-size: var(--fs-xs); color: var(--muted); }
+.typechip { display: inline-block; font-family: var(--font-mono); font-size: var(--fs-xs); padding: 1px 6px; border-radius: 4px; margin-right: 7px; background: #E4E9F2; color: #3A4E78; }
 .sevdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
 @media (max-width: 1100px) { .legend { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .ov-grid { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .proj-duo { grid-template-columns: 1fr; } .ms-row { grid-template-columns: 110px 1fr 100px; } }
 .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; margin-bottom: 18px; }
 .plists { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
-.plist h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
-.plist .prow { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: baseline; }
+.plist h3 { font-size: var(--fs-sm); font-weight: 700; margin-bottom: 10px; }
+.plist .prow { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); align-items: baseline; }
 .plist .prow:last-child { border-bottom: none; }
 .plist .ttl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plist .why { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.plist .why { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
 .plist .why.hot { color: var(--alert); }
-.pempty { font-size: 13px; color: var(--muted); }
+.pempty { font-size: var(--fs-sm); color: var(--muted); }
 @media (max-width: 900px) { .pgrid, .plists { grid-template-columns: 1fr 1fr; } }
-.table-note { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 10px; }
+.table-note { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); margin-top: 10px; }
 
 /* ---------- task table controls ---------- */
 .table-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 #taskSearch {
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--ink);
   background: var(--card);
   border: 1px solid var(--line-strong);
@@ -427,7 +458,7 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .level-filter { display: flex; gap: 4px; flex-wrap: wrap; }
 .lvbtn {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
   background: var(--card);
   border: 1px solid var(--line);
@@ -439,7 +470,7 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .lvbtn.is-on { background: var(--ink); border-color: var(--ink); color: #fff; }
 .load-more {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--ink);
   background: var(--card);
   border: 1px solid var(--line-strong);
@@ -451,29 +482,34 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .load-more:hover { border-color: var(--ink); }
 .quality { margin-bottom: 14px; }
 .qgrid { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 28px; align-items: start; }
-.qrow { display: grid; grid-template-columns: 44px 200px 96px; gap: 12px; align-items: center; margin-bottom: 8px; }
-.qrow .p { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: right; }
-.rework { color: var(--warn); font-family: var(--font-mono); font-size: 11px; margin-left: 6px; }
-.qgrid { grid-template-columns: repeat(5, 1fr); }
+/* 96px held "48% (185/387)" on one line at 11px; at 14px it wrapped into two. */
+.qrow { display: grid; grid-template-columns: 44px 200px 132px; gap: 12px; align-items: center; margin-bottom: 8px; }
+.qrow .p { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--muted); text-align: right; }
+.rework { color: var(--warn); font-family: var(--font-mono); font-size: var(--fs-xs); margin-left: 6px; }
+/* Three across, two rows. Five across left the sixth card (缺陷率) orphaned on
+   a row of its own at the far left, which reads as a bug rather than a layout.
+   No test caught it — there was no overflow and no type violation, only a
+   shape that looked broken. It took rendering the page to see. */
+.qgrid { grid-template-columns: repeat(3, 1fr); }
 .rag { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; }
-.rag .chip-rag { font-family: var(--font-mono); font-size: 12px; display: flex; align-items: center; gap: 7px; cursor: help; }
+.rag .chip-rag { font-family: var(--font-mono); font-size: var(--fs-sm); display: flex; align-items: center; gap: 7px; cursor: help; }
 .rag .dotg { width: 10px; height: 10px; border-radius: 50%; }
 .plan-row { display: grid; grid-template-columns: 110px 1fr 44px auto auto; gap: 14px; align-items: center; margin-bottom: 10px; }
-.mono-s { font-family: var(--font-mono); font-size: 12px; }
-.plan-nums { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+.mono-s { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.plan-nums { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--muted); }
 .plan-bar { height: 8px; }
-.plan-empty { font-size: 12.5px; color: var(--muted); }
+.plan-empty { font-size: var(--fs-sm); color: var(--muted); }
 .plan-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 18px; }
-.plan-h { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.plan-h { font-size: var(--fs-sm); font-weight: 700; margin-bottom: 10px; }
 .plan-list { list-style: none; }
-.plan-list li { margin-bottom: 10px; font-size: 12.5px; line-height: 1.45; }
-.plan-list .why { display: block; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
-.repo-tag { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin: 0 4px; }
+.plan-list li { margin-bottom: 10px; font-size: var(--fs-sm); line-height: 1.45; }
+.plan-list .why { display: block; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); }
+.repo-tag { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); margin: 0 4px; }
 
 footer {
   margin-top: 22px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
   display: flex;
   justify-content: space-between;
@@ -485,7 +521,7 @@ footer {
   /* the hero cannot share a row at this width — it stacks and stays first */
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .kpi.hero { grid-column: 1 / -1; }
-  .kpi.hero .value { font-size: 52px; }
+  .kpi.hero .value { font-size: var(--fs-display-sm); }
   .dora-strip { grid-template-columns: repeat(2, 1fr); }
   .dora-strip .d:nth-child(3) { border-left: 0; }
   .duo { grid-template-columns: 1fr; }
@@ -496,6 +532,34 @@ footer {
   td.subject { max-width: 150px; }
   .table-scroll { overflow-x: auto; }
 }
+/* Phones. The stylesheet stopped at 900px, so nothing relaxed the fixed track
+   widths below it and two tabs ran off the side of a 375px screen — 品質 by
+   34px, 項目 by 58px. Pre-existing, not introduced by the type scale: the
+   overflow measured identically before and after it.
+
+   The offenders are tracks that never shrink. .qrow was 44px + 200px + 96px
+   plus 24px of gap = 364px of fixed width before the card's own padding, and
+   .pgrid / .plists stayed two-column all the way down. Pinned by
+   test_frontend_typography.py, which measures one tab at a time — the state a
+   reader actually sees. */
+@media (max-width: 640px) {
+  .qgrid { grid-template-columns: 1fr !important; }
+  /* The three bar rows all carry a fixed 200px track, added deliberately so
+     the label-to-value travel stops depending on card width. It has to give
+     way on a phone: .ov-row alone measured 92+200+76+20 = 388px inside a
+     375px viewport, which was the whole of the 項目 tab's 58px overflow. */
+  .qrow { grid-template-columns: 40px 1fr 56px; gap: 8px; }
+  .ov-row { grid-template-columns: 72px 1fr 60px; gap: 8px; }
+  .pgrid, .plists { grid-template-columns: 1fr; gap: 20px; }
+  .ms-row { grid-template-columns: 1fr 72px; gap: 8px; }
+  .ms-row .p { grid-column: 2; }
+  .plan-row { grid-template-columns: 1fr 40px; }
+  .legend .row { grid-template-columns: 30px 1fr 44px; gap: 6px; }
+  .search { min-width: 0; width: 100%; }
+  .rag { gap: 10px; }
+  td.subject { max-width: 110px; }
+}
+
 @media print {
   .controls, .tabs { display: none; }
   /* Tabs would otherwise hide three quarters of the report from the printer. */
@@ -510,7 +574,7 @@ footer {
 /* 揀咗某個人之後,呢啲區塊嘅數字仍然係全 repo 範圍 — 標示出嚟,
    免得讀者當咗係嗰個人嘅數字。 */
 .scope-note {
-  font-size: 11px; color: var(--muted); border: 1px solid var(--line);
+  font-size: var(--fs-xs); color: var(--muted); border: 1px solid var(--line);
   border-radius: 3px; padding: 1px 5px; margin-left: 6px; white-space: nowrap;
   font-weight: 400; letter-spacing: 0;
 }

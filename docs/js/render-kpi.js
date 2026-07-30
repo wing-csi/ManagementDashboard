@@ -205,7 +205,9 @@ export function renderDora(cur, meta) {
   const rd = pct(cur.remedyTasks, cur.total, 0);
   $('dCfr').innerHTML = rd == null ? '–' : `${rd}<span class="unit">%</span>`;
   $('dCfrSub').textContent = cur.total
-    ? `${cur.remedyTasks} / ${cur.total} 個 task 係 revert / hotfix / regression`
+    // 短過 `revert / hotfix / regression` — 嗰句喺 16px 之下會斷成兩三行,
+    // 而且斷喺 slash 中間。訊號集嘅細節喺 README,唔使塞落一格 DORA 卡。
+    ? `${cur.remedyTasks} / ${cur.total} 個 task 屬補救`
     : '此範圍內無 task';
   $('dMttr').innerHTML = fmtHours(median(cur.fixLeads));
 }
@@ -337,7 +339,7 @@ export function renderQuality(cur) {
       <span class="p">${share.toFixed(0)}% (${f}/${n})</span>`;
     box.appendChild(row);
   }
-  if (!box.children.length) box.innerHTML = '<div style="color:var(--muted);font-size:12px">未有已分級 tasks</div>';
+  if (!box.children.length) box.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-sm)">未有已分級 tasks</div>';
 }
 
 /** 標示邊啲區塊喺揀咗人之後,數字仍然係全 repo 範圍。 */
