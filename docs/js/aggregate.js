@@ -11,7 +11,7 @@ export const META = {
 };
 export const UNTAGGED_COLOR = '#DFE1D8';
 export const INK = '#191D1B';
-export const TABLE_CAP = 80;
+export const PAGE_SIZE = 25;
 export const DEFECT_CAP = 10;
 export const FIX_RE = /^(fix|hotfix|revert)\b/i;
 export const FAIL_RE = /^(revert|hotfix)\b/i;

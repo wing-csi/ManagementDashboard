@@ -129,6 +129,11 @@ export function render() {
 
   rebuildBranches();
   rebuildPeople();
+  // 收窄 scope 之後,舊嘅 page offset 冇意義 — 要喺下面啲 render() listener 之前
+  // 註冊,唔係就會用返舊 page 重新 render 一次先至 reset。
+  for (const id of ['repoSel', 'branchSel', 'personSel', 'windowSel']) {
+    $(id).addEventListener('change', () => { state.page = 1; });
+  }
   $('repoSel').addEventListener('change', (e) => { state.repo = e.target.value; rebuildBranches(); rebuildPeople(); render(); });
   $('branchSel').addEventListener('change', (e) => { state.branch = e.target.value; rebuildPeople(); render(); });
   $('personSel').addEventListener('change', (e) => { state.person = e.target.value; syncOwnerParam(); render(); });
@@ -136,8 +141,25 @@ export function render() {
   document.querySelectorAll('thead th.sortable').forEach((th) => th.addEventListener('click', () => {
     const k = th.dataset.key;
     state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : -1 };
+    state.page = 1;
     renderTable();
   }));
+
+  let searchTimer;
+  $('taskSearch').addEventListener('input', (e) => {
+    const v = e.target.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { state.search = v; state.page = 1; renderTable(); }, 150);
+  });
+  $('levelFilter').addEventListener('click', (e) => {
+    const btn = e.target.closest('.lvbtn');
+    if (!btn) return;
+    state.level = btn.dataset.level;
+    state.page = 1;
+    for (const b of $('levelFilter').querySelectorAll('.lvbtn')) b.classList.toggle('is-on', b === btn);
+    renderTable();
+  });
+  $('tableMore').addEventListener('click', () => { state.page += 1; renderTable(); });
   // 一個喺 hidden panel 入面 layout 嘅 canvas 量到 0x0。Chart.js 建構嗰陣就讀咗
   // client box,所以每次 總覽 重新顯示都要叫佢再量一次。
   document.addEventListener('tab:shown', (e) => {

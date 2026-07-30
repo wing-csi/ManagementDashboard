@@ -1,6 +1,6 @@
 import { state, $, esc, windowTasks, repoInScope, personInScope } from './data.js';
 import { personOf } from './people.js';
-import { TABLE_CAP, DEFECT_CAP, VIOLATION_META } from './aggregate.js';
+import { PAGE_SIZE, DEFECT_CAP, VIOLATION_META } from './aggregate.js';
 
 const TYPE_RE = /^(feat|fix|hotfix|revert|refactor|test|docs|chore|build|ci|perf|style)\b/i;
 export function typeChip(t) {
@@ -115,8 +115,17 @@ export function renderDefects() {
   }).join('') || '<tr><td colspan="7" class="mono" style="color:var(--muted)">冇 defect — 開 issue 打 bug label,或者喺 plan file 寫 <code>- [ ] … #bug !P1 due:2026-08-01</code></td></tr>';
 }
 
+/** 搜尋比對原始欄位,唔係 render 出嚟嘅 HTML — markup(例如 typechip、⛔ 標記)
+ *  永遠唔應該影響搵到啲乜。 */
+function matchesFilters(t) {
+  if (state.level !== 'all' && (t.level || 'none') !== state.level) return false;
+  const q = state.search.trim().toLowerCase();
+  if (!q) return true;
+  return [t.title, t.author, t.branch].some((v) => (v || '').toLowerCase().includes(q));
+}
+
 export function renderTable() {
-  const rows = windowTasks().slice();
+  const rows = windowTasks().filter(matchesFilters);
   const order = { null: 0, L1: 1, L2: 2, L3: 3, L4: 4, L5: 5 };
   const { key, dir } = state.sort;
   rows.sort((a, b) => {
@@ -129,7 +138,7 @@ export function renderTable() {
     th.querySelector('.arrow').textContent = th.dataset.key === key ? (dir === 1 ? '▲' : '▼') : '';
   });
 
-  const shown = rows.slice(0, TABLE_CAP);
+  const shown = rows.slice(0, state.page * PAGE_SIZE);
   $('taskRows').innerHTML = shown.map((r) => `
     <tr>
       <td class="mono">${r.date}</td>
@@ -141,5 +150,6 @@ export function renderTable() {
       <td class="lvlcell">${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}${r.check && r.check.indexOf('suspect') === 0 ? `<span class="flag" title="${esc(r.check)}">⚠</span>` : ''}${(r.violations || []).length ? `<span class="vflag" title="${esc(r.violations.map((v) => (VIOLATION_META[v] || {}).label || v).join(' · '))}">⛔</span>` : ''}</td>
       <td class="lines">+${r.additions}<span class="del">−${r.deletions}</span></td>
     </tr>`).join('') || '<tr><td colspan="8" class="mono" style="color:var(--muted)">此範圍內無 tasks</td></tr>';
-  $('tableCap').textContent = rows.length > TABLE_CAP ? `顯示 ${TABLE_CAP} / ${rows.length} 個 tasks` : '';
+  $('tableCap').textContent = rows.length ? `顯示 ${shown.length} / ${rows.length} 個 tasks` : '';
+  $('tableMore').hidden = shown.length >= rows.length;
 }

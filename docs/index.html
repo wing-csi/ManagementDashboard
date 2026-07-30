@@ -242,6 +242,18 @@
         <h2>最近 Tasks</h2>
         <span class="card-note" id="tableNote">source: GitHub GraphQL API</span>
       </div>
+      <div class="table-controls">
+        <input type="search" id="taskSearch" placeholder="搜尋 title / author / branch" aria-label="搜尋 tasks">
+        <div class="level-filter" id="levelFilter" role="group" aria-label="按 Level 篩選">
+          <button class="lvbtn is-on" data-level="all">全部</button>
+          <button class="lvbtn" data-level="L1">L1</button>
+          <button class="lvbtn" data-level="L2">L2</button>
+          <button class="lvbtn" data-level="L3">L3</button>
+          <button class="lvbtn" data-level="L4">L4</button>
+          <button class="lvbtn" data-level="L5">L5</button>
+          <button class="lvbtn" data-level="none">未分級</button>
+        </div>
+      </div>
       <div class="table-scroll">
         <table>
         <colgroup>
@@ -264,6 +276,7 @@
         </table>
       </div>
       <div class="table-note" id="tableCap"></div>
+      <button class="load-more" id="tableMore" hidden>載入更多</button>
     </section>
 
   </div>

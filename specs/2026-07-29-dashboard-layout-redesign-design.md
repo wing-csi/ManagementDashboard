@@ -329,14 +329,19 @@ the tabs and measure whichever panel is showing.
 `state="attached"` is the correct fix rather than clicking the tab first: these
 tests assert *rendering*, not navigation. Tab activation gets its own test file.
 
-**`scripts/fixtures/rendered-baseline.json` must be regenerated** with
-`--snapshot-update`. `SECTION_IDS` includes `taskRows`, whose `innerHTML`
-legitimately changes when paging cuts 80 rows to 25. Regeneration must happen
-**after** the implementation is otherwise verified, and the diff must be
-inspected — `strip`, `alertList`, `projChips`, `projMilestones`, `projLate`,
-`projTodo` and `footStamp` are expected to be **byte-identical**, since no
-renderer that produces them changes. Any diff in those seven is a bug, not a
-baseline update.
+~~`scripts/fixtures/rendered-baseline.json` must be regenerated.~~
+**Withdrawn during implementation: no regeneration is needed.** The prediction
+assumed `#taskRows` innerHTML would change when paging cut 80 rows to 25, but
+`metrics-fixture.json` contains **2 tasks**, and the baseline holds 2 rows. Both
+the old 80-row cap and the new 25-row page render the same two rows, so all
+eight `SECTION_IDS` stay byte-identical and the snapshot passes untouched.
+
+This is the better outcome, and worth stating plainly: it means the entire
+redesign — tabs, hero, DORA strip, density, table paging — ships without ever
+rewriting the render baseline. Every one of the eight captured sections is
+byte-for-byte what it was before the change. If a future edit does force a
+regeneration, inspect the diff and confirm only `taskRows` moved; any other key
+is a bug, not a baseline update.
 
 New `scripts/test_frontend_tabs.py`:
 

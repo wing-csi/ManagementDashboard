@@ -15,6 +15,8 @@ import pytest
 pytest.importorskip("pytest_playwright",
                     reason="tab tests need pytest-playwright")
 
+from playwright.sync_api import expect  # noqa: E402  (must follow importorskip)
+
 TABS = ["overview", "quality", "projects", "tasks"]
 
 
@@ -92,6 +94,57 @@ def test_chart_recovers_size_after_returning_to_overview(page, server):
     page.click("#tab-overview")
     width = page.eval_on_selector("#weeklyChart", "el => el.getBoundingClientRect().width")
     assert width > 0
+
+
+def open_tasks_tab(page, server):
+    open_dashboard(page, server)
+    page.click("#tab-tasks")
+    return page
+
+
+def test_table_pages_at_25_rows(page, server):
+    open_tasks_tab(page, server)
+    expect(page.locator("#taskRows tr")).to_have_count(25)
+    assert "25 /" in page.text_content("#tableCap")
+
+
+def test_load_more_appends_a_page(page, server):
+    open_tasks_tab(page, server)
+    page.click("#tableMore")
+    expect(page.locator("#taskRows tr")).to_have_count(50)
+
+
+def test_search_filters_rows(page, server):
+    open_tasks_tab(page, server)
+    page.fill("#taskSearch", "webhook")
+    # debounced 150ms — expect() polls, so no fixed sleep
+    expect(page.locator("#taskRows tr")).not_to_have_count(25)
+    titles = page.eval_on_selector_all(
+        "#taskRows tr td:nth-child(6)", "els => els.map(e => e.textContent.toLowerCase())")
+    assert titles and all("webhook" in t for t in titles)
+
+
+def test_level_filter_shows_only_that_level(page, server):
+    open_tasks_tab(page, server)
+    page.click('#levelFilter [data-level="L4"]')
+    levels = page.eval_on_selector_all(
+        "#taskRows tr td.lvlcell", "els => els.map(e => e.textContent.trim())")
+    assert levels and all(t.startswith("L4") for t in levels)
+
+
+def test_search_resets_paging(page, server):
+    """A narrowed result set must not keep the old page offset."""
+    open_tasks_tab(page, server)
+    page.click("#tableMore")
+    expect(page.locator("#taskRows tr")).to_have_count(50)
+    page.fill("#taskSearch", "fix")
+    expect(page.locator("#taskRows tr")).to_have_count(25)
+
+
+def test_load_more_hides_when_everything_is_shown(page, server):
+    open_tasks_tab(page, server)
+    page.click('#levelFilter [data-level="L5"]')
+    assert page.is_hidden("#tableMore")
 
 
 def test_owner_param_and_tab_hash_coexist(page, server):
