@@ -35,6 +35,27 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 
 > 步驟 3、4、7 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
 
+## 版面(四個分頁)
+
+Dashboard 分咗四個分頁。Masthead、四個 filter 同分頁列釘喺頂(sticky),所以
+scroll 到幾底都改到 repo / branch / 成員 / window,唔使碌返上去。
+
+| 分頁 | 入面有咩 |
+|---|---|
+| **總覽** | 主 KPI(L3+ 自動化佔比做 hero)、DORA 條、自動化水平分佈、每週趨勢 + 異常提醒 |
+| **品質** | RAG 燈、品質 × 自動化、各 Level 修復佔比、Defect 追蹤 |
+| **項目 & 團隊** | 項目進度(milestones / 延誤 / 建議)、Repo 概覽、貢獻者 |
+| **Tasks** | 最近 Tasks — 搜尋(title / author / branch)、Level 篩選、每頁 25 行 |
+
+**分享某個分頁**:URL 後面加 `#quality`、`#projects`、`#tasks`(`#overview` 係
+預設)。認唔到嘅 hash 會落返總覽。分頁狀態同 `?owner=` 係兩回事 — hash 係
+「睇緊邊頁」,`?owner=` 係「filter 緊邊個」,兩者互不干涉,可以一齊用:
+`?owner=Wing#quality`。鍵盤:Tab 去到分頁列之後,用 ←/→/Home/End 揀。
+
+**列印**:`@media print` 會強制四個 panel 全部顯示,所以印出嚟仍然係完整報告,
+唔會淨係印咗當前分頁。但 Tasks 表格只會印到**已經載入嘅行**(預設 25)— 想印晒
+就先㩒幾次「載入更多」。
+
 ## 指標字典 — 每個數點計、代表咩
 
 **通用機制**:「今日」= 數據 `generated_at` 嗰日;window(近 30/60/90/180 日)以佢倒數;「前一段」= 緊接之前、同樣長度嘅 window;「週」= ISO 週(星期一開始);repo 下拉 filter 影響所有數字。Task = merged PR,或者冇 associated PR 嘅 direct commit(auto mode,唔會重複計)。
