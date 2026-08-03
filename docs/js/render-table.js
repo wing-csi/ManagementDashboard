@@ -1,4 +1,4 @@
-import { state, $, esc, windowTasks, repoInScope, personInScope } from './data.js';
+import { state, $, esc, windowTasks, repoInScope, personInScope, registerUrl } from './data.js';
 import { personOf } from './people.js';
 import { PAGE_SIZE, DEFECT_CAP, VIOLATION_META } from './aggregate.js';
 
@@ -98,7 +98,7 @@ export function renderDefects() {
       rows.push({
         number: null, title: i.title, repo,
         status: i.open ? 'Open' : 'Fixed',
-        url: `https://github.com/${repo}/blob/HEAD/${dfx.path}`,
+        url: registerUrl(repo, dfx),
         labels: i.severity ? [i.severity] : [], assignees: [],
         due: i.fixed || i.found,
       });
@@ -106,7 +106,7 @@ export function renderDefects() {
     for (const t of (plan?.open_tasks || []).filter((t) => t.bug))
       rows.push({
         number: null, title: t.title, repo, status: 'Open',
-        url: `https://github.com/${repo}/blob/HEAD/${plan.path}`,
+        url: registerUrl(repo, plan),
         labels: t.priority ? [t.priority] : [], assignees: [], due: t.due,
       });
   }

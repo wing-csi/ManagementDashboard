@@ -1,4 +1,4 @@
-import { state, $, esc, toDate, repoInScope } from './data.js';
+import { state, $, esc, toDate, repoInScope, registerUrl } from './data.js';
 import { issuesInScope } from './aggregate.js';
 
 const PRIORITY_RE = [
@@ -97,7 +97,7 @@ export function renderProjects() {
     for (const t of plan.open_tasks) {
       planItems.push({
         number: null, title: t.title,
-        url: `https://github.com/${repo}/blob/HEAD/${plan.path}`,
+        url: registerUrl(repo, plan),
         labels: [...(t.priority ? [t.priority] : []), ...(t.bug ? ['bug'] : [])],
         milestone: t.section, due: t.due || null, created: null, updated: null, repo,
       });

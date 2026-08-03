@@ -13,6 +13,15 @@ export const $ = (id) => document.getElementById(id);
 export const pct = (num, den, dp = 1) => (den > 0 ? ((num / den) * 100).toFixed(dp) : null);
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/** 登記冊(plan / defect)喺 GitHub 上面條 link。
+ *
+ *  `reg.ref` 係 config `registers_ref` 指嗰條 branch — 兩份登記冊可以住喺一條
+ *  `docs/*` branch,唔使 merge 入 default branch。冇設就用 HEAD(= default
+ *  branch)。寫死 HEAD 嘅話,branch 上面嘅登記冊會照樣出行,但撳落去係 404。
+ */
+export const registerUrl = (repo, reg) =>
+  `https://github.com/${repo}/blob/${reg.ref || 'HEAD'}/${reg.path}`;
+
 /* ---------------- repo scope ----------------
  * state.repo 可以係 'all'、一個 repo 名,或者 'owner:<Person>'。每個 consumer
  * 都要問呢個 predicate,唔好直接比較 state.repo — 咁先唔會有某個 call site

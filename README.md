@@ -146,6 +146,7 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 - **`found:` 可以唔寫**。冇日期嘅項目照樣入未修積壓(積壓係快照,唔需要日期),但入唔到窗口比率,而卡上會講明「N 個冇 found: 日期」。默默截走會令個率虛低而你睇唔出。
 - 冇任何 checkbox 嘅檔案當「冇登記冊」處理,唔會當成「零缺陷」。
 - 上限 500 條,超過會喺卡上標「清單已截斷」。
+- **登記冊唔一定要住喺 default branch。** 唔想 markdown 撈埋落 app 嘅 main,就開一條 branch(例 `docs/management-dashboard-registers`)擺 `plan.md` + `defect.md`,再 config 設 `registers_ref`。冇設 `registers_ref` 嘅話,GitHub contents API 一律派 default branch,兩個檔都 404,而 404 會靜靜變「呢個 repo 冇登記冊」 — 卡照樣顯示 `–`,你唔會知係設定錯咗定真係冇。條 branch 只俾兩份登記冊用,唔會入 `branches`(即係唔會計多咗 commits),而表同今日建議條 link 亦會指返嗰條 branch,唔係 `HEAD`。
 - Parser 係 [`parse_defect_markdown()`](scripts/collect_github.py),刻意獨立於 `parse_plan_markdown()` — 後者服務緊 完成度、今日建議、異常 tasks 同 Defect 追蹤,而且只保留未打勾嘅項目;為咗一張新卡去改佢嘅 return shape,等於將四個行緊嘅畫面一齊擺上枱。兩者只共用標記 regex。
 | 各 Level 修復佔比 | 該 level 入面 fix tasks ÷ 該 level tasks | 「自動化越高係咪越多手尾」嘅切面 | 樣本細時波動大 |
 
@@ -456,6 +457,7 @@ python3 -m http.server -d docs 8000
 | `repos[].branches` | — | **多 branch 監察**:`["main", "develop"]` — 逐條掃,共享 commits 去重(首名 branch 優先);同時做「跨 branch 合併」紅線嘅放行名單(自動加埋 default branch)|
 | `repos[].plan_file` | — | project plan markdown 路徑;checkboxes 做完成度 scope,帶 `#bug` 嘅入 Defect 追蹤 |
 | `repos[].defect_file` | — | 缺陷登記冊 markdown 路徑(例 `docs/defects.md`);餵 缺陷率 同 Defect 追蹤。唔設就當呢個 repo 冇登記冊 |
+| `repos[].registers_ref` | default branch | `plan_file` + `defect_file` 由邊條 branch 讀(例 `docs/registers`)。登記冊唔想 merge 入 main 就用呢個 — 只影響呢兩個檔,唔會加入 commits 統計 |
 | `repos[].token_env` | `GH_METRICS_TOKEN` | 呢個 repo 改用另一個 env var 嘅 token(least privilege;workflow env 要傳入) |
 | `repos[].no_evidence_level` 等 | 跟全局 | 每個 repo 可獨立 override `no_evidence_level` / `sop_paths` / `rules` / `agent_authors`(例:已知 AI 輔助但冇 SOP convention 嘅 repo 設 `no_evidence_level = "L2"`、`sop_paths = []`) |
 | `classify.label_prefix` | `ai-level/` | PR label 前綴 |

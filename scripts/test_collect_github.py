@@ -1008,6 +1008,88 @@ def test_plan_markers_due_priority_bug_and_inheritance():
     assert plan["sections"][0]["title"] == "Phase 2 報稅核心"  # heading 唔帶 due 標記
 
 
+# ------------------------------- 登記冊住喺另一條 branch(registers_ref)
+
+DEFECT_MD = "- [ ] 匯出 CSV 中文亂碼 !P1 found:2026-07-14\n"
+
+
+def test_registers_ref_reads_the_register_off_that_branch():
+    """plan.md / defect.md 可以住喺一條 docs branch,唔使 merge 入 default branch。
+    contents API 冇 `?ref=` 就永遠讀 default branch,而 fetch_plan_file 會將個
+    404 食咗變 None — 即係靜靜當「呢個 repo 冇登記冊」,同真係冇分唔到。"""
+    from collect_github import fetch_plan_file
+
+    seen: list[str] = []
+
+    class Ok:
+        def rest_raw(self, path):
+            seen.append(path)
+            return PLAN_MD
+
+    plan = fetch_plan_file(Ok(), "w/r", "plan.md", ref="docs/management-dashboard-registers")
+    assert seen == ["/repos/w/r/contents/plan.md?ref=docs/management-dashboard-registers"]
+    assert plan["total"] == 6
+
+
+def test_registers_ref_is_a_separate_field_and_stays_out_of_the_path():
+    """個 path 直接餵去前端砌 blob URL,所以 query string 唔可以漏入去;
+    branch 自己一個欄位,前端先砌到 blob/<ref>/<path>。"""
+    from collect_github import fetch_defect_file
+
+    class Ok:
+        def rest_raw(self, path):
+            return DEFECT_MD
+
+    dfx = fetch_defect_file(Ok(), "w/r", "defect.md", ref="docs/registers")
+    assert dfx["path"] == "defect.md"
+    assert dfx["ref"] == "docs/registers"
+
+
+def test_without_a_ref_the_call_and_the_meta_are_unchanged():
+    """絕大部分 repo 唔會設 registers_ref — 佢哋條 URL 同 meta 要一模一樣。"""
+    from collect_github import fetch_plan_file
+
+    seen: list[str] = []
+
+    class Ok:
+        def rest_raw(self, path):
+            seen.append(path)
+            return PLAN_MD
+
+    plan = fetch_plan_file(Ok(), "w/r", "docs/plan.md")
+    assert seen == ["/repos/w/r/contents/docs/plan.md"]
+    assert plan["ref"] is None
+
+
+def test_collect_repo_hands_the_registers_ref_to_both_registers():
+    """一個 config key 覆蓋兩份登記冊 — 分開兩個 key 只會令人設漏一個,
+    然後靜靜少咗半邊數據。"""
+    from collect_github import collect_repo
+
+    class RegisterClient(FakeClient):
+        def __init__(self, responses):
+            super().__init__(responses)
+            self.raw_paths: list[str] = []
+
+        def rest_raw(self, path):
+            self.raw_paths.append(path)
+            return PLAN_MD if "plan.md" in path else DEFECT_MD
+
+    client = RegisterClient([
+        DEFAULT_BRANCH_RESP, commits_page([]), META_DEP_EMPTY, META_EMPTY,
+    ])
+    repo_cfg = {"name": "w/r", "plan_file": "plan.md", "defect_file": "defect.md",
+                "registers_ref": "docs/management-dashboard-registers",
+                "track_issues": False}
+    _tasks, meta = collect_repo(client, repo_cfg, SINCE, "commits", CFG)
+    assert client.raw_paths == [
+        "/repos/w/r/contents/plan.md?ref=docs/management-dashboard-registers",
+        "/repos/w/r/contents/defect.md?ref=docs/management-dashboard-registers",
+    ]
+    assert meta["plan"]["ref"] == "docs/management-dashboard-registers"
+    assert meta["defects"]["ref"] == "docs/management-dashboard-registers"
+
+
 def test_fetch_repo_meta_languages_and_disk():
     from collect_github import fetch_repo_meta
     client = FakeClient([META_DEP_EMPTY, {"repository": {

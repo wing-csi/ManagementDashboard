@@ -37,6 +37,7 @@ import re
 import sys
 import tomllib
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -902,29 +903,45 @@ def parse_defect_markdown(text: str) -> dict | None:
     return {"items": items, "truncated": truncated}
 
 
-def fetch_defect_file(client: GitHubClient, repo: str, path: str) -> dict | None:
+def _contents_path(repo: str, path: str, ref: str | None) -> str:
+    """Contents API path, pinned to `ref` when the register lives on its own branch.
+
+    冇 `?ref=` 嘅話 GitHub 一律派 default branch,而下面兩個 fetcher 會將個 404
+    食咗變 None — 即係一條 docs branch 上面嘅登記冊會靜靜當「冇登記冊」。
+    """
+    url = f"/repos/{repo}/contents/{path}"
+    return f"{url}?ref={urllib.parse.quote(ref, safe='/')}" if ref else url
+
+
+def fetch_defect_file(
+    client: GitHubClient, repo: str, path: str, ref: str | None = None
+) -> dict | None:
     """Defect register markdown maintained in the target repo.
 
     None if missing, unreadable, or not a register — a repo without one is not
     an error, it simply contributes nothing. Same contract as fetch_plan_file.
     """
     try:
-        defects = parse_defect_markdown(client.rest_raw(f"/repos/{repo}/contents/{path}"))
+        defects = parse_defect_markdown(client.rest_raw(_contents_path(repo, path, ref)))
     except CollectError:
         return None
     if defects:
         defects["path"] = path
+        defects["ref"] = ref
     return defects
 
 
-def fetch_plan_file(client: GitHubClient, repo: str, path: str) -> dict | None:
+def fetch_plan_file(
+    client: GitHubClient, repo: str, path: str, ref: str | None = None
+) -> dict | None:
     """Project plan markdown maintained in the target repo (None if missing/not a plan)."""
     try:
-        plan = parse_plan_markdown(client.rest_raw(f"/repos/{repo}/contents/{path}"))
+        plan = parse_plan_markdown(client.rest_raw(_contents_path(repo, path, ref)))
     except CollectError:
         return None
     if plan:
         plan["path"] = path
+        plan["ref"] = ref
     return plan
 
 
@@ -1032,10 +1049,12 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
         meta["issues"] = issues
         if issues_err:
             meta["issues_error"] = issues_err
+    # 兩份登記冊共用一個 ref:分開兩個 key 只會令人設漏一個,然後靜靜少咗半邊數據
+    registers_ref = repo_cfg.get("registers_ref")
     if repo_cfg.get("plan_file"):
-        meta["plan"] = fetch_plan_file(client, repo, repo_cfg["plan_file"])
+        meta["plan"] = fetch_plan_file(client, repo, repo_cfg["plan_file"], registers_ref)
     if repo_cfg.get("defect_file"):
-        meta["defects"] = fetch_defect_file(client, repo, repo_cfg["defect_file"])
+        meta["defects"] = fetch_defect_file(client, repo, repo_cfg["defect_file"], registers_ref)
     return tasks, meta
 
 

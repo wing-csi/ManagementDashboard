@@ -18,6 +18,9 @@ plan_file = "plan.md"        # remediation tracker;`#bug` 嘅項目會入 Defect
 # defect_file = "docs/defects.md"       # 缺陷登記冊:`- [ ]` 未修 / `- [x]` 已修,
 #                                       # 標記 !P0-!P3 found:YYYY-MM-DD fixed:YYYY-MM-DD
 #                                       # 餵 缺陷率 卡同 Defect 追蹤(見 README「缺陷登記冊」)
+# registers_ref = "docs/registers"      # plan_file + defect_file 讀邊條 branch;
+#                                       # 唔設就讀 default branch。登記冊唔想 merge
+#                                       # 入 main 就用呢個(只影響呢兩個檔,唔影響 commits)
 # branch = "main"            # 單條:唔填就自動用 default branch(只影響 commits)
 # branches = ["main", "develop"]  # 多條:掃晒列表(共享 commit 去重,首名優先);
 #                                 # merge 入列表 + default branch 唔算「跨 branch 合併」紅線
@@ -128,6 +131,13 @@ owner = "Wing"                 # 項目負責人;repo select 會有「按負責�
 sop_paths = []
 # main 排首名:共享 commits 歸 main,兩條工作 branch 嘅獨有 commits 各自入帳
 branches = ["main", "Refactor", "product-selection-update"]
+# 兩份登記冊住喺 docs/management-dashboard-registers 條 branch(冇 merge 入 main),
+# 所以要 registers_ref —— 冇佢嘅話 contents API 讀 default branch,兩個檔都 404,
+# 而 404 會靜靜變「呢個 repo 冇登記冊」。呢條 branch 淨係俾登記冊用,冇入
+# branches:佢係 product-selection-update 加一個 docs commit,入咗會重複計 commits。
+plan_file = "plan.md"
+defect_file = "defect.md"
+registers_ref = "docs/management-dashboard-registers"
 
 
 # [[repos]]
