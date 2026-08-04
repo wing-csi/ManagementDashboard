@@ -805,9 +805,16 @@ def _clean_plan_title(text: str) -> str:
 def parse_plan_markdown(text: str) -> dict | None:
     """GitHub-flavored task-list plan: `- [ ]` open, `- [x]` done; headings = sections.
     Inline markers on tasks/headings: due:YYYY-MM-DD, !P0/!P1/!P2, #bug —
-    task-level due overrides the section's. None if no checkboxes (not a plan)."""
+    task-level due overrides the section's. None if no checkboxes (not a plan).
+
+    `due_max` is the project's target date for the burndown: a heading-level
+    due: wins (an explicit declaration), else the latest date on any checkbox,
+    ticked included. Counting only open tasks would walk the deadline earlier
+    every time a late item lands."""
     sections: list[dict] = []
     open_tasks: list[dict] = []
+    heading_dues: list[str] = []
+    task_dues: list[str] = []
     cur: dict | None = None
     cur_due: str | None = None
     done = total = 0
@@ -816,6 +823,8 @@ def parse_plan_markdown(text: str) -> dict | None:
         if h:
             m_due = PLAN_DUE_RE.search(h.group(1))
             cur_due = m_due.group(1) if m_due else None
+            if cur_due:
+                heading_dues.append(cur_due)
             cur = {"title": _clean_plan_title(h.group(1)), "done": 0, "total": 0}
             sections.append(cur)
             continue
@@ -824,12 +833,15 @@ def parse_plan_markdown(text: str) -> dict | None:
             total += 1
             checked = m.group(1) in "xX"
             done += checked
+            raw = m.group(2)
+            m_due_any = PLAN_DUE_RE.search(raw)
+            if m_due_any:
+                task_dues.append(m_due_any.group(1))
             if cur is not None:
                 cur["total"] += 1
                 cur["done"] += checked
             if not checked and len(open_tasks) < 50:
-                raw = m.group(2)
-                m_due = PLAN_DUE_RE.search(raw)
+                m_due = m_due_any
                 m_pri = PLAN_PRIO_RE.search(raw)
                 open_tasks.append({
                     "title": _clean_plan_title(raw),
@@ -841,6 +853,7 @@ def parse_plan_markdown(text: str) -> dict | None:
     if total == 0:
         return None
     return {"done": done, "total": total, "open_tasks": open_tasks,
+            "due_max": max(heading_dues) if heading_dues else (max(task_dues) if task_dues else None),
             "sections": [s for s in sections if s["total"]][:12]}
 
 

@@ -1350,3 +1350,46 @@ def test_build_output_warns_once_per_unknown_owner(capsys):
     assert "9 repos" in err            # still says how widespread it is
     # every repo still gets the owner stamped, warning or not
     assert all(m["owner"] == "Lam" for m in repo_meta.values())
+
+
+PLAN_DUE_MD = """# Remediation plan
+
+- [x] P-01 早就做完 #bug !P1 due:2026-07-10
+- [ ] P-02 仲未做 #bug !P1 due:2026-08-01
+- [x] P-03 做完但係最遲 #bug !P2 due:2026-09-18
+"""
+
+PLAN_HEADING_DUE_MD = """# Phase 2 due:2026-12-31
+
+- [ ] 一件事 due:2026-08-01
+- [ ] 另一件事 due:2026-08-15
+"""
+
+
+def test_due_max_counts_ticked_tasks():
+    """打咗勾嗰個仲係最遲 due — 唔數佢,個死線會喺你 burn 緊嘅時候向前跳。"""
+    from collect_github import parse_plan_markdown
+    assert parse_plan_markdown(PLAN_DUE_MD)["due_max"] == "2026-09-18"
+
+
+def test_due_max_prefers_a_heading_over_task_dates():
+    """Heading 上面嘅 due: 係明文宣告嘅 project 死線,贏過推斷出嚟嘅最遲 task。"""
+    from collect_github import parse_plan_markdown
+    assert parse_plan_markdown(PLAN_HEADING_DUE_MD)["due_max"] == "2026-12-31"
+
+
+def test_due_max_is_none_when_the_plan_has_no_dates():
+    """冇 due: 就冇理想線 — 唔可以靜靜哋作一個出嚟。"""
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown("# 計劃\n\n- [ ] 一件事\n- [x] 另一件事\n")
+    assert plan["due_max"] is None
+
+
+def test_due_max_sees_tasks_beyond_the_open_task_cap():
+    """open_tasks 封頂 50,但 due_max 要掃晒成個檔 — 第 51 個 task
+    嘅日期一樣係項目死線嘅一部分。"""
+    from collect_github import parse_plan_markdown
+    body = "".join(f"- [ ] task {i} due:2026-08-{i:02d}\n" for i in range(1, 29))
+    body += "".join(f"- [ ] extra {i}\n" for i in range(40))
+    body += "- [ ] 最後一個 due:2026-11-30\n"
+    assert parse_plan_markdown("# 計劃\n\n" + body)["due_max"] == "2026-11-30"
