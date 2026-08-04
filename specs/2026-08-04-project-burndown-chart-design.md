@@ -98,7 +98,7 @@ Heading 上面嘅 `due:` 優先過 task —— parser 已經讀緊佢入 `cur_du
 }
 ```
 
-`history` 升序。commits API 失敗嘅時候 `history` **唔會出現**(唔係 `[]`)—— 前端要分得出「攞唔到歷史」同「歷史係空」。
+`history` 升序。commits API 失敗嘅時候 `history` **唔會出現**(唔係 `[]`)—— 前端要分得出「攞唔到歷史」同「歷史係空」;同一時間 `history_error` 會設做一句人睇得明嘅訊息。兩個 key 互斥,而舊數據兩個都冇(見 §7)。
 
 ## 6. 前端
 
@@ -123,11 +123,13 @@ X 軸:起點 → `due_max`,今日標一條線,剩餘線去到今日為止(右邊
 | 情況 | 行為 |
 |---|---|
 | 冇設 `plan_file` | 呢個 repo 唔出卡 |
-| commits API 失敗(`history` 缺席) | 出明文訊息,**唔係**一條平線 |
+| commits API 失敗(`history_error` 著) | 出明文訊息,**唔係**一條平線 |
 | 得一個觀測點 | 畫返個點,寫「只有一個觀測點,未成趨勢」,唔畫趨勢線 |
 | `plan.md` 冇任何 `due:` | 冇理想線,剩餘 + scope 照出,卡上講明 |
 | `history_truncated` | 卡上標明已截斷 |
-| 舊 `metrics.json` 冇 `history` key | 成個 section 隱藏 —— 同 `people` 一樣嘅向後兼容 fallback |
+| 舊 `metrics.json` 兩個 key 都冇 | 成個 section 隱藏 —— 同 `people` 一樣嘅向後兼容 fallback |
+
+**點解要多一個 `history_error`。** 上面兩行喺前端睇落係同一個狀態:兩者都係「冇 `history` key」。淨靠缺席就分唔出「今次攞唔到」同「呢份數據舊到根本未有呢個 feature」—— 而兩者要做嘅嘢啱啱相反(一個要出聲,一個要收埋)。所以 collector 讀唔到歷史嘅時候會明文寫低 `history_error`,舊數據永遠冇呢個 key。
 
 ## 8. 測試(TDD,先寫測試)
 
@@ -135,7 +137,7 @@ X 軸:起點 → `due_max`,今日標一條線,剩餘線去到今日為止(右邊
 |---|---|
 | `scripts/test_plan_history.py`(新) | 逐日去重留最後一個 commit;升序;上限 + `history_truncated`;空 commit list 回 `None` 而唔係 `[]` |
 | `scripts/test_collect_github.py`(加) | `due_max`:打勾嘅計埋、heading 覆蓋 task、全部冇 `due:` → `None`;`registers_ref` 有帶落 commits API |
-| `scripts/test_frontend_burndown.py`(新,playwright) | 三條線齊、冇 `due_max` 冇理想線、單點狀態、API 失敗訊息、舊 fixture 隱藏 section |
+| `scripts/test_frontend_burndown.py`(新,playwright) | 三條線齊、今日標線、冇 `due_max` 冇理想線、單點狀態、`history_error` 出訊息但唔出圖、舊 fixture 隱藏 section |
 
 新 fixture `scripts/fixtures/metrics-fixture-burndown.json`,做法沿用 `test_frontend_registers_ref.py`。
 
