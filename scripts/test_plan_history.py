@@ -132,3 +132,13 @@ def test_one_unreadable_blob_does_not_kill_the_series():
     )
     got = fetch_plan_history(client, "acme/alpha", "plan.md", _parse)
     assert got["history"] == [{"date": "2026-07-28", "done": 0, "total": 11}]
+
+
+def test_fetch_plan_history_is_none_when_every_blob_is_unreadable():
+    """日子唔係空,但每個 blob 都攞唔到 — 呢個仍然係「攞唔到歷史」,
+    唔可以扮成「歷史係空」畀前端畫一張睇落合法但乜都冇講嘅圖。"""
+    from plan_history import fetch_plan_history
+    client = StubClient(
+        [_commit("c1", "2026-07-28T10:00:00Z")], {},  # 呢個 commit 嘅 blob 唔存在
+    )
+    assert fetch_plan_history(client, "acme/alpha", "plan.md", _parse) is None
