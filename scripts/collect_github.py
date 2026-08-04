@@ -43,6 +43,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from plan_history import fetch_plan_history
+
 GRAPHQL_URL = "https://api.github.com/graphql"
 LEVEL_RE = re.compile(r"^L?([1-5])$", re.IGNORECASE)
 MAX_PAGES = 20
@@ -1078,6 +1080,17 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     registers_ref = repo_cfg.get("registers_ref")
     if repo_cfg.get("plan_file"):
         meta["plan"] = fetch_plan_file(client, repo, repo_cfg["plan_file"], registers_ref)
+        if meta["plan"]:
+            # Burndown 嘅時間軸:plan.md 自己嘅 commit 歷史。
+            # 成功寫 history,失敗寫 history_error —— 兩者互斥。淨係靠「冇
+            # history key」嘅話,一次讀唔到同一份舊 metrics.json 完全一樣,
+            # 但前者要出聲、後者要收埋。
+            history = fetch_plan_history(client, repo, repo_cfg["plan_file"],
+                                         parse_plan_markdown, registers_ref)
+            if history:
+                meta["plan"].update(history)
+            else:
+                meta["plan"]["history_error"] = "攞唔到 plan.md 嘅 commit 歷史"
     if repo_cfg.get("defect_file"):
         meta["defects"] = fetch_defect_file(client, repo, repo_cfg["defect_file"], registers_ref)
     return tasks, meta

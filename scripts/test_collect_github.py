@@ -1407,3 +1407,68 @@ def test_due_max_sees_tasks_beyond_the_open_task_cap():
     body += "".join(f"- [ ] extra {i}\n" for i in range(40))
     body += "- [ ] 最後一個 due:2026-11-30\n"
     assert parse_plan_markdown("# 計劃\n\n" + body)["due_max"] == "2026-11-30"
+
+
+# ------------------------------------------------------------ plan history
+
+
+def test_collect_repo_folds_plan_history_into_the_plan_block():
+    from collect_github import DEFAULT_BRANCH_QUERY, PRS_QUERY, collect_repo
+
+    class PlanClient:
+        def graphql(self, query, variables, **kw):
+            # collect_repo 行到 plan_file 之前重使 branch resolution 同 PR
+            # 分頁 —— 呢兩條 query 要返真嘅形狀,其餘就用 {"repository": {}}
+            # 頂住(fetch_repo_meta 對缺欄位本身就寬容)。
+            if query == DEFAULT_BRANCH_QUERY:
+                return DEFAULT_BRANCH_RESP
+            if query == PRS_QUERY:
+                return prs_page([])
+            return {"repository": {}}
+
+        def rest_json(self, path):
+            assert "/commits?" in path and "path=plan.md" in path
+            return [{"sha": "c1", "commit": {"committer": {"date": "2026-07-28T10:00:00Z"}}}]
+
+        def rest_raw(self, path):
+            return "# 計劃\n\n- [ ] 一件事 due:2026-09-18\n- [x] 另一件事\n"
+
+    _, meta = collect_repo(PlanClient(), {"name": "acme/alpha", "plan_file": "plan.md",
+                                          "track_issues": False},
+                           SINCE, "pr", CFG)
+    assert meta["plan"]["history"] == [{"date": "2026-07-28", "done": 1, "total": 2}]
+    assert meta["plan"]["history_truncated"] is False
+    assert meta["plan"]["due_max"] == "2026-09-18"
+
+
+def test_collect_repo_omits_history_when_the_commits_call_fails():
+    """缺席 ≠ 空。前端要講得出「攞唔到歷史」,而唔係畫一個空圖。"""
+    from collect_github import CollectError, DEFAULT_BRANCH_QUERY, PRS_QUERY, collect_repo
+
+    class NoHistoryClient:
+        def graphql(self, query, variables, **kw):
+            if query == DEFAULT_BRANCH_QUERY:
+                return DEFAULT_BRANCH_RESP
+            if query == PRS_QUERY:
+                return prs_page([])
+            return {"repository": {}}
+
+        def rest_json(self, path):
+            raise CollectError("HTTP 403")
+
+        def rest_raw(self, path):
+            return "# 計劃\n\n- [ ] 一件事\n"
+
+    _, meta = collect_repo(NoHistoryClient(), {"name": "acme/alpha", "plan_file": "plan.md",
+                                               "track_issues": False},
+                           SINCE, "pr", CFG)
+    assert "history" not in meta["plan"]
+    assert meta["plan"]["history_error"]
+
+
+def test_a_plan_without_history_support_leaves_both_keys_off():
+    """舊 metrics.json 兩個 key 都冇 — 前端靠呢點分得出「讀唔到」同
+    「呢份數據未有呢個 feature」,而兩者要做嘅嘢啱啱相反。"""
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown("# 計劃\n\n- [ ] 一件事\n")
+    assert "history" not in plan and "history_error" not in plan
