@@ -6,6 +6,7 @@ import {
   renderRag, renderQuality, setScopeNotes,
 } from './render-kpi.js';
 import { renderProjects } from './render-project.js';
+import { renderBurndown } from './render-burndown.js';
 import { renderOverview, renderDefects, renderTable } from './render-table.js';
 import { initTabs } from './tabs.js';
 
@@ -31,6 +32,7 @@ export function render() {
   renderRag();
   renderQuality(cur);
   renderProjects();
+  renderBurndown();
   renderOverview(cur);
   renderDefects();
   renderTable();
