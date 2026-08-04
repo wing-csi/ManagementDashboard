@@ -42,10 +42,12 @@ def test_remaining_carries_forward_between_observations(page, server):
 
 
 def test_the_actual_line_stops_at_today(page, server):
-    """今日之後嗰段係 runway,唔係「剩返零」。"""
+    """今日之後嗰段係 runway,remaining 同 scope 都唔應該再有數 ——
+    唔係「剩返零」,亦唔係「範圍已知」。"""
     got = evaluate(page, server, f"m.burndownSeries({PLAN}, '2026-08-04')")
     assert got["todayIndex"] == 3
     assert got["remaining"][4:] == [None] * (len(got["days"]) - 4)
+    assert got["scope"][4:] == [None] * (len(got["days"]) - 4)
 
 
 def test_the_ideal_line_reaches_zero_on_the_due_date(page, server):
@@ -53,6 +55,21 @@ def test_the_ideal_line_reaches_zero_on_the_due_date(page, server):
     assert got["days"][-1] == "2026-08-06"
     assert got["ideal"][0] == 10
     assert got["ideal"][-1] == 0
+
+
+def test_the_ideal_line_anchors_to_starting_scope_not_starting_remaining(page, server):
+    """起點嗰日已經做咗啲嘢,remaining(6) 同 total(10) 唔同,先分得出
+    理想線錨喺邊個 —— 錨喺 total,唔係 total - done。"""
+    plan = """{
+      path: 'plan.md', done: 4, total: 10, due_max: '2026-08-03',
+      history_truncated: false,
+      history: [
+        {date: '2026-08-01', done: 4, total: 10},
+        {date: '2026-08-02', done: 6, total: 10},
+      ],
+    }"""
+    got = evaluate(page, server, f"m.burndownSeries({plan}, '2026-08-02')")
+    assert got["ideal"][0] == 10
 
 
 def test_no_due_date_means_no_ideal_line(page, server):
