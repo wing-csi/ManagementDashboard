@@ -290,6 +290,18 @@ class GitHubClient:
         except (urllib.error.HTTPError, urllib.error.URLError) as e:
             raise CollectError(f"REST fetch {path} failed: {e}") from e
 
+    def rest_json(self, path: str) -> list | dict:
+        """GET a REST path returning parsed JSON (list endpoints, e.g. commits)."""
+        req = urllib.request.Request(
+            "https://api.github.com" + path,
+            headers={**self._headers, "Accept": "application/vnd.github+json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode())
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            raise CollectError(f"REST fetch {path} failed: {e}") from e
+
 
 def normalize_level(raw: str) -> str | None:
     match = LEVEL_RE.match(raw.strip())
