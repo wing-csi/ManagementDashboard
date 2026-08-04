@@ -1439,6 +1439,7 @@ def test_collect_repo_folds_plan_history_into_the_plan_block():
     assert meta["plan"]["history"] == [{"date": "2026-07-28", "done": 1, "total": 2}]
     assert meta["plan"]["history_truncated"] is False
     assert meta["plan"]["due_max"] == "2026-09-18"
+    assert "history_error" not in meta["plan"]
 
 
 def test_collect_repo_omits_history_when_the_commits_call_fails():
@@ -1463,6 +1464,7 @@ def test_collect_repo_omits_history_when_the_commits_call_fails():
                                                "track_issues": False},
                            SINCE, "pr", CFG)
     assert "history" not in meta["plan"]
+    assert "history_truncated" not in meta["plan"]
     assert meta["plan"]["history_error"]
 
 
