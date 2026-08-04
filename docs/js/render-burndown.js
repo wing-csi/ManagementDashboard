@@ -10,11 +10,17 @@ const CAPTION = {
 };
 
 /** 今日嗰條直線。Chart.js 4 冇內置 annotation,但一個 inline plugin
- *  就夠 —— 為咗一條線裝多個 CDN library 唔抵。 */
+ *  就夠 —— 為咗一條線裝多個 CDN library 唔抵。
+ *
+ *  `chart.$todayMarkerDrawnIndex` 純粹俾測試用:讀 options.plugins.todayMarker
+ *  淨係讀到設定咗乜,唔證明個 hook 真係行過 —— `new Chart(...)` 漏咗
+ *  `plugins: [todayMarker]` 嗰陣,呢個 config namespace 照樣喺度,但條線
+ *  唔會畫。留一個喺 hook 入面先至會寫嘅痕跡,先分得出「設定咗」同「真係畫咗」。 */
 const todayMarker = {
   id: 'todayMarker',
   afterDatasetsDraw(chart, _args, opts) {
     if (!opts || opts.index == null || opts.index < 0) return;
+    chart.$todayMarkerDrawnIndex = opts.index;
     const x = chart.scales.x.getPixelForValue(opts.index);
     const { top, bottom } = chart.chartArea;
     const ctx = chart.ctx;

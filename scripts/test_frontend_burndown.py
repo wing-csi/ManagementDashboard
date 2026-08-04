@@ -43,6 +43,13 @@ def test_a_repo_with_plan_history_gets_a_chart(page, server):
     dash = _open(page, server)
     dash.wait_for_selector("#burndownCards canvas", state="attached")
     assert dash.eval_on_selector_all("#burndownCards canvas", "els => els.length") == 1
+    # A healthy plan (due set, 2 history points, not truncated) must not carry
+    # any of the caveat captions — a captionFor() that emitted them
+    # unconditionally would still pass every other test in this file.
+    text = dash.inner_text("#burndownCards")
+    assert "未成趨勢" not in text
+    assert "冇理想線" not in text
+    assert "已截斷" not in text
 
 
 def test_a_failed_history_fetch_says_so_instead_of_drawing_a_flat_line(page, server):
@@ -99,12 +106,26 @@ def test_old_metrics_without_any_plan_history_hide_the_section(page, server):
 
 
 def test_today_is_marked_on_the_chart(page, server):
-    """今日條線係「追唔追得上」嘅參考點 —— 冇佢,兩條線嘅開叉讀唔出意思。"""
+    """今日條線係「追唔追得上」嘅參考點 —— 冇佢,兩條線嘅開叉讀唔出意思。
+
+    讀 `.options.plugins.todayMarker.index` 唔夠:嗰個淨係一個 config
+    namespace,`new Chart(...)` 漏咗 `plugins: [todayMarker]` 都照樣有得讀,
+    但條線根本冇畫過。改為讀 `$todayMarkerDrawnIndex` —— 呢個係個 plugin
+    嘅 `afterDatasetsDraw` hook 真係行過先會寫低嘅痕跡,證明個 plugin 有
+    掛牢喺呢個 chart 度,唔淨係設定存在。"""
     data = _load()
     _serve(page, data)
     dash = _open(page, server)
     dash.wait_for_selector("#burndownCards canvas", state="attached")
-    drawn = dash.evaluate(
+    # #burndownCards lives inside the Projects tab panel, which starts hidden
+    # (display: none — see docs/js/tabs.js). Chart.js constructs the chart
+    # against a 0x0 canvas there and only performs its real draw once the
+    # panel becomes visible and its ResizeObserver reports a real size, same
+    # as any real user has to click into the tab to see this card at all.
+    dash.click("#tab-projects")
+    # The resize-triggered redraw can land a frame after the click, so poll
+    # for the drawn side effect rather than reading it synchronously.
+    # fixture: history starts 2026-08-01, today is 2026-08-04 → index 3.
+    dash.wait_for_function(
         "() => Chart.getChart(document.querySelector('#burndownCards canvas'))"
-        ".options.plugins.todayMarker.index")
-    assert drawn == 3  # fixture: 2026-08-01 起,今日 2026-08-04
+        "?.$todayMarkerDrawnIndex === 3")
