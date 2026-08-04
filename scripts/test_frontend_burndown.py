@@ -129,3 +129,30 @@ def test_today_is_marked_on_the_chart(page, server):
     dash.wait_for_function(
         "() => Chart.getChart(document.querySelector('#burndownCards canvas'))"
         "?.$todayMarkerDrawnIndex === 3")
+
+
+def test_a_chart_rebuilt_while_its_tab_is_hidden_still_renders_once_shown(page, server):
+    """真實流程:用戶一開始留喺 Overview(default tab),Projects panel 收埋
+    (display:none)。呢個時候揀第個 filter,`render()` 會重新整個
+    `renderBurndown()`,charts Map 攞住一個 0x0 嘅 canvas 起 Chart —— 跟住
+    先至切去 Projects tab。要證明條 chart 唔會停喺嗰個 0x0 嘅一刻,冇畫過
+    就算數。"""
+    _serve(page, _load())
+    dash = _open(page, server)
+    dash.wait_for_selector("#burndownCards canvas", state="attached")
+    assert dash.evaluate("document.getElementById('panel-projects').hidden") is True
+
+    # 重新 render 一次,而 Projects panel 呢陣時仲係隱藏緊 —— 呢個先係
+    # coordinator 講嗰個 path,唔係一開波就切去 Projects 嗰種。
+    dash.select_option("#windowSel", "180")
+    # 用嚟證明真係喺隱藏緊嗰陣重新整過個 chart:呢一刻 canvas 應該係 0x0。
+    assert dash.eval_on_selector("#burndownCards canvas", "el => el.width") == 0
+
+    dash.click("#tab-projects")
+    dash.wait_for_function(
+        "() => { const c = document.querySelector('#burndownCards canvas');"
+        " return c && c.width > 0; }")
+    assert dash.eval_on_selector("#burndownCards canvas", "el => el.width") > 0
+    dash.wait_for_function(
+        "() => Chart.getChart(document.querySelector('#burndownCards canvas'))"
+        "?.$todayMarkerDrawnIndex === 3")
