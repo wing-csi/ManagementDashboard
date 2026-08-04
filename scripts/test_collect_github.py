@@ -1365,6 +1365,12 @@ PLAN_HEADING_DUE_MD = """# Phase 2 due:2026-12-31
 - [ ] 另一件事 due:2026-08-15
 """
 
+PLAN_HEADING_DUE_EARLIER_MD = """# Phase 2 due:2026-08-01
+
+- [ ] 一件事 due:2026-09-01
+- [ ] 另一件事 due:2026-08-15
+"""
+
 
 def test_due_max_counts_ticked_tasks():
     """打咗勾嗰個仲係最遲 due — 唔數佢,個死線會喺你 burn 緊嘅時候向前跳。"""
@@ -1373,9 +1379,17 @@ def test_due_max_counts_ticked_tasks():
 
 
 def test_due_max_prefers_a_heading_over_task_dates():
-    """Heading 上面嘅 due: 係明文宣告嘅 project 死線,贏過推斷出嚟嘅最遲 task。"""
+    """Heading 上面嘅 due: 會攞嚟做 due_max —— 呢個 fixture 入面嘅 heading due
+    啱啱好本身就係最大,precedence 嘅真正證明喺下面嗰個 earlier-heading test。"""
     from collect_github import parse_plan_markdown
     assert parse_plan_markdown(PLAN_HEADING_DUE_MD)["due_max"] == "2026-12-31"
+
+
+def test_due_max_heading_wins_even_when_earlier_than_task_dates():
+    """就算 heading 嘅 due: 比最遲嗰個 task due 仲早,都係 heading 嗰個算數 ——
+    明文宣告嘅死線贏過推斷出嚟嘅最遲 task,唔係淨係『啱啱好個大數』咁簡單。"""
+    from collect_github import parse_plan_markdown
+    assert parse_plan_markdown(PLAN_HEADING_DUE_EARLIER_MD)["due_max"] == "2026-08-01"
 
 
 def test_due_max_is_none_when_the_plan_has_no_dates():
