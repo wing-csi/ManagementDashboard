@@ -176,6 +176,25 @@ body {
 .badge-demo.on { display: inline-block; }
 .stamp { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); }
 
+/* 數據過期提示條:header 同 tabs 中間,所以每個分頁都見到。
+   唔俾撳走 —— 撳得走嘅提示一定俾人撳走,撳走之後就返返去「睇唔見」,
+   即係原本要修嗰個問題。 */
+.stale-banner {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--alert);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--alert);
+  font-size: var(--fs-xs);
+  /* 1.6 俾中文行距鬆啲;唔設 white-space,等佢喺窄螢幕自己斷行 ——
+     test_no_horizontal_overflow_at_supported_widths 最窄查到 375px。 */
+  line-height: 1.6;
+}
+.stale-banner[hidden] { display: none; }
+/* 呢兩個唔係「數據舊咗」,係「講唔出佢幾舊」—— 用 warn 唔用 alert。 */
+.sb-unreadable, .sb-future { border-color: var(--warn); color: var(--warn); }
+
 /* ---------- KPI ---------- */
 /* The hero takes the wide first column: the north star must not look like
    MTTR. The other three size to content rather than stretching to hero

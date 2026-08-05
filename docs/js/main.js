@@ -9,6 +9,7 @@ import { renderProjects } from './render-project.js';
 import { renderBurndown } from './render-burndown.js';
 import { renderOverview, renderDefects, renderTable } from './render-table.js';
 import { initTabs } from './tabs.js';
+import { staleness, stalenessMessage } from './staleness.js';
 
 /** eyebrow 要講明而家係邊個嘅視角,否則 filtered dashboard 會被當成全隊數字。 */
 export function renderEyebrow() {
@@ -79,6 +80,19 @@ export function render() {
   const ts = data.generated_at.replace('T', ' ').slice(0, 16) + ' UTC';
   $('stamp').textContent = ts;
   $('footStamp').textContent = 'generated ' + ts;
+
+  // 數據過期提示。Demo 模式唔計 —— demo 個 generated_at 死咗喺度,幾大都唔
+  // 代表任何嘢,而 #demoBadge 已經講緊你喺 demo 入面。
+  const stale = state.demo ? null : staleness(data.generated_at, Date.now());
+  const banner = $('staleBanner');
+  if (!stale || stale.status === 'fresh') {
+    banner.hidden = true;
+    banner.textContent = '';
+  } else {
+    banner.textContent = stalenessMessage(stale);
+    banner.className = `stale-banner sb-${stale.status}`;
+    banner.hidden = false;
+  }
 
   const rebuildBranches = () => {
     const sel = $('branchSel');
