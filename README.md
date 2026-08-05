@@ -167,6 +167,29 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 - 未估到細節嘅探索性工作,開一個 placeholder issue(例:`spike: X 方案調研`),令 scope 至少喺個分母度。
 - 見到 % 跌,先問「係咪開咗新 issues」,唔好直接當退步。
 
+### 項目 Burndown
+
+設咗 `plan_file` 嘅 repo,每個喺「項目 & 團隊」多一張 burndown 卡。**唔使加任何 config** — 兩條軸都由已有嘅嘢讀返嚟:
+
+| 軸 | 來源 |
+|---|---|
+| 起點同每一點 | target repo 入面 `plan.md` 嘅**commit 歷史**(每日最後一個 commit,經同一個 parser 重新讀一次) |
+| 目標日 | `plan.md` 自己嘅 `due:` — heading 上面嗰個優先(就算佢比其他 task due 仲早都算),否則取全部 checkbox 最遲嗰個(**打咗勾嘅照計**) |
+
+三條線:**剩餘**(`total − done`,觀測之間拉平)、**總 scope**(`total`)、**理想**(由起點 scope 直線落到目標日嘅 0)。總 scope 條線係故意要有嘅 —— 完成度 % 回跌通常係 scope 浮現,唔係退步,冇呢條線個現象只會令人誤會。
+
+同「項目進度」一樣,burndown **唔跟** window selector(30/60/90/180)。
+
+**讀之前要知:**
+
+- **解像度 = `plan.md` 嘅 commit 頻率。** 一星期 commit 一次就一星期一點。個檔幾時改過,係我哋唯一真正觀測到嘅嘢。
+- **`plan.md` 開檔之前嘅嘢睇唔到。** 起點係第一個(留低嘅)commit,唔係項目真正開始嗰日。
+- **歷史封頂 150 個觀測日。** 多過就淨係留返最新嗰 150 日,連理想線嘅起點(佢錨住嗰個 scope)都會跟住搬去現存最舊嗰一日,唔再係項目真正嘅起點;呢種情況卡會標「歷史已截斷」提你,唔會靜靜搬線唔通知。
+- **目標日多數係推斷出嚟**(最遲嗰個 task due),除非有人喺 heading 明文寫。想寫死就喺 heading 加 `due:YYYY-MM-DD`。
+- **重寫過歷史(force push / squash)嘅 plan branch 會失真** —— commits API 只見到現存嘅 history。
+- **讀唔到歷史,卡唔會靜靜消失或者畫一條假嘅平線。** Collector 呢次讀唔到就寫 `history_error`,卡照出但唔畫圖,出張卡講明(例:「攞唔到 plan.md 嘅 commit 歷史」);同「呢份數據仲未有呢個 feature」(`history`、`history_error` 兩個 key 都冇,成張卡唔出)分得開 —— 兩種情況睇落唔一樣。
+- **登記冊住喺自己條 branch 嘅話,`registers_ref` 一樣管住 burndown 嘅歷史查詢。** Ref 錯咗令 `plan.md` 本身都讀唔到嘅話,成張卡都唔會出(同冇設 `registers_ref` 嗰種 404 一樣);如果淨係嗰次歷史攞唔到(例如 commits API 派空 list),就係上面嗰種 `history_error` 卡,卡照出,唔係卡消失。
+
 ### Defect 追蹤
 
 兩個來源合埋同一個表,未修嘅排先:
