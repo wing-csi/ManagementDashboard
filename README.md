@@ -191,6 +191,25 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 - **讀唔到歷史,卡唔會靜靜消失或者畫一條假嘅平線。** Collector 呢次讀唔到就寫 `history_error`,卡照出但唔畫圖,出張卡講明(例:「攞唔到 plan.md 嘅 commit 歷史」);同「呢份數據仲未有呢個 feature」(`history`、`history_error` 兩個 key 都冇,成張卡唔出)分得開 —— 兩種情況睇落唔一樣。
 - **登記冊住喺自己條 branch 嘅話,`registers_ref` 一樣管住 burndown 嘅歷史查詢。** Ref 錯咗令 `plan.md` 本身都讀唔到嘅話,成張卡都唔會出(同冇設 `registers_ref` 嗰種 404 一樣);如果淨係嗰次歷史攞唔到(例如 commits API 派空 list),就係上面嗰種 `history_error` 卡,卡照出,唔係卡消失。
 
+### Plan Timeline 條
+
+同一張卡入面,burndown 下面多一條時間軸,答「邊件事、幾時到期」。**唔使加任何 config**,同 burndown 食同一份數據:
+
+| 嘢 | 來源 |
+|---|---|
+| 條 bar(計劃窗口) | `plan.md` 第一個 commit → `due:` 推斷出嚟嘅目標日 |
+| 每一粒 marker | `plan.open_tasks[]` 每個未做 task 嘅 `due:` |
+| SPI | 完成 % ÷ 時間流逝 %。≥1 追得上、0.8–1 落後、<0.8 嚴重落後 |
+
+Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1` 同 `#bug` 喺 tooltip 入面。同一日嘅 task 合成一粒,個數字就係嗰日有幾多件事。
+
+**讀之前要知:**
+
+- **條線只畫未做嘅 task。** `open_tasks` 得未打勾嗰啲,所以做完嘅嘢唔會留低痕跡 —— task 一路做完,條線一路變疏,就算冇任何嘢 slip 都一樣。「變疏」唔等於「順利」。
+- **上限 50 個。** 一份超過 50 個未做 task 嘅 plan,條線會唔齊。
+- **目標日多數係推斷嘅**(最遲嗰個 task due),同 burndown 一樣。冇一個用得嘅目標日就冇 SPI、冇「剩幾多日」,而條 bar 改為畫到今日 —— 卡上會講明係邊一種。
+- **同 burndown 一樣唔跟** window selector(30/60/90/180)。
+
 ### Defect 追蹤
 
 兩個來源合埋同一個表,未修嘅排先:

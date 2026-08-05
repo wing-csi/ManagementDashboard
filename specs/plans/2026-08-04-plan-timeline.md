@@ -980,10 +980,16 @@ Append to `docs/css/dashboard.css`, directly after the `.burndown-card` block th
    (#C2452D)。兩條今日線喺同一張卡入面上下對住,差少少色會好突兀;canvas
    嗰邊讀唔到 CSS 變數,所以就係呢個字面值話事。 */
 .tl-today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed #C4553B; }
+/* 18px 唔係 12px:粒點入面個數字係要讀嘅字,所以要行返 --fs-xs(12px)
+   個地板,而 12px 字塞唔入 12px 圓。字級一定要用 token,唔可以喺呢度寫死
+   一個 px 數值 —— test_frontend_typography.py 釘住兩條:「:root 以外冇字級
+   字面值」同埋 12px 最細可讀字。佢係喺成個檔做 regex,唔係解析 CSS,
+   所以連註釋入面寫個反例都會中,呢句先至要咁樣繞開講。 */
 .tl-mark {
-  position: absolute; top: 3px; width: 12px; height: 12px; margin-left: -6px;
-  border-radius: 50%; font-size: 9px; line-height: 12px; text-align: center;
-  color: #fff; cursor: default;
+  position: absolute; top: 0; width: 18px; height: 18px;
+  margin-left: -9px; border-radius: 50%;
+  font-size: var(--fs-xs); line-height: 18px;
+  text-align: center; color: #fff; cursor: default;
 }
 .tl-overdue { background: var(--alert); }
 .tl-soon7 { background: var(--warn); }
@@ -1009,7 +1015,19 @@ Then the whole suite:
 python -m pytest scripts/ -q
 ```
 
-Expected: **367 passed** (330 baseline + 9 + 16 + 12). If `test_frontend_snapshot.py` fails, the rendered baseline changed on purpose — re-record with `python -m pytest scripts/test_frontend_snapshot.py --snapshot-update` and read the diff before committing.
+Expected: **367 passed** (330 baseline + 9 + 16 + 12).
+
+> **Two corrections found while executing this task.**
+>
+> 1. `test_frontend_snapshot.py` cannot be disturbed by this work and needs no
+>    `--snapshot-update`: it loads `metrics-fixture.json` (not the burndown
+>    fixture) and snapshots eight section ids, none of which is `#burndownCards`.
+> 2. `test_frontend_typography.py` **will** go red on the marker CSS as this plan
+>    originally wrote it. `test_no_font_size_literal_survives_outside_the_token_block`
+>    regexes the whole stylesheet after `:root` for `font-size: <n>px` and demands
+>    zero hits, and `MIN_FONT_PX` is 12. Hence the 18px dot with a `var(--fs-xs)`
+>    label above. The regex reads the file as text, not as CSS, so even a comment
+>    quoting the forbidden literal trips it.
 
 - [ ] **Step 8: Commit**
 
