@@ -19,6 +19,7 @@ ROOT = Path(__file__).parent.parent
 WORKFLOW = ROOT / ".github" / "workflows" / "collect.yml"
 DEPLOY_STEP = "Deploy dashboard to Cloudflare Pages"
 PUBLISH_STEP = "Publish metrics to private data repo"
+COLLECT_STEP = "Collect metrics"
 
 
 # --- dependency-free guards: these must never skip ---------------------------
@@ -83,3 +84,44 @@ def test_deploy_copies_metrics_into_the_runner_workspace_only() -> None:
 def test_deploy_runs_after_the_data_repo_publish() -> None:
     names = [s.get("name") for s in _steps()]
     assert names.index(DEPLOY_STEP) > names.index(PUBLISH_STEP)
+
+
+# --- the two sinks must fail independently -----------------------------------
+#
+# Ordering and *conditional dependency* are different things. The test above pins
+# the order — deploy last — and that is fine. What follows pins that the order
+# does not also make the deploy inherit the data repo's failures.
+
+def test_a_data_repo_failure_does_not_skip_the_cloudflare_deploy() -> None:
+    """The design treats the private data repo and Pages as two independent sinks,
+    each a fallback for the other. Under GitHub's default `success()` gate they are
+    not independent: an expired DATA_REPO_PAT fails the checkout, every later step
+    is skipped, and the Pages site quietly keeps serving the previous deploy. The
+    run does go red in Actions — but nobody watches Actions, and the dashboard
+    itself shows no sign that its numbers are old.
+
+    The design's error-handling section reasoned about the opposite direction only
+    ("deploy fails, data-repo publish has already completed"), so this direction
+    was never considered.
+    """
+    cond = _step(DEPLOY_STEP)["if"]
+    assert "!cancelled()" in cond, (
+        "the deploy inherits the default success() gate, so an earlier failure "
+        "silently skips it and the dashboard serves stale data"
+    )
+
+
+def test_the_deploy_still_refuses_to_run_without_a_good_collect() -> None:
+    """`!cancelled()` on its own is too permissive — it would also deploy after the
+    collector itself crashed, shipping a stale or half-written /tmp/metrics.json as
+    though it were today's numbers. Resilience to the data repo must not become
+    indifference to the data.
+    """
+    cond = _step(DEPLOY_STEP)["if"]
+    assert "steps.collect.outcome == 'success'" in cond, (
+        "the deploy must gate on the collector having succeeded"
+    )
+    assert _step(COLLECT_STEP).get("id") == "collect", (
+        "the deploy's condition references steps.collect, so the collect step "
+        "needs that id"
+    )

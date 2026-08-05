@@ -450,6 +450,15 @@ Dashboard 已經上線:**https://management-dashboard-emj.pages.dev**
   **Create Custom Token**(範本清單冇 Pages 嗰項),權限只揀
   **Account → Cloudflare Pages → Edit**,Account Resources 限返呢個帳號 → 貼落
   repo Settings → Secrets and variables → Actions。
+- **兩個去向各自死得**:private data repo 同 Cloudflare Pages 係互為 fallback,所以
+  `collect.yml` 唔會一邊跌就拖埋另一邊。`DATA_REPO_PAT` 過期只會令 data repo 嗰兩步
+  紅,Cloudflare deploy 照跑,網站照有當日數據(反方向本來就成立 —— deploy 排喺
+  publish 之後,wrangler 死唔會影響已經 push 好嘅 data repo)。**但 collector 自己
+  爆咗就兩邊都唔會出**:deploy 條件釘死 `steps.collect.outcome == 'success'`,寧願
+  留住舊數據,都好過派一份殘缺嘅 `metrics.json` 當今日嘅數。
+- **睇唔出數據舊咗**:上面嗰句「唔會拖垮」係講 pipeline,唔係講版面。真係兩邊都
+  跌嘅話,Pages 會繼續派上一次 deploy 嘅嘢,而頁面**除咗 header 個 `generated_at`
+  之外冇任何提示**。懷疑啲數字唔郁,第一件事係對下 `generated_at`。
 - **設定記錄**:Pages project 名 `management-dashboard`(所以 workflow 個
   `--project-name` 唔受 hostname 影響);Access team domain
   `summer-mud-0e86.cloudflareaccess.com`。詳細落成記錄同取捨見
