@@ -1,7 +1,7 @@
 # Plan 起點:三層 fallback
 
 **日期:** 2026-08-05
-**狀態:** 設計已批,未實作
+**狀態:** 已實作(`f37c3eb` … `22b3908`),全套測試 411 passed
 **改動範圍:** `plan-dates.js` 嘅 `resolvePlanWindow()` + 兩個新 collector 欄位 + 一個新 `plan.md` marker
 **影響:** [Burndown 卡](2026-08-04-project-burndown-chart-design.md) 同
 [Plan timeline 條](2026-08-04-plan-timeline-design.md) 兩張圖一齊跟
