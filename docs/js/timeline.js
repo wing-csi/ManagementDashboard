@@ -20,13 +20,14 @@ function urgencyOf(daysFromToday) {
 
 const EMPTY = {
   status: 'no-history', start: null, due: null, dueReason: 'no-history',
+  startSource: null, startReason: null,
   axisStart: null, axisEnd: null, barLeftPct: 0, barWidthPct: 0,
   todayPct: null, markers: [], spi: null, spiReason: 'no-history',
   daysLeft: null, overdue: 0, invalidDues: 0, allDone: false,
 };
 
 export function timelineStrip(plan, todayStr) {
-  const { start, due, dueReason } = resolvePlanWindow(plan);
+  const { start, startSource, startReason, due, dueReason } = resolvePlanWindow(plan);
   if (!start) return { ...EMPTY };
 
   const open = (plan.open_tasks || []).filter((t) => t && t.due);
@@ -89,7 +90,8 @@ export function timelineStrip(plan, todayStr) {
   }
 
   return {
-    status: 'ok', start, due, dueReason, axisStart, axisEnd,
+    status: 'ok', start, startSource, startReason, due, dueReason,
+    axisStart, axisEnd,
     barLeftPct, barWidthPct,
     todayPct: todayStr < axisStart ? null : pct(todayStr),
     markers, spi, spiReason,

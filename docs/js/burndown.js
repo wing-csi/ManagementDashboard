@@ -11,11 +11,11 @@
 import { dayRange, resolvePlanWindow } from './plan-dates.js';
 
 export function burndownSeries(plan, todayStr) {
-  const { start, due, dueReason } = resolvePlanWindow(plan);
+  const { start, startSource, startReason, due, dueReason } = resolvePlanWindow(plan);
   if (!start) {
     return { status: 'no-history', days: [], remaining: [], scope: [],
              ideal: [], todayIndex: -1, due: null, idealReason: 'no-history',
-             truncated: false };
+             startSource: null, startReason: null, truncated: false };
   }
 
   const history = plan.history;
@@ -52,6 +52,9 @@ export function burndownSeries(plan, todayStr) {
   return {
     status: history.length === 1 ? 'single-point' : 'ok',
     days, remaining, scope, ideal, todayIndex, due, idealReason,
+    // 條線本身唔使知起點由邊層嚟,但張卡要講得出 —— 渲染層冇第二個途徑
+    // 攞到,所以呢度要 pass 過去。
+    startSource, startReason,
     truncated: !!plan.history_truncated,
   };
 }

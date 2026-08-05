@@ -152,3 +152,27 @@ def test_no_history_reports_no_history(page, server):
                    "m.timelineStrip({path: 'plan.md', done: 1, total: 2}, '2026-08-04')")
     assert got["status"] == "no-history"
     assert got["markers"] == []
+
+
+# ------------------------------------------------ SPI 跟解析咗嘅起點,唔係觀測
+
+SPI_PLAN = ("{done: 3, total: 12, due_max: '2026-09-01', open_tasks: [], "
+            "repo_first_commit: '2026-07-01', "
+            "history: [{date: '2026-08-01', done: 0, total: 10}]}")
+
+
+def test_spi_measures_from_the_resolved_start(page, server):
+    """SPI 個分母係計劃窗口,唔係「我哋幾時開始有記錄」。錨返第一個觀測
+    會令一個做咗三個月、上星期先開 plan.md 嘅項目報一個近乎完美嘅 SPI。"""
+    got = evaluate(page, server, f"m.timelineStrip({SPI_PLAN}, '2026-08-16')")
+    # elapsed = (08-16 − 07-01) / (09-01 − 07-01) = 46/62 = 0.7419…
+    # SPI = (3/12) / 0.7419… = 0.34;錨返 08-01 嘅話會係 0.5
+    assert got["start"] == "2026-07-01"
+    assert got["startSource"] == "repo"
+    assert got["spi"] == 0.34
+
+
+def test_the_bar_starts_at_the_resolved_start(page, server):
+    got = evaluate(page, server, f"m.timelineStrip({SPI_PLAN}, '2026-08-16')")
+    assert got["axisStart"] == "2026-07-01"
+    assert got["barLeftPct"] == 0

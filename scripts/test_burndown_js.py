@@ -160,3 +160,41 @@ def test_a_missing_history_key_is_not_an_empty_chart(page, server):
     plan = "{path: 'plan.md', done: 3, total: 12, due_max: '2026-09-01'}"
     got = evaluate(page, server, f"m.burndownSeries({plan}, '2026-08-04')")
     assert got["status"] == "no-history"
+
+
+# ------------------------------------------ 起點早過第一個觀測嗰陣點樣畫
+
+EARLY_PLAN = """{
+  path: 'plan.md', done: 3, total: 12, due_max: '2026-08-06',
+  history_truncated: false, repo_first_commit: '2026-07-29',
+  history: [
+    {date: '2026-08-01', done: 0, total: 10},
+    {date: '2026-08-03', done: 3, total: 12},
+  ],
+}"""
+
+
+def test_the_window_before_the_first_observation_is_left_blank(page, server):
+    """起點推早咗,但嗰段時間我哋一個數都冇量度過。Carry-back 一條平線
+    等於斷言「開檔第一日就已經有 10 個 task、一個都未做」—— 作出嚟嘅線
+    同真線喺畫面上分唔開。"""
+    got = evaluate(page, server, f"m.burndownSeries({EARLY_PLAN}, '2026-08-04')")
+    assert got["days"][:4] == ["2026-07-29", "2026-07-30", "2026-07-31", "2026-08-01"]
+    assert got["remaining"][:4] == [None, None, None, 10]
+    assert got["scope"][:4] == [None, None, None, 10]
+
+
+def test_the_ideal_line_is_anchored_at_the_new_start(page, server):
+    """理想線由起點拉到 due。起點推早咗,佢就要變平 —— 呢個正正係呢個
+    改動要修嘅嘢:plan.md 開得遲會令理想線過斜。"""
+    got = evaluate(page, server, f"m.burndownSeries({EARLY_PLAN}, '2026-08-04')")
+    assert got["days"][-1] == "2026-08-06"
+    assert got["ideal"][0] == 10          # 錨喺 history[0].total,唔係今日嘅
+    assert got["ideal"][-1] == 0          # 喺 due 嗰日到零
+
+
+def test_the_new_fields_reach_the_series(page, server):
+    """渲染層要靠佢哋出出處同原因,唔 pass 過就永遠讀到 undefined。"""
+    got = evaluate(page, server, f"m.burndownSeries({EARLY_PLAN}, '2026-08-04')")
+    assert got["startSource"] == "repo"
+    assert got["startReason"] is None

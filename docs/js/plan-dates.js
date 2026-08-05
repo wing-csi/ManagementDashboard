@@ -45,7 +45,27 @@ export function dayRange(start, end) {
   return out;
 }
 
-/** 一份 plan 嘅計劃窗口:`{start, due, dueReason}`。
+/** 一個 candidate 起點用唔用得。
+ *
+ *  三個條件缺一不可:係一個真日曆日、唔遲過第一個觀測(遲過就同 git 記錄
+ *  矛盾,採用佢要切走真嘢)、而且唔遠到爆條軸 —— `dayRange()` 個 cap 係
+ *  **剪尾**嘅,剪走今日同死線,比起唔採用衰好多。 */
+const usableStart = (value, firstObs) =>
+  !!value && realDate(value) && value <= firstObs
+    && spanDays(value, firstObs) <= MAX_DAYS;
+
+/** 一份 plan 嘅計劃窗口:`{start, startSource, startReason, due, dueReason}`。
+ *
+ *  起點行三層:`plan.md` 宣告嘅 `start:` → repo 第一個 commit → 第一個
+ *  plan 觀測。頭兩層都係 optional 欄位,舊 `metrics.json` 兩個都冇,自然
+ *  跌到第三層 —— 即係呢個 feature 之前嘅行為。
+ *
+ *  `startSource` 講用咗邊層,張卡要出返俾人睇:同一條軸,由 repo 開檔拉起
+ *  同由第一次改 plan.md 拉起,理想線同 SPI 嘅意思完全唔同,但畫面上一模
+ *  一樣。
+ *
+ *  `startReason` 淨係講「人手宣告咗但用唔到」。`repo_first_commit` 唔係人手
+ *  寫嘅,攞唔到或者唔啱就靜靜跌落下一層 —— 出一句叫人去改乜嘢都冇。
  *
  *  `dueReason` 唔係 null 就代表冇一個用得嘅終點,而個值就係要同用家講嘅
  *  原因。四個原因要分得開,因為要改嘅嘢完全唔同:冇 history(舊數據)、
@@ -56,13 +76,34 @@ export function dayRange(start, end) {
 export function resolvePlanWindow(plan) {
   const history = (plan || {}).history;
   if (!Array.isArray(history) || history.length === 0) {
-    return { start: null, due: null, dueReason: 'no-history' };
+    return { start: null, startSource: null, startReason: null,
+             due: null, dueReason: 'no-history' };
   }
-  const start = history[0].date;
+  const firstObs = history[0].date;
+  const declaredStart = plan.start_min || null;
+  const repoStart = plan.repo_first_commit || null;
+
+  let start = firstObs;
+  let startSource = 'observation';
+  if (usableStart(declaredStart, firstObs)) {
+    start = declaredStart;
+    startSource = 'plan';
+  } else if (usableStart(repoStart, firstObs)) {
+    start = repoStart;
+    startSource = 'repo';
+  }
+  // `realDate` 要行喺日期比大細之前:`'2026-13-01' > '2026-08-01'` 係字串
+  // 比較,答「係」,但佢唔係遲咗 —— 佢根本唔係一個日期。揀錯咗個 reason,
+  // 張卡就會叫人去改一個唔存在嘅問題。
+  const startReason = (!declaredStart || startSource === 'plan') ? null
+    : !realDate(declaredStart) ? 'start-unusable'
+      : declaredStart > firstObs ? 'start-after-history'
+        : 'start-unusable';
+
   // `due_max` 淨係「shape 啱」就入到嚟(舊 metrics.json 更加乜都冇驗過),
   // 而佢係一個字串 max() 揀出嚟嘅 —— `2026-13-01` 呢類打錯嘅日期會贏晒
   // 同年所有真日期。攞唔到 timestamp(NaN)或者離譜到要畫十年以上,兩種
-  // 都當「畫唔出」,唔好帶落條軸度。
+  // 都當「畫唔出」,唔好帶落條軸度。個 span 由**解析咗嘅**起點度起計。
   const declared = plan.due_max || null;
   const usable = !!declared && realDate(declared)
     && spanDays(start, declared) <= MAX_DAYS;
@@ -73,5 +114,5 @@ export function resolvePlanWindow(plan) {
     : !usable ? 'due-unusable'
       : due <= start ? 'due-not-after-start'
         : null;
-  return { start, due, dueReason };
+  return { start, startSource, startReason, due, dueReason };
 }
