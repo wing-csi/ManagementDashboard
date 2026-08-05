@@ -61,8 +61,9 @@ Heading 上面嘅 `due:` 優先過 task —— parser 已經讀緊佢入 `cur_du
 
 逐個有 `plan_file` 嘅 repo:
 
-1. `GET /repos/{repo}/commits?path=<plan_file>&sha=<registers_ref>&per_page=100`
+1. `GET /repos/{repo}/commits?path=<plan_file>&sha=<registers_ref>&per_page=100&page=N`
    —— 郁過個 plan 嘅 commit,**釘喺登記冊嗰條 branch**。冇設 `registers_ref` 就唔帶 `sha`,GitHub 派 default branch —— 同 `_contents_path()` 一模一樣嘅契約(AIFlowTesting 就係呢個 case,plan.md 住喺 `main`)。設咗就一定要帶:ref 錯咗個 list 係**空**,唔係錯,而空 list 會靜靜哋變「呢個 repo 冇歷史」。
+   **一定要揭版。** `per_page=100` 係 GitHub list endpoint 嘅硬頂,唔係我哋揀嘅數 —— 淨係發一個 request 嘅話,任何改過超過 100 次嘅 plan 都會靜靜哋淨返最新 100 日,`history[0]` 唔再係開檔嗰日,而第 4 點嗰個 150 上限就永遠撞唔到、個 flag 永遠唔會著。所以要一版一版揭,揭到「短版」(到底)或者「日數已經多過 cap」為止,並且封一個版數上限(20 版 = 2000 個 commit)防死循環 —— 撞到版數上限嗰次同樣要 set `history_truncated`,佢一樣係「攞唔晒」。
 2. **逐日去重**,每個曆日只留**最後**一個 commit(嗰日收工時嘅狀態)。大部分日子根本冇郁過 plan,所以實際 fetch 數 = 「plan 改過嘅日數」。
 3. 每個生還者:fetch 嗰個 sha 嘅 blob → 過現有 `parse_plan_markdown()`。**冇第二個 parser,冇新標記語意。**
 4. 上限 150 個 blob,超出掉最舊,並且設 `history_truncated: true`。上限只會令個 flag 著,唔會靜靜哋剪短條線。
@@ -73,7 +74,7 @@ Heading 上面嘅 `due:` 優先過 task —— parser 已經讀緊佢入 `cur_du
 
 ### 4.1 API 成本
 
-每個 plan repo 每次夜更:1 個 commit-list call + 「plan 改過嘅日數」個 blob call。今日兩個 repo 設咗 `plan_file`。GitHub REST 上限 5000/hr,量級上完全唔成問題。
+每個 plan repo 每次夜更:1–2 個 commit-list call(150 個觀測日一定超過一版 100 個 commit,所以要揭版;封頂 20 版)+ 「plan 改過嘅日數」個 blob call。今日兩個 repo 設咗 `plan_file`。GitHub REST 上限 5000/hr,量級上完全唔成問題。
 
 ## 5. Schema
 

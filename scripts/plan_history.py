@@ -19,6 +19,11 @@ import urllib.parse
 from typing import Callable, Protocol
 
 HISTORY_CAP = 150
+PER_PAGE = 100  # GitHub 嘅硬上限:list endpoint 一版最多派 100 個
+# 100 × 20 = 2000 個 commit,遠遠夠冚 150 個觀測日;純粹係封住死循環嘅閘,
+# 唔係常態。同 collect_github.MAX_PAGES 一樣係 20,但嗰個係 GraphQL 嘅,
+# 兩邊各有各嘅 transport,唔可以共用一個常數扮成同一件事。
+MAX_HISTORY_PAGES = 20
 
 
 class _Client(Protocol):
@@ -27,15 +32,19 @@ class _Client(Protocol):
 
 
 def commits_path(repo: str, path: str, ref: str | None,
-                 per_page: int = 100) -> str:
+                 per_page: int = PER_PAGE, page: int = 1) -> str:
     """Commits that touched `path`, pinned to `ref` when the plan has its own branch.
 
     Same contract as `collect_github._contents_path()`: no `sha` means GitHub
     serves the default branch, which is correct for a plan living on `main`.
     A *wrong* ref returns an empty list rather than an error, which is why the
     caller must treat empty as「揾唔到」and not as「冇歷史」.
+
+    `per_page` 頂到 100 就冇得再大 —— 想攞多過 100 個 commit 唯一嘅方法係
+    揭下一版,所以呢度一定要出 `page`,見 `_fetch_commit_pages()`。
     """
-    query = [f"path={urllib.parse.quote(path)}", f"per_page={per_page}"]
+    query = [f"path={urllib.parse.quote(path)}", f"per_page={per_page}",
+             f"page={page}"]
     if ref:
         query.append(f"sha={urllib.parse.quote(ref, safe='/')}")
     return f"/repos/{repo}/commits?" + "&".join(query)
@@ -59,6 +68,45 @@ def daily_commits(commits: list[dict]) -> list[tuple[str, str]]:
     return sorted(by_day.items())
 
 
+def _fetch_commit_pages(
+    client: _Client,
+    repo: str,
+    path: str,
+    ref: str | None,
+    cap: int,
+    per_page: int = PER_PAGE,
+    max_pages: int = MAX_HISTORY_PAGES,
+) -> tuple[list[dict], bool]:
+    """一版一版揭,直到夠料為止。回 (commits, 上游仲有嘢未攞)。
+
+    一個 request 得 100 個 commit,即係最多 100 個日曆日 —— 一份改過超過
+    100 次嘅 plan,`commits[-1]` 就唔再係開檔嗰個 commit,而理想線正正錨喺
+    `history[0]` 嘅 scope。所以呢度一定要揭版:150 日嘅上限先至係真上限,
+    `history_truncated` 先至係「真係剪咗嘢」嘅意思。
+
+    停喺三個位:短版(到底)、日數已經多過 cap(最新 cap 日已經齊,再舊
+    嘅點反正都要剪走)、或者揭到 `max_pages`。最後嗰種先至係唯一一個「攞
+    唔晒」嘅出口,所以佢要老實認 truncated。
+    """
+    commits: list[dict] = []
+    for page in range(1, max_pages + 1):
+        try:
+            batch = client.rest_json(commits_path(repo, path, ref, per_page, page))
+        except Exception:
+            if page == 1:
+                raise  # 第一版都攞唔到 = 真係讀唔到歷史,唔可以扮成「歷史係空」
+            # 中途斷線:攞到幾多用幾多,但條線嘅頭係唔完整嘅,要認。
+            return commits, True
+        if not isinstance(batch, list) or not batch:
+            return commits, False  # 空版 = 冇下一版
+        commits.extend(batch)
+        if len(batch) < per_page:
+            return commits, False  # 短版 = 已經到底
+        if len(daily_commits(commits)) > cap:
+            return commits, False  # 夠 cap+1 日,最新嗰 cap 日已經完整
+    return commits, True
+
+
 def fetch_plan_history(
     client: _Client,
     repo: str,
@@ -80,16 +128,20 @@ def fetch_plan_history(
     frontend carries values forward instead.
     """
     try:
-        commits = client.rest_json(commits_path(repo, path, ref))
+        commits, more_upstream = _fetch_commit_pages(client, repo, path, ref, cap)
     except Exception:
         return None
-    if not isinstance(commits, list) or not commits:
+    if not commits:
         return None
 
     days = daily_commits(commits)
     if not days:
         return None
-    truncated = len(days) > cap
+    # 兩個都係「`history[0]` 唔再係開檔嗰日」:日數過咗 cap(我哋自己剪),
+    # 或者揭到版數上限都仲有更舊嘅(攞唔晒)。後者理論上可能全部都係已經
+    # 見過嘅日子,但唔再發 request 係查唔到嘅 —— 寧願講多咗,都好過條理想線
+    # 扮成由項目開頭拉出嚟。
+    truncated = len(days) > cap or more_upstream
     days = days[-cap:]  # keep the most recent; see the caveat below
 
     history: list[dict] = []

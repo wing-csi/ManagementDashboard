@@ -9,7 +9,9 @@ Run:  python -m pytest scripts/test_plan_history.py -v
 
 from __future__ import annotations
 
+import datetime
 import sys
+import urllib.parse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -51,6 +53,52 @@ class StubClient:
         if sha not in self.blobs:
             raise StubError("HTTP 404")
         return self.blobs[sha]
+
+
+def _day(n: int) -> str:
+    """由 2026-01-01 起計第 n 日,行真日曆。"""
+    return (datetime.date(2026, 1, 1) + datetime.timedelta(days=n)).isoformat()
+
+
+class PagedStubClient:
+    """真實嘅 REST 分頁:一版最多 `per_page` 個,最後一版短。
+
+    上面嗰個 StubClient 一次 call 就派晒成個 commit list,所以佢由頭到尾
+    都撞唔到傳輸層嗰個 100 上限 —— 分頁完全冇寫都照樣綠。呢個 stub 就係
+    補返嗰忽:commit 由新到舊排(同 GitHub 一樣),要多過 100 個就一定要
+    揭版先攞得到。
+    """
+
+    def __init__(self, commits: list[dict], blobs: dict[str, str],
+                 fail_on_page: int | None = None):
+        self.commits = commits
+        self.blobs = blobs
+        self.fail_on_page = fail_on_page
+        self.pages: list[int] = []
+
+    def rest_json(self, path: str):
+        query = urllib.parse.parse_qs(path.split("?", 1)[1])
+        page = int(query["page"][0])
+        per_page = int(query["per_page"][0])
+        assert per_page <= 100, "GitHub list endpoint 一版派唔到多過 100 個"
+        self.pages.append(page)
+        if page == self.fail_on_page:
+            raise StubError("HTTP 502")
+        return self.commits[(page - 1) * per_page:page * per_page]
+
+    def rest_raw(self, path: str) -> str:
+        sha = path.rsplit("=", 1)[-1]
+        if sha not in self.blobs:
+            raise StubError("HTTP 404")
+        return self.blobs[sha]
+
+
+def _paged(n_days: int, per_day: int = 1) -> PagedStubClient:
+    """n_days 個日曆日,每日 per_day 個 commit,由新到舊。"""
+    commits = [_commit(f"c{day}-{k}", f"{_day(day)}T{10 + k:02d}:00:00Z")
+               for day in range(n_days - 1, -1, -1)
+               for k in range(per_day - 1, -1, -1)]
+    return PagedStubClient(commits, {c["sha"]: "0/5" for c in commits})
 
 
 def test_commits_path_pins_the_ref_when_the_plan_lives_on_a_branch():
@@ -109,6 +157,80 @@ def test_fetch_plan_history_caps_and_flags_truncation():
     # 剪走最舊 50 日 (2026-01-01..2026-02-22),留低最新 150 日。
     assert got["history"][0]["date"] == "2026-02-23"
     assert got["history"][-1]["date"] == "2026-08-04"
+
+
+# ------------------------------------------------------- 分頁(傳輸層上限)
+
+
+def test_commits_path_carries_a_page_number():
+    """`per_page` 頂到 100 —— 想要多過 100 個 commit,`page` 係唯一嘅路。"""
+    from plan_history import commits_path
+    assert "page=1" in commits_path("acme/alpha", "plan.md", None)
+    assert "page=3" in commits_path("acme/alpha", "plan.md", None, 100, 3)
+
+
+def test_fetch_plan_history_pages_past_the_hundred_commit_ceiling():
+    """一個 request 得 100 個 commit,即係最多 100 個日曆日。
+
+    唔揭版嘅話,一份改過 130 次嘅 plan 就會靜靜哋淨返最新 100 日,而
+    `history[0]`(理想線嘅錨)就唔再係項目起點 —— 冇任何 flag 著,冇人知。
+    """
+    from plan_history import fetch_plan_history
+    client = _paged(130)
+    got = fetch_plan_history(client, "acme/alpha", "plan.md", _parse, cap=150)
+    assert len(got["history"]) == 130
+    assert got["history"][0]["date"] == _day(0)      # 真係由開檔嗰日起
+    assert got["history"][-1]["date"] == _day(129)
+    assert got["history_truncated"] is False         # 150 未撞到,冇剪過嘢
+    assert client.pages == [1, 2]                    # 第二版短,收工
+
+
+def test_fetch_plan_history_flags_truncation_only_when_the_cap_really_bites():
+    """150 先至係真上限。200 日 → 剪走最舊 50 日,flag 著。"""
+    from plan_history import fetch_plan_history
+    got = fetch_plan_history(_paged(200), "acme/alpha", "plan.md", _parse, cap=150)
+    assert len(got["history"]) == 150
+    assert got["history_truncated"] is True
+    assert got["history"][0]["date"] == _day(50)     # 剪頭唔剪尾
+    assert got["history"][-1]["date"] == _day(199)
+
+
+def test_a_short_plan_is_never_flagged_as_truncated():
+    """一版就攞得晒嘅 plan,無論如何都唔可以標「已截斷」—— 標錯咗就係叫
+    人以為條理想線搬咗位,同靜靜哋搬位一樣咁誤導。"""
+    from plan_history import fetch_plan_history
+    client = _paged(12)
+    got = fetch_plan_history(client, "acme/alpha", "plan.md", _parse, cap=150)
+    assert len(got["history"]) == 12
+    assert got["history_truncated"] is False
+    assert client.pages == [1]
+
+
+def test_fetch_plan_history_stops_at_the_page_limit_and_admits_it():
+    """病態 repo(2100 個 commit 擠喺 105 日)唔可以行到天光。
+
+    揭到版數上限就收手,但上游仲有更舊嘅 commit,`history[0]` 因此唔一定
+    係開檔嗰日 —— 呢個出口一定要認 truncated,否則就係另一種靜靜哋剪短。
+    """
+    from plan_history import MAX_HISTORY_PAGES, fetch_plan_history
+    client = _paged(105, per_day=20)
+    got = fetch_plan_history(client, "acme/alpha", "plan.md", _parse, cap=150)
+    assert len(client.pages) == MAX_HISTORY_PAGES
+    assert got["history_truncated"] is True
+    assert len(got["history"]) == 100  # 2000 個 commit ÷ 每日 20 個
+
+
+def test_a_failure_midway_through_paging_keeps_what_it_got_and_admits_it():
+    """第一版之後先斷 = 攞到嘅仍然係最新嗰段真數據,掉咗佢冇著數;但條線
+    嘅頭係唔完整嘅,所以要 flag,唔可以扮完整。"""
+    from plan_history import fetch_plan_history
+    client = _paged(250, per_day=2)  # 一版 100 個 commit = 50 日
+    client.fail_on_page = 3
+    got = fetch_plan_history(client, "acme/alpha", "plan.md", _parse, cap=150)
+    assert client.pages == [1, 2, 3]                 # 真係試過揭第三版
+    assert got["history_truncated"] is True
+    assert len(got["history"]) == 100                # 頭兩版嘅 100 日
+    assert got["history"][-1]["date"] == _day(249)   # 最新嗰邊完好
 
 
 def test_fetch_plan_history_is_none_when_the_commits_call_fails():
