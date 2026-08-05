@@ -805,27 +805,40 @@ def fetch_quality_file(client: GitHubClient, repo: str, path: str) -> dict | Non
 CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[( |x|X)\]\s+(\S.*)$")
 HEADING_RE = re.compile(r"^#{1,6}\s+(.+)$")
 PLAN_DUE_RE = re.compile(r"\bdue:(\d{4}-\d{2}-\d{2})\b")
+PLAN_START_RE = re.compile(r"\bstart:(\d{4}-\d{2}-\d{2})\b")
 PLAN_PRIO_RE = re.compile(r"!(P[0-3])\b", re.IGNORECASE)
 PLAN_BUG_RE = re.compile(r"#bug\b", re.IGNORECASE)
 
 
 def _clean_plan_title(text: str) -> str:
+    text = PLAN_START_RE.sub("", text)
     text = PLAN_DUE_RE.sub("", text)
     text = PLAN_PRIO_RE.sub("", text)
     text = PLAN_BUG_RE.sub("", text)
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
-def _calendar_dues(values: list[str], source: str) -> list[str]:
-    """Drop `due:` dates that do not exist on the calendar, loudly.
+# 一個爛日期喺兩個 marker 度造成嘅傷害唔同,所以句 warning 唔可以共用 ——
+# 睇嘅人要知去改邊個字。ASCII only: 呢啲字出去 Windows console,非 cp1252
+# 字元會 print 成一個替代符號。
+_MARKER_HARM = {
+    "due": "it would win max() and become the burndown deadline",
+    "start": "it would win min() and become the burndown start",
+}
 
-    PLAN_DUE_RE only matches the *shape* `\\d{4}-\\d{2}-\\d{2}`, and `due_max`
-    is a `max()` over strings — so one typo outranks every valid date in the
-    same year ('2026-13-01' > '2026-09-18', '2026-08-32' > '2026-08-31') and
-    becomes the project deadline. The frontend then parses it to NaN and draws
-    a card with a title, a blank chart and nothing to explain it. `plan.md` is
-    hand-edited in the *target* repo, so this is untrusted input crossing a
-    boundary and has to be validated here, not assumed.
+
+def _calendar_dates(values: list[str], source: str, marker: str) -> list[str]:
+    """Drop `<marker>:` dates that do not exist on the calendar, loudly.
+
+    The marker regexes only match the *shape* `\\d{4}-\\d{2}-\\d{2}`, and both
+    `due_max` and `start_min` reduce with a plain string `max()`/`min()` — so
+    one typo outranks every valid date in the same year ('2026-13-01' >
+    '2026-09-18' and '2026-08-32' > '2026-08-31' for due; '1900-01-01' beats
+    everything for start) and becomes the project window. The frontend then
+    parses it to NaN and draws a card with a title, a blank chart and nothing
+    to explain it. `plan.md` is hand-edited in the *target* repo, so this is
+    untrusted input crossing a boundary and has to be validated here, not
+    assumed.
 
     `source` names the repo/file for the warning; empty means「唔好嘈」and is
     what the history replay passes — the same bad line sits in all 150 old
@@ -837,11 +850,9 @@ def _calendar_dues(values: list[str], source: str) -> list[str]:
             date.fromisoformat(value)
         except ValueError:
             if source:
-                # ASCII only: this goes to a Windows console too, where a
-                # non-cp1252 character prints as a replacement glyph.
-                print(f"  ! warning: {source} has due:{value} - not a real "
-                      f"calendar date, ignored (it would win max() and become "
-                      f"the burndown deadline)", file=sys.stderr)
+                print(f"  ! warning: {source} has {marker}:{value} - not a real "
+                      f"calendar date, ignored ({_MARKER_HARM[marker]})",
+                      file=sys.stderr)
             continue
         kept.append(value)
     return kept
@@ -856,12 +867,17 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     due: wins (an explicit declaration), else the latest date on any checkbox,
     ticked included. Counting only open tasks would walk the deadline earlier
     every time a late item lands. Calendar-invalid dates are discarded before
-    that max() — see `_calendar_dues()`.
+    that max() — see `_calendar_dates()`.
+
+    `start_min` is the declared project start: the earliest heading-level
+    `start:`. Heading level only — when a *task* starts is not when the
+    project did, and the axis, the ideal line and SPI all hang off this date.
 
     `source` is only a label for those warnings (e.g. "acme/alpha plan.md")."""
     sections: list[dict] = []
     open_tasks: list[dict] = []
     heading_dues: list[str] = []
+    heading_starts: list[str] = []
     task_dues: list[str] = []
     cur: dict | None = None
     cur_due: str | None = None
@@ -873,6 +889,9 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
             cur_due = m_due.group(1) if m_due else None
             if cur_due:
                 heading_dues.append(cur_due)
+            m_start = PLAN_START_RE.search(h.group(1))
+            if m_start:
+                heading_starts.append(m_start.group(1))
             cur = {"title": _clean_plan_title(h.group(1)), "done": 0, "total": 0}
             sections.append(cur)
             continue
@@ -902,10 +921,12 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
         return None
     # 一個 heading 寫住個唔存在嘅日期 = 佢乜都冇宣告到,所以照跌落 task 嗰邊,
     # 唔係「有 heading due 但係 None」。
-    heading_dues = _calendar_dues(heading_dues, source)
-    task_dues = _calendar_dues(task_dues, source)
+    heading_dues = _calendar_dates(heading_dues, source, "due")
+    task_dues = _calendar_dates(task_dues, source, "due")
+    heading_starts = _calendar_dates(heading_starts, source, "start")
     return {"done": done, "total": total, "open_tasks": open_tasks,
             "due_max": max(heading_dues) if heading_dues else (max(task_dues) if task_dues else None),
+            "start_min": min(heading_starts) if heading_starts else None,
             "sections": [s for s in sections if s["total"]][:12]}
 
 

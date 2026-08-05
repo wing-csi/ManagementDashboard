@@ -1475,6 +1475,75 @@ def test_due_max_sees_tasks_beyond_the_open_task_cap():
     assert parse_plan_markdown("# 計劃\n\n" + body)["due_max"] == "2026-11-30"
 
 
+# ------------------------------------------------------------ plan start:
+
+PLAN_START_MD = """# Issue board start:2026-06-16 due:2026-09-18
+
+- [x] 做咗嘅嘢
+- [ ] 未做嘅嘢
+"""
+
+
+def test_a_heading_start_becomes_start_min():
+    from collect_github import parse_plan_markdown
+    assert parse_plan_markdown(PLAN_START_MD)["start_min"] == "2026-06-16"
+
+
+def test_a_plan_without_start_has_none():
+    """冇宣告唔係一個錯 —— 前端會跌落下一層,唔使喺呢度作一個日期出嚟。"""
+    from collect_github import parse_plan_markdown
+    assert parse_plan_markdown("# 計劃\n\n- [ ] 一件事\n")["start_min"] is None
+
+
+def test_the_earliest_heading_start_wins():
+    """`due:` 取 max、`start:` 取 min —— 兩個一齊圍出最闊嘅宣告窗口。"""
+    from collect_github import parse_plan_markdown
+    md = ("# 第一期 start:2026-06-16\n\n- [ ] 一件事\n\n"
+          "# 第二期 start:2026-07-01\n\n- [ ] 另一件事\n")
+    assert parse_plan_markdown(md)["start_min"] == "2026-06-16"
+
+
+def test_a_task_level_start_is_not_a_project_start():
+    """一個 task 幾時開始唔係項目起點。`due:` 收 task 級係因為要砌 marker,
+    起點冇呢個需要 —— 收咗就會有人喺一行 checkbox 度改到成條軸。"""
+    from collect_github import parse_plan_markdown
+    md = "# 計劃\n\n- [ ] 一件事 start:2026-06-16\n"
+    assert parse_plan_markdown(md)["start_min"] is None
+
+
+def test_a_start_that_is_not_a_calendar_date_is_dropped():
+    """同 due: 一樣,個 regex 淨係夾 shape。`2026-02-30` 過得 regex,但
+    JS 會靜靜哋當佢係 3 月 2 日,喺條軸上面永遠 indexOf 唔到。"""
+    from collect_github import parse_plan_markdown
+    md = "# 計劃 start:2026-02-30\n\n- [ ] 一件事\n"
+    assert parse_plan_markdown(md)["start_min"] is None
+
+
+def test_a_dropped_start_warns_under_its_own_marker_name(capsys):
+    """兩個 marker 唔可以共用一句講 due_max 嘅說話 —— 睇嘅人要知去改邊個字。"""
+    from collect_github import parse_plan_markdown
+    parse_plan_markdown("# 計劃 start:2026-02-30\n\n- [ ] 一件事\n",
+                        "acme/alpha plan.md")
+    err = capsys.readouterr().err
+    assert "acme/alpha plan.md" in err
+    assert "start:2026-02-30" in err
+    assert "deadline" not in err, "呢句唔係講 due_max"
+    assert err.isascii(), "呢啲字會出去 Windows console,非 ASCII 會變亂碼"
+
+
+def test_start_is_stripped_from_the_section_title():
+    """唔 strip 嘅話個 section title 會帶住 `start:2026-06-16` 出街。"""
+    from collect_github import parse_plan_markdown
+    assert parse_plan_markdown(PLAN_START_MD)["sections"][0]["title"] == "Issue board"
+
+
+def test_the_due_side_still_behaves_after_the_rename():
+    """`_calendar_dues` → `_calendar_dates` 係一個純改名 —— due 嗰邊
+    一個字都唔應該變。"""
+    from collect_github import parse_plan_markdown
+    assert parse_plan_markdown(PLAN_BAD_DUE_MD)["due_max"] == "2026-09-18"
+
+
 # ------------------------------------------------------------ plan history
 
 
