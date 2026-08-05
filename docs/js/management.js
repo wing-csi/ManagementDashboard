@@ -19,6 +19,7 @@ function observations(plan, todayStr) {
     .filter((p) => p && realDate(p.date) && Number.isFinite(p.done) && Number.isFinite(p.total))
     .map((p) => ({ date: p.date, done: p.done, total: p.total }))
     .sort((a, b) => a.date.localeCompare(b.date));
+  if (!rows.length) return rows;
   if (realDate(todayStr) && Number.isFinite(plan?.done) && Number.isFinite(plan?.total)) {
     const current = { date: todayStr, done: plan.done, total: plan.total };
     const last = rows.at(-1);
@@ -231,14 +232,17 @@ export function deriveManagement(data, { repos = data.repos || [], tasks = data.
     portfolioStatus = 'unknown';
   }
   const changes = projects.map((p) => p.scopeChange).filter((c) => c?.available);
+  const planProjects = projects.filter((p) => p.scope?.source === 'plan');
   const forecasts = projects.map((p) => p.forecast).filter((f) => f.status === 'forecast');
   const totals = {
     planning: projects.filter((p) => p.scope).length,
-    currentScope: changes.reduce((n, c) => n + c.current, 0),
+    currentScope: planProjects.reduce((n, p) => n + p.scope.total, 0),
     baselineScope: changes.reduce((n, c) => n + c.baseline, 0),
+    net: changes.reduce((n, c) => n + c.net, 0),
     added: changes.reduce((n, c) => n + c.added, 0),
     removed: changes.reduce((n, c) => n + c.removed, 0),
-    scopeRepos: changes.length,
+    scopeRepos: planProjects.length,
+    historyRepos: changes.length,
     forecastable: forecasts.length,
     forecastLate: forecasts.filter((f) => f.late).length,
   };

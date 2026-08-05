@@ -55,11 +55,13 @@ function renderHeadline(summary) {
 
   const scopeValue = summary.totals.scopeRepos
     ? summary.totals.currentScope.toLocaleString() : '–';
-  const net = summary.totals.currentScope - summary.totals.baselineScope;
+  const net = summary.totals.net;
   const netLabel = net === 0 ? 'scope 無淨變動' : `${net > 0 ? '+' : ''}${net} net scope`;
   setMetric('managementScope', scopeValue,
-    summary.totals.scopeRepos
-      ? `${netLabel} · +${summary.totals.added} added · −${summary.totals.removed} removed · ${summary.totals.scopeRepos} plans`
+    summary.totals.historyRepos
+      ? `${netLabel} · +${summary.totals.added} added · −${summary.totals.removed} removed · ${summary.totals.historyRepos}/${summary.totals.scopeRepos} histories`
+      : summary.totals.scopeRepos
+        ? `${summary.totals.scopeRepos} plans · scope history unavailable`
       : '未有 plan history', summary.totals.scopeRepos ? '' : 'is-unknown');
 
   setMetric('managementForecast', `${summary.totals.forecastable}/${summary.totals.planning}`,

@@ -32,6 +32,21 @@ def test_scope_change_reports_gross_adds_removes_and_net(page, server):
     assert got["net"] == 1
 
 
+def test_old_metrics_keep_current_scope_but_do_not_invent_a_baseline(page, server):
+    change = evaluate(page, server, "m.scopeChange({done:0,total:11}, '2026-07-22')")
+    assert change["available"] is False
+    assert change["reason"] == "no-history"
+    assert change["current"] == 11
+
+    data = """{generated_at:'2026-07-22T12:00:00Z',repos:['acme/app'],tasks:[],errors:[],
+      repo_meta:{'acme/app':{plan:{path:'plan.md',done:0,total:11,open_tasks:[]}}}}"""
+    summary = evaluate(page, server,
+        f"m.deriveManagement({data}, {{todayStr:'2026-07-22', nowMs:Date.parse('2026-07-22T13:00:00Z')}})")
+    assert summary["totals"]["currentScope"] == 11
+    assert summary["totals"]["scopeRepos"] == 1
+    assert summary["totals"]["historyRepos"] == 0
+
+
 def test_forecast_uses_observed_progress_and_names_confidence(page, server):
     plan = """{
       done: 5, total: 10, due_max:'2026-08-20',
@@ -88,4 +103,3 @@ def test_issue_permission_errors_are_visible_in_data_health(page, server):
     assert got["health"]["status"] == "attention"
     assert got["health"]["counts"]["issueErrors"] == 1
     assert any("收集唔到 Issues" in item["title"] for item in got["attention"])
-

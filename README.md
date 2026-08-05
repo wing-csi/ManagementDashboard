@@ -71,7 +71,7 @@ attention 逐項顯示同連返 GitHub / plan file。
 |---|---|---|
 | Portfolio delivery | 每 repo 先判 On track / At risk / Off track / Unknown,portfolio 取最需要注意嘅狀態 | stale 或缺 planning data 唔會出 On track |
 | Data health | `generated_at` 年齡 + top-level errors + `repo_meta[].issues_error` + planning/history 覆蓋 | 超過 48 小時出不可關閉 banner |
-| Current plan scope | 有 history 嘅 plan 現時總 task;逐次 `total` 上落分開計 gross added / removed | 淨變動同 gross churn 分開,唔會互相抵銷 |
+| Current plan scope | 所有 plan 現時總 task;有 history 嗰部分再將逐次 `total` 上落分開計 gross added / removed | 無 history 照顯示 current scope,但唔會作 baseline / churn |
 | Forecast coverage | 有 planning scope 嘅 repo 入面,幾多個有至少 7 日歷史同正完成速度 | 冇速度就顯示不可用,唔會作一個日期 |
 
 預測公式係 `剩餘 task ÷ 觀測完成速度`,投射日期由最後觀測點向前。history 少、scope
