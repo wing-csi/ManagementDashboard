@@ -82,6 +82,31 @@ def test_the_card_names_freshness_source_and_keeps_task_dates_on_demand(page, se
     assert "查看 4 項未完成工作的期限" in details.locator("summary").inner_text()
 
 
+def test_backfilled_history_is_drawn_but_names_its_provenance_and_scope_limit(page, server):
+    data = _load()
+    plan = data["repo_meta"]["acme/alpha"]["plan"]
+    plan["history"][0]["source"] = "task-date"
+    plan["history"][1]["source"] = "snapshot"
+    plan.update(history_backfilled=True, history_backfill_tasks=3,
+                history_backfill_coverage=1.0,
+                history_source="task-dates+plan-commits")
+    _serve(page, data)
+    dash = _open(page, server)
+    dash.wait_for_selector("#burndownCards canvas", state="attached")
+    text = dash.inner_text("#burndownCards")
+    assert "來源：plan.md task done: 日期 + commit 歷史" in text
+    assert "完成趨勢由 3 項 task done: 日期回填（覆蓋 100%）" in text
+    assert "scope 變動只計真實 plan snapshot" in text
+    scope_metric = dash.locator("#burndownCards .burn-metric").nth(3).evaluate(
+        "el => el.textContent.replace(/\\s+/g, ' ').trim()")
+    assert scope_metric == "範圍變動 0 由 08/03 起 12 → 現在 12"
+    scope_data = dash.eval_on_selector(
+        "#burndownCards canvas",
+        "el => Chart.getChart(el).data.datasets[1].data.slice(0, 4)",
+    )
+    assert scope_data == [None, None, 12, 12]
+
+
 def test_observed_remaining_and_scope_are_steps_not_invented_daily_slopes(page, server):
     _serve(page, _load())
     dash = _open(page, server)

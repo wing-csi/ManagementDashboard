@@ -71,6 +71,8 @@ repo first commit ────────────────┘
 - Extra triggers: relevant pushes and manual dispatch.
 - Current plan data: GitHub Contents API through `fetch_plan_file`.
 - History: GitHub commits filtered by the plan path; the last plan state per calendar day is parsed into `{date, done, total}`.
+- Backfill: when at least two completed tasks are dated and valid `done:` coverage is at least 80%, cumulative completion is reconstructed from those dates. Same-day git snapshots override backfill.
+- Backfilled rows are completion evidence only. They are excluded from scope movement, and forecast confidence is capped at medium.
 - Start fallback: declared heading `start:` → repository first commit → first plan observation.
 - Transport: successful collection writes `/tmp/metrics.json`; the snapshot is published independently to the private data repo and Cloudflare Pages.
 - Freshness: `generated_at`, not the nominal cron time. Existing 48-hour stale handling remains authoritative.
@@ -83,6 +85,7 @@ The browser is a snapshot consumer. It does not call GitHub or hold repository c
 - The fixture project reads as 25% complete, 9 remaining, target 08/06, scope +2 and no forecast because history is under seven days.
 - Its callout says it is behind plan and quantifies the percentage-point gap.
 - A sufficiently long positive history shows projected date, confidence and target delta.
+- A late-created plan with high-coverage task `done:` markers renders a provenance-labelled history; its scope line starts only at the first true plan snapshot.
 - Source, snapshot date and expected cadence are visible without opening documentation.
 - Task deadline detail is available but collapsed on first render.
 - Existing burndown, timeline, stale-data, typography and responsive-overflow tests continue to pass.

@@ -1041,6 +1041,65 @@ def test_plan_scheduled_rows_use_github_mentions_for_work_allocation():
     assert plan["open_tasks"][0]["assignee"] == "Tony-Liu-1248"
 
 
+def test_an_indented_scheduled_row_example_in_prose_is_not_a_task():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown(
+        "# Format notes\n"
+        "  read `description @owner start:2026-04-28` in the queue\n"
+        "# M1\n"
+        "Real work @wing start:2026-05-01 done:2026-05-02\n"
+    )
+    assert plan["done"] == 1 and plan["total"] == 1
+
+
+def test_task_done_dates_backfill_completion_history_when_coverage_is_high():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown(
+        "# Plan\n"
+        "- [x] foundation start:2026-01-20 done:2026-02-01\n"
+        "- [x] login start:2026-01-22 done:2026-02-10\n"
+        "- [x] transfer start:2026-01-25 done:2026-02-10\n"
+        "- [ ] release start:2026-02-01\n"
+    )
+    assert plan["_history_backfill"] == {
+        "rows": [
+            {"date": "2026-01-20", "done": 0, "total": 4,
+             "source": "task-date"},
+            {"date": "2026-02-01", "done": 1, "total": 4,
+             "source": "task-date"},
+            {"date": "2026-02-10", "done": 3, "total": 4,
+             "source": "task-date"},
+        ],
+        "tasks": 3,
+        "coverage": 1.0,
+    }
+
+
+def test_sparse_done_markers_do_not_invent_a_project_trend():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown(
+        "# Plan\n"
+        "- [x] dated done:2026-02-01\n"
+        "- [x] undated one\n"
+        "- [x] undated two\n"
+        "- [ ] open\n"
+    )
+    assert "_history_backfill" not in plan
+
+
+def test_an_open_checkbox_with_done_text_is_not_backfilled_as_complete():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown(
+        "# Plan\n"
+        "- [x] real one done:2026-02-01\n"
+        "- [x] real two done:2026-02-02\n"
+        "- [ ] contradiction done:2026-02-03\n"
+    )
+    assert plan["done"] == 2
+    assert plan["_history_backfill"]["tasks"] == 2
+    assert plan["_history_backfill"]["rows"][-1]["done"] == 2
+
+
 def test_plan_checkbox_accepts_a_standalone_github_mention():
     from collect_github import parse_plan_markdown
     plan = parse_plan_markdown("- [ ] build reports @pie-csi due:2026-08-20\n")
@@ -1628,6 +1687,47 @@ def test_the_due_side_still_behaves_after_the_rename():
 
 
 # ------------------------------------------------------------ plan history
+
+
+def test_task_date_backfill_merges_with_and_yields_to_real_plan_snapshots():
+    from collect_github import apply_plan_history, parse_plan_markdown
+    plan = parse_plan_markdown(
+        "# Plan\n"
+        "- [x] foundation start:2026-01-20 done:2026-02-01\n"
+        "- [x] login start:2026-01-22 done:2026-02-10\n"
+        "- [ ] release\n"
+    )
+    apply_plan_history(plan, {
+        "history": [{"date": "2026-02-10", "done": 2, "total": 3}],
+        "history_truncated": False,
+    })
+    assert "_history_backfill" not in plan
+    assert plan["history"] == [
+        {"date": "2026-01-20", "done": 0, "total": 3,
+         "source": "task-date"},
+        {"date": "2026-02-01", "done": 1, "total": 3,
+         "source": "task-date"},
+        {"date": "2026-02-10", "done": 2, "total": 3,
+         "source": "snapshot"},
+    ]
+    assert plan["history_source"] == "task-dates+plan-commits"
+    assert plan["history_backfill_tasks"] == 2
+    assert "history_warning" not in plan
+
+
+def test_task_date_backfill_remains_usable_when_commit_history_is_unavailable():
+    from collect_github import apply_plan_history, parse_plan_markdown
+    plan = parse_plan_markdown(
+        "# Plan\n"
+        "- [x] foundation done:2026-02-01\n"
+        "- [x] login done:2026-02-10\n"
+        "- [ ] release\n"
+    )
+    apply_plan_history(plan, None)
+    assert len(plan["history"]) == 2
+    assert plan["history_source"] == "task-dates"
+    assert plan["history_warning"]
+    assert "history_error" not in plan
 
 
 def test_collect_repo_folds_plan_history_into_the_plan_block():

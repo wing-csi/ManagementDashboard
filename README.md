@@ -194,7 +194,7 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 | 軸 | 來源 |
 |---|---|
 | 起點 | 三層:`plan.md` heading 嘅 `start:` → repo 第一個 commit → 第一日改過 `plan.md`。用咗邊層,卡上會寫明 |
-| 每一點 | target repo 入面 `plan.md` 嘅**commit 歷史**(每日最後一個 commit,經同一個 parser 重新讀一次) |
+| 每一點 | 優先合併 target repo 入面 `plan.md` 嘅**commit 歷史**(每日最後一個 commit)；如果已完成 tasks 有至少 80% 寫咗有效 `done:`,會用 task 完成日期向前回填 |
 | 目標日 | `plan.md` 自己嘅 `due:` — heading 上面嗰個優先(就算佢比其他 task due 仲早都算),否則取全部 checkbox 最遲嗰個(**打咗勾嘅照計**) |
 
 三條線:**剩餘**(`total − done`,觀測之間拉平)、**總 scope**(`total`)、**理想**(由起點 scope 直線落到目標日嘅 0)。總 scope 條線係故意要有嘅 —— 完成度 % 回跌通常係 scope 浮現,唔係退步,冇呢條線個現象只會令人誤會。
@@ -204,7 +204,8 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 ```text
 target repo plan.md
   ├─ Contents API ───────────────▶ 今日 done / total / due / open tasks
-  └─ Commits API + 每日最後 blob ─▶ [{date, done, total}] 歷史
+  │                                └─ task done: 日期 ─▶ 回填完成趨勢
+  └─ Commits API + 每日最後 blob ─▶ 真實 plan / scope snapshots
                                       │
 GitHub Actions collect.yml            ▼
 每日 21:00 UTC（05:00 HKT） ───────▶ /tmp/metrics.json + generated_at
@@ -216,7 +217,7 @@ GitHub Actions collect.yml            ▼
 ```
 
 - Schedule 以 `.github/workflows/collect.yml` 嘅 `0 21 * * *` 為唯一權威;改 cron 要同步改卡頭嘅 cadence 文案。push 到 collector / dashboard 相關檔案同手動 `workflow_dispatch` 都會額外跑一次。
-- Collector **stateless 重建** history,唔係每日 append 一點:同一份 repo history 重跑會出同一條線,唔會因為漏跑一晚永久斷點。代價係每次要讀 commit list 同最多 150 個觀測日嘅 blob。
+- Collector **stateless 重建** history,唔係每日 append 一點:同一份 repo history 重跑會出同一條線,唔會因為漏跑一晚永久斷點。先由高覆蓋率 `done:` markers 回填完成進度,再用同日嘅真實 plan commit snapshot 覆蓋;合併後最多 150 點。
 - `generated_at` 係 PM 判斷 freshness 嘅事實來源;排程時間只代表預期 cadence,唔代表嗰次 job 一定成功。超過 48 小時仍沿用全頁 stale-data banner。
 - Collector 成功先可以 deploy;private data repo publish 同 Cloudflare deploy 互為 fallback。history 個別讀取失敗寫 `history_error`,前端出明確錯誤卡而唔畫假平線。
 - Browser 唔直接打 GitHub API,亦唔持有 PAT;所有敏感讀取同 parsing 都留喺 nightly job。
@@ -225,8 +226,11 @@ GitHub Actions collect.yml            ▼
 
 **讀之前要知:**
 
-- **解像度 = `plan.md` 嘅 commit 頻率。** 一星期 commit 一次就一星期一點。個檔幾時改過,係我哋唯一真正觀測到嘅嘢。
-- **只有一個歷史點唔畫趨勢線。** 卡片嘅進度、目標日同期限照出,但圖位會明講資料不足;一條由單點拉到今日嘅平線好容易被誤讀成「一直冇進展」。
+- **有足夠 task dates 就可以 backfill。** 條件係至少 2 個已完成 task 有日期,而且 `done:` 覆蓋至少 80% 已完成項目。BoostBank 呢份 plan 係 71/71（100%）,所以可以由 2026-01-20 至 2026-08-03 重建 32 點。卡會標明係回填,forecast 信心最高只到「中」。
+- **Backfill 只證明完成時間,唔證明當時 scope。** 回填點用今日 total 計 remaining,但 scope 線同「範圍變動」會忽略佢哋;scope 只由 `plan.md` 真實 snapshot 開始計,唔會扮成 1 月已經知道晒 78 項。
+- **`done:` 語義係 task 完成 proxy。** 對 BoostBank 係重建 plan 時記低嘅最後相關 commit 日期,唔一定等於 PM 驗收或 production release 日;所以 projection 係趨勢,唔係承諾。
+- **冇高覆蓋率 task dates 時,解像度仍然等於 `plan.md` commit 頻率。** 一星期 commit 一次就一星期一點。
+- **最後仍只有一個歷史點就唔畫趨勢線。** 卡片嘅進度、目標日同期限照出,但圖位會明講資料不足;一條由單點拉到今日嘅平線好容易被誤讀成「一直冇進展」。
 - **起點行三層 fallback。** `plan.md` 個 heading 寫住 `start:YYYY-MM-DD` 就用佢(多過一個取最早);冇寫就用 repo 第一個 commit;連佢都攞唔到(空 repo、API 讀唔到)先至用第一日改過 `plan.md` 嗰日。條軸、理想線同 SPI 三樣都跟呢個起點 —— 所以一份開檔遲過 repo 嘅 `plan.md` 唔寫 `start:` 嘅話,理想線會過斜、SPI 會偏樂觀。
 - **起點早過第一個觀測嘅話,中間嗰段留白,唔畫線。** 嗰段時間我哋一個數都冇量度過;拉一條平線過去就等於話你聽「開檔第一日就已經有 N 個 task、一個都未做」,而一條作出嚟嘅線同一條真線,喺畫面上分唔開。
 - **`start:` 寫錯咗唔會靜靜哋跌走。** 唔係一個畫得出嘅日期(日曆上唔存在,或者離遠到爆條軸),又或者遲過第一個觀測(即係同 git 記錄矛盾 —— 採用佢就要切走真正量度過嘅點),兩種都唔採用,跌落下一層,而卡上會講明係邊一種。

@@ -33,7 +33,9 @@ export function burndownSeries(plan, todayStr) {
     if (byDate.has(d)) cur = byDate.get(d);
     const past = todayIndex < 0 || i <= todayIndex;
     remaining.push(past && cur ? cur.total - cur.done : null);
-    scope.push(past && cur ? cur.total : null);
+    // task-date backfill reconstructs completion, not when scope became known.
+    // Drawing today's total backwards would falsely claim scope never moved.
+    scope.push(past && cur && cur.source !== 'task-date' ? cur.total : null);
   });
 
   // 理想線錨喺起點嘅 scope,唔係今日嘅 —— scope 加咗幾多,就係兩條線嘅開叉。
@@ -56,5 +58,6 @@ export function burndownSeries(plan, todayStr) {
     // 攞到,所以呢度要 pass 過去。
     startSource, startReason,
     truncated: !!plan.history_truncated,
+    backfilled: !!plan.history_backfilled,
   };
 }

@@ -1,8 +1,8 @@
 import { state, $, esc, repoInScope } from './data.js';
-import { burndownSeries } from './burndown.js';
+import { burndownSeries } from './burndown.js?v=zh-20260805-5';
 import { timelineHTML } from './render-timeline.js?v=zh-20260805-3';
 import { timelineStrip } from './timeline.js';
-import { completionForecast, scopeChange } from './management.js?v=zh-20260805-3';
+import { completionForecast, scopeChange } from './management.js?v=zh-20260805-5';
 
 /** 每個 repo 一個 Chart 實例。state.chart 得一個位,係每週圖嘅;
  *  唔另開一本帳,重畫嗰陣舊 canvas 會漏返出嚟。 */
@@ -96,7 +96,7 @@ function managementSummary(plan, series, today) {
 
   return {
     timeline, scope, forecast, total, done, remaining, progressPct,
-    expectedPct, gapPct, remainingGap, status,
+    expectedPct, gapPct, remainingGap, status, backfilled: !!plan.history_backfilled,
   };
 }
 
@@ -127,8 +127,10 @@ function scopeMetric(summary) {
   const { scope } = summary;
   if (!scope.available) return metricHTML('範圍變動', '—', '未有歷史基線', 'is-unknown');
   const tone = scope.net > 0 ? 'is-warn' : scope.net < 0 ? 'is-good' : '';
+  const prefix = summary.backfilled && scope.baselineDate
+    ? `由 ${shortDate(scope.baselineDate)} 起` : '起點';
   return metricHTML('範圍變動', signed(scope.net),
-    `起點 ${scope.baseline} → 現在 ${scope.current}`, tone);
+    `${prefix} ${scope.baseline} → 現在 ${scope.current}`, tone);
 }
 
 function forecastMetric(summary) {
@@ -219,7 +221,7 @@ const todayMarker = {
   },
 };
 
-function captionFor(series) {
+function captionFor(series, plan) {
   const bits = [];
   if (CAPTION[series.status]) bits.push(CAPTION[series.status]);
   if (START_CAPTION[series.startSource]) bits.push(START_CAPTION[series.startSource]);
@@ -239,6 +241,11 @@ function captionFor(series) {
   if (series.truncated && series.startSource === 'observation') {
     bits.push('歷史已截斷,理想線由現存最早嗰個觀測起計');
   }
+  if (plan.history_backfilled) {
+    const pct = Math.round((plan.history_backfill_coverage || 0) * 100);
+    bits.push(`完成趨勢由 ${plan.history_backfill_tasks} 項 task done: 日期回填（覆蓋 ${pct}%）；scope 變動只計真實 plan snapshot`);
+  }
+  if (plan.history_warning) bits.push(plan.history_warning);
   return bits.join(' · ');
 }
 
@@ -259,17 +266,18 @@ export function renderBurndown() {
     if (!plan || (!plan.history_error && !(plan.history || []).length)) continue;
 
     const series = burndownSeries(plan, today);
-    const caption = plan.history_error || captionFor(series);
+    const caption = plan.history_error || captionFor(series, plan);
     const card = document.createElement('div');
     card.className = 'burndown-card';
     const hasTrend = !plan.history_error && series.status !== 'single-point';
     const source = `<a href="${esc(planUrl(repo, plan))}" target="_blank" rel="noopener">${esc(plan.path)}</a>`;
+    const sourceKind = plan.history_backfilled ? 'task done: 日期 + commit 歷史' : 'commit 歷史';
     const generated = (state.data.generated_at || '').slice(0, 10) || '—';
     const openCount = (plan.open_tasks || []).length;
     card.innerHTML = `<div class="burn-card-head">
         <div><div class="burn-eyebrow">PROJECT BURNDOWN</div>
           <div class="t">${esc(repo.split('/').pop())}</div></div>
-        <div class="burn-source">數據截至 ${esc(generated)} · 每日 05:00 HKT 更新<br>來源：${source} commit 歷史</div>
+        <div class="burn-source">數據截至 ${esc(generated)} · 每日 05:00 HKT 更新<br>來源：${source} ${sourceKind}</div>
       </div>
       ${plan.history_error ? `<div class="burn-error">${esc(plan.history_error)}</div>` : summaryHTML(plan, series, today)}
       ${plan.history_error ? '' : `<div class="burn-chart-head"><strong>剩餘工作趨勢</strong><span>數字愈接近 0 愈好</span></div>`}

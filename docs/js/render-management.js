@@ -1,5 +1,5 @@
 import { state, $, esc, repoInScope, windowTasks } from './data.js';
-import { deriveManagement } from './management.js?v=zh-20260805-3';
+import { deriveManagement } from './management.js?v=zh-20260805-5';
 import { stalenessMessage } from './staleness.js?v=zh-20260805-3';
 
 const STATUS = {

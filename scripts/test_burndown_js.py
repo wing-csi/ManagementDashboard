@@ -41,6 +41,22 @@ def test_remaining_carries_forward_between_observations(page, server):
     assert got["scope"][:4] == [10, 10, 12, 12]
 
 
+def test_task_date_backfill_draws_completion_but_not_fake_scope_history(page, server):
+    plan = """{
+      path:'plan.md', done:2, total:3, due_max:'2026-01-06',
+      history_backfilled:true,
+      history:[
+        {date:'2026-01-01',done:0,total:3,source:'task-date'},
+        {date:'2026-01-02',done:1,total:3,source:'task-date'},
+        {date:'2026-01-04',done:2,total:3,source:'snapshot'}
+      ]
+    }"""
+    got = evaluate(page, server, f"m.burndownSeries({plan}, '2026-01-04')")
+    assert got["remaining"][:4] == [3, 2, 2, 1]
+    assert got["scope"][:4] == [None, None, None, 3]
+    assert got["backfilled"] is True
+
+
 def test_the_actual_line_stops_at_today(page, server):
     """今日之後嗰段係 runway,remaining 同 scope 都唔應該再有數 ——
     唔係「剩返零」,亦唔係「範圍已知」。"""

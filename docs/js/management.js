@@ -18,13 +18,16 @@ const planUrl = (repo, plan) =>
 function observations(plan, todayStr) {
   const rows = (Array.isArray(plan?.history) ? plan.history : [])
     .filter((p) => p && realDate(p.date) && Number.isFinite(p.done) && Number.isFinite(p.total))
-    .map((p) => ({ date: p.date, done: p.done, total: p.total }))
+    .map((p) => ({ date: p.date, done: p.done, total: p.total,
+                   source: p.source || 'snapshot' }))
     .sort((a, b) => a.date.localeCompare(b.date));
   if (!rows.length) return rows;
   if (realDate(todayStr) && Number.isFinite(plan?.done) && Number.isFinite(plan?.total)) {
-    const current = { date: todayStr, done: plan.done, total: plan.total };
+    const current = { date: todayStr, done: plan.done, total: plan.total,
+                      source: 'snapshot' };
     const last = rows.at(-1);
-    if (!last || last.date !== current.date || last.done !== current.done || last.total !== current.total) {
+    if (!last || last.date !== current.date || last.done !== current.done
+        || last.total !== current.total || last.source === 'task-date') {
       rows.push(current);
       rows.sort((a, b) => a.date.localeCompare(b.date));
     }
@@ -34,7 +37,8 @@ function observations(plan, todayStr) {
 }
 
 export function scopeChange(plan, todayStr) {
-  const rows = observations(plan, todayStr);
+  // A task-date row says when work completed, not what scope was known then.
+  const rows = observations(plan, todayStr).filter((p) => p.source !== 'task-date');
   if (!rows.length) {
     return { available: false, reason: 'no-history', baseline: null, current: plan?.total ?? null,
              net: null, added: null, removed: null, observations: 0 };
@@ -49,7 +53,7 @@ export function scopeChange(plan, todayStr) {
   const current = rows.at(-1).total;
   return { available: true, reason: rows.length < 2 ? 'baseline-only' : null,
            baseline, current, net: current - baseline, added, removed,
-           observations: rows.length };
+           observations: rows.length, baselineDate: rows[0].date };
 }
 
 /** A deliberately guarded projection, not a commitment date.
@@ -76,7 +80,8 @@ export function completionForecast(plan, todayStr) {
   const projected = addDays(rows.at(-1).date, Math.ceil(remaining / ratePerDay));
   const change = scopeChange(plan, todayStr);
   const moved = (change.added || 0) + (change.removed || 0) > 0;
-  const confidence = rows.length >= 8 && span >= 28 && !moved ? 'high'
+  const confidence = plan.history_backfilled ? 'medium'
+    : rows.length >= 8 && span >= 28 && !moved ? 'high'
     : rows.length >= 4 && span >= 14 && !moved ? 'medium' : 'low';
   const due = realDate(plan.due_max) ? plan.due_max : null;
   return { status: 'forecast', reason: null, projected, remaining, confidence,

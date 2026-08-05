@@ -6,10 +6,10 @@ import {
   renderRag, renderQuality, setScopeNotes,
 } from './render-kpi.js?v=zh-20260805-3';
 import { renderProjects } from './render-project.js?v=zh-20260805-3';
-import { renderBurndown } from './render-burndown.js?v=zh-20260805-4';
+import { renderBurndown } from './render-burndown.js?v=zh-20260805-5';
 import { renderOverview, renderDefects, renderTable } from './render-table.js?v=zh-20260805-3';
 import { renderProductOutcomes } from './render-product.js?v=zh-20260805-3';
-import { renderManagement } from './render-management.js?v=zh-20260805-3';
+import { renderManagement } from './render-management.js?v=zh-20260805-5';
 import { initTabs } from './tabs.js';
 
 /** eyebrow 要講明而家係邊個嘅視角,否則 filtered dashboard 會被當成全隊數字。 */

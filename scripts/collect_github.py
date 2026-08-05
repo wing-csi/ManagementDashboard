@@ -31,6 +31,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import os
 import re
@@ -43,7 +44,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from plan_history import fetch_plan_history
+from plan_history import HISTORY_CAP, fetch_plan_history
 from repo_start import first_commit_date
 
 GRAPHQL_URL = "https://api.github.com/graphql"
@@ -905,7 +906,8 @@ _MARKER_HARM = {
 }
 
 
-def _calendar_dates(values: list[str], source: str, marker: str) -> list[str]:
+def _calendar_dates(values: list[str], source: str, marker: str,
+                    harm: str | None = None) -> list[str]:
     """Drop `<marker>:` dates that do not exist on the calendar, loudly.
 
     The marker regexes only match the *shape* `\\d{4}-\\d{2}-\\d{2}`, and both
@@ -929,11 +931,47 @@ def _calendar_dates(values: list[str], source: str, marker: str) -> list[str]:
         except ValueError:
             if source:
                 print(f"  ! warning: {source} has {marker}:{value} - not a real "
-                      f"calendar date, ignored ({_MARKER_HARM[marker]})",
+                      f"calendar date, ignored ({harm or _MARKER_HARM[marker]})",
                       file=sys.stderr)
             continue
         kept.append(value)
     return kept
+
+
+def _task_date_history(done_dates: list[str], start_dates: list[str],
+                       done: int, total: int) -> dict | None:
+    """Reconstruct completion history from explicit task ``done:`` markers.
+
+    A plan added late can have only one git snapshot while still carrying real
+    historical evidence on every task. We accept that evidence only when at
+    least two completed tasks are dated and date coverage is >=80%; a couple
+    of decorative dates in an otherwise undated plan must not become a trend.
+
+    Scope is deliberately held at today's total. These rows reconstruct when
+    work completed, not what scope was known on each historical date. Callers
+    tag them so scope-change calculations can ignore that synthetic ceiling.
+    """
+    if done < 2 or len(done_dates) < 2:
+        return None
+    coverage = len(done_dates) / done
+    if coverage < 0.8:
+        return None
+
+    by_day = Counter(done_dates)
+    rows: list[dict] = []
+    first_done = min(by_day)
+    if start_dates:
+        first_start = min(start_dates)
+        if first_start < first_done:
+            rows.append({"date": first_start, "done": 0, "total": total,
+                         "source": "task-date"})
+    cumulative = 0
+    for completed_on in sorted(by_day):
+        cumulative += by_day[completed_on]
+        rows.append({"date": completed_on, "done": cumulative, "total": total,
+                     "source": "task-date"})
+    return {"rows": rows, "tasks": len(done_dates),
+            "coverage": round(coverage, 3)}
 
 
 def parse_plan_markdown(text: str, source: str = "") -> dict | None:
@@ -961,6 +999,8 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     heading_dues: list[str] = []
     heading_starts: list[str] = []
     task_dues: list[str] = []
+    task_starts: list[str] = []
+    task_done_dates: list[str] = []
     cur: dict | None = None
     cur_due: str | None = None
     assignments: dict[str, int] = {}
@@ -979,7 +1019,10 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
             sections.append(cur)
             continue
         m = CHECKBOX_RE.match(line)
-        scheduled_row = (not m and PLAN_MENTION_RE.search(line)
+        # Scheduled rows are top-level plan records. Indented prose examples
+        # such as ``read `description @owner start:...` `` are documentation,
+        # not a phantom task.
+        scheduled_row = (not m and line == line.lstrip() and PLAN_MENTION_RE.search(line)
                          and (PLAN_START_RE.search(line) or PLAN_DONE_RE.search(line)))
         if m or scheduled_row:
             total += 1
@@ -992,6 +1035,14 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
             m_due_any = PLAN_DUE_RE.search(raw)
             if m_due_any:
                 task_dues.append(m_due_any.group(1))
+            m_task_start = PLAN_START_RE.search(raw)
+            if m_task_start:
+                task_starts.append(m_task_start.group(1))
+            m_task_done = PLAN_DONE_RE.search(raw)
+            # Checkbox state remains authoritative: ``- [ ] ... done:`` is a
+            # contradiction, not a completed task to backfill silently.
+            if checked and m_task_done:
+                task_done_dates.append(m_task_done.group(1))
             if cur is not None:
                 cur["total"] += 1
                 cur["done"] += checked
@@ -1013,15 +1064,26 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     heading_dues = _calendar_dates(heading_dues, source, "due")
     task_dues = _calendar_dates(task_dues, source, "due")
     heading_starts = _calendar_dates(heading_starts, source, "start")
+    task_starts = _calendar_dates(
+        task_starts, source, "start",
+        "it would corrupt the task-date backfill baseline")
+    task_done_dates = _calendar_dates(
+        task_done_dates, source, "done",
+        "it would put completion on the wrong burndown day")
+    history_backfill = _task_date_history(task_done_dates, task_starts, done, total)
     assignment_rows = [
         {"name": name, "tasks": tasks}
         for name, tasks in sorted(assignments.items(), key=lambda row: (-row[1], row[0].casefold()))
     ]
-    return {"done": done, "total": total, "open_tasks": open_tasks,
+    result = {"done": done, "total": total, "open_tasks": open_tasks,
             "assignments": assignment_rows, "unassigned": total - sum(assignments.values()),
             "due_max": max(heading_dues) if heading_dues else (max(task_dues) if task_dues else None),
             "start_min": min(heading_starts) if heading_starts else None,
             "sections": [s for s in sections if s["total"]][:12]}
+    if history_backfill:
+        # Internal hand-off to collect_repo; never published as-is.
+        result["_history_backfill"] = history_backfill
+    return result
 
 
 DEFECT_FOUND_RE = re.compile(r"\bfound:(\d{4}-\d{2}-\d{2})\b")
@@ -1185,6 +1247,41 @@ def collect_issues(client: GitHubClient, repo: str) -> tuple[dict | None, str | 
     }, None
 
 
+def apply_plan_history(plan: dict, commit_history: dict | None) -> None:
+    """Attach the best honest history available to a current plan snapshot.
+
+    Git snapshots are authoritative for scope and override a task-date row on
+    the same day. Task dates can extend completion history before the plan file
+    existed, but are explicitly tagged because they cannot tell us historical
+    scope. The private ``_history_backfill`` hand-off is always consumed here
+    so it never leaks into metrics.json.
+    """
+    backfill = plan.pop("_history_backfill", None)
+    if not backfill:
+        if commit_history:
+            plan.update(commit_history)
+        else:
+            plan["history_error"] = "攞唔到 plan.md 嘅 commit 歷史"
+        return
+
+    merged = {row["date"]: dict(row) for row in backfill["rows"]}
+    snapshots = (commit_history or {}).get("history", [])
+    for row in snapshots:
+        merged[row["date"]] = {**row, "source": "snapshot"}
+    rows = [merged[key] for key in sorted(merged)]
+    truncated = len(rows) > HISTORY_CAP or bool(
+        (commit_history or {}).get("history_truncated"))
+    plan["history"] = rows[-HISTORY_CAP:]
+    plan["history_truncated"] = truncated
+    plan["history_backfilled"] = True
+    plan["history_backfill_tasks"] = backfill["tasks"]
+    plan["history_backfill_coverage"] = backfill["coverage"]
+    plan["history_source"] = "task-dates+plan-commits" if snapshots else "task-dates"
+    if not snapshots:
+        plan["history_warning"] = (
+            "攞唔到 plan.md commit 歷史；趨勢只用 task done: 日期回填")
+
+
 def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str, cfg: dict) -> tuple[list[Task], dict]:
     repo = repo_cfg["name"]
     if "/" not in repo:
@@ -1249,10 +1346,7 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
             # 但前者要出聲、後者要收埋。
             history = fetch_plan_history(client, repo, repo_cfg["plan_file"],
                                          parse_plan_markdown, registers_ref)
-            if history:
-                meta["plan"].update(history)
-            else:
-                meta["plan"]["history_error"] = "攞唔到 plan.md 嘅 commit 歷史"
+            apply_plan_history(meta["plan"], history)
             # 條軸起點嘅 C 層後備,`plan.md` 冇宣告 `start:` 嗰陣用。兩個
             # REST request,所以淨係喺真係有 plan 嘅 repo 度畀 —— 冇 plan
             # 嘅 repo 攞返嚟都冇人讀。

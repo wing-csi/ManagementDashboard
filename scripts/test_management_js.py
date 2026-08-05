@@ -32,6 +32,37 @@ def test_scope_change_reports_gross_adds_removes_and_net(page, server):
     assert got["net"] == 1
 
 
+def test_scope_change_ignores_task_date_rows_that_only_backfill_completion(page, server):
+    plan = """{
+      done:7,total:12,history_backfilled:true,
+      history:[
+        {date:'2026-01-01',done:0,total:12,source:'task-date'},
+        {date:'2026-07-01',done:6,total:12,source:'task-date'},
+        {date:'2026-08-01',done:7,total:12,source:'snapshot'}
+      ]
+    }"""
+    got = evaluate(page, server, f"m.scopeChange({plan}, '2026-08-05')")
+    assert got["baseline"] == 12 and got["current"] == 12
+    assert got["net"] == 0 and got["observations"] == 2
+    assert got["baselineDate"] == "2026-08-01"
+
+
+def test_backfilled_forecast_is_capped_at_medium_confidence(page, server):
+    plan = """{
+      done:8,total:10,due_max:'2026-09-01',history_backfilled:true,
+      history:[
+        {date:'2026-01-01',done:0,total:10,source:'task-date'},
+        {date:'2026-02-01',done:2,total:10,source:'task-date'},
+        {date:'2026-03-01',done:4,total:10,source:'task-date'},
+        {date:'2026-04-01',done:6,total:10,source:'task-date'},
+        {date:'2026-05-01',done:8,total:10,source:'snapshot'}
+      ]
+    }"""
+    got = evaluate(page, server, f"m.completionForecast({plan}, '2026-08-05')")
+    assert got["status"] == "forecast"
+    assert got["confidence"] == "medium"
+
+
 def test_old_metrics_keep_current_scope_but_do_not_invent_a_baseline(page, server):
     change = evaluate(page, server, "m.scopeChange({done:0,total:11}, '2026-07-22')")
     assert change["available"] is False
