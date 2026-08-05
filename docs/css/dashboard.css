@@ -436,6 +436,38 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .burndown-card .t { font-size: var(--fs-sm); font-weight: 700; color: var(--ink); }
 .burndown-card .note { font-size: var(--fs-xs); color: var(--muted); margin-top: 6px; }
 .burndown-card .chart-box { height: 220px; margin-top: 10px; }
+/* Plan timeline 條:同一張卡入面,burndown 下面。條軸係 position:relative,
+   啲 marker 用 left:% 定位,所以唔使 Chart.js —— Chart.js 4 冇 Gantt 型,
+   為一條 bar 加個 CDN library 唔抵,而 CSS 版本 print 得出。 */
+.tl { margin-top: 12px; }
+.tl-head { font-size: var(--fs-xs); color: var(--muted); margin-bottom: 8px; }
+.tl-head .tl-ok { color: var(--good); font-weight: 700; }
+.tl-head .tl-warn { color: var(--warn); font-weight: 700; }
+.tl-head .tl-bad { color: var(--alert); font-weight: 700; }
+.tl-head .tl-muted { color: var(--muted); }
+.tl-axis { position: relative; height: 22px; border-bottom: 1px solid var(--line); }
+.tl-bar { position: absolute; top: 7px; height: 6px; border-radius: 3px; background: var(--line-strong); }
+/* 今日線用返 render-burndown.js todayMarker 嗰個 #C4553B,唔用 var(--alert)
+   (#C2452D)。兩條今日線喺同一張卡入面上下對住,差少少色會好突兀;canvas
+   嗰邊讀唔到 CSS 變數,所以就係呢個字面值話事。 */
+.tl-today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed #C4553B; }
+/* 18px 唔係 12px:粒點入面個數字係要讀嘅字,所以要行返 --fs-xs(12px)
+   個地板,而 12px 字塞唔入 12px 圓。字級一定要用 token,唔可以喺呢度寫死
+   一個 px 數值 —— test_frontend_typography.py 釘住兩條:「:root 以外冇字級
+   字面值」同埋 12px 最細可讀字。佢係喺成個檔做 regex,唔係解析 CSS,
+   所以連註釋入面寫個反例都會中,呢句先至要咁樣繞開講。 */
+.tl-mark {
+  position: absolute; top: 0; width: 18px; height: 18px;
+  margin-left: -9px; border-radius: 50%;
+  font-size: var(--fs-xs); line-height: 18px;
+  text-align: center; color: #fff; cursor: default;
+}
+.tl-overdue { background: var(--alert); }
+.tl-soon7 { background: var(--warn); }
+.tl-soon14 { background: #C9A227; }
+.tl-later { background: var(--muted); }
+.tl-scale { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--muted); margin-top: 4px; }
+.tl-note { font-size: var(--fs-xs); color: var(--muted); margin-top: 6px; }
 .ms-row .p { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--muted); text-align: right; }
 .overview, .defects { margin-bottom: 14px; }
 .ov-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; }

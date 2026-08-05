@@ -37,7 +37,12 @@
     "done": 3, "total": 12, "path": "plan.md", "ref": null,
     "due_max": "2026-08-06", "history_truncated": false,
     "sections": [{"title": "Phase 2", "done": 3, "total": 12}],
-    "open_tasks": [],
+    "open_tasks": [
+     {"title": "P-01 過咗期嘅嘢", "due": "2026-08-01", "priority": "P1", "bug": true, "section": "Phase 2"},
+     {"title": "P-02 同日另一件", "due": "2026-08-01", "priority": "P2", "bug": false, "section": "Phase 2"},
+     {"title": "P-03 就快到期", "due": "2026-08-06", "priority": "P1", "bug": false, "section": "Phase 2"},
+     {"title": "P-04 遲過目標日", "due": "2026-08-20", "priority": "P2", "bug": false, "section": "Phase 2"}
+    ],
     "history": [
      {"date": "2026-08-01", "done": 0, "total": 10},
      {"date": "2026-08-03", "done": 3, "total": 12}

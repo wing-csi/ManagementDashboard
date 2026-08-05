@@ -1,5 +1,6 @@
 import { state, $, esc, repoInScope } from './data.js';
 import { burndownSeries } from './burndown.js';
+import { timelineHTML } from './render-timeline.js';
 
 /** 每個 repo 一個 Chart 實例。state.chart 得一個位,係每週圖嘅;
  *  唔另開一本帳,重畫嗰陣舊 canvas 會漏返出嚟。 */
@@ -80,6 +81,7 @@ export function renderBurndown() {
     card.innerHTML = `<div class="t">${esc(repo.split('/').pop())}
         <span style="color:var(--muted)">· burndown(${esc(plan.path)})</span></div>
       ${plan.history_error ? '' : '<div class="chart-box"><canvas></canvas></div>'}
+      ${plan.history_error ? '' : timelineHTML(plan, today)}
       ${caption ? `<div class="note" style="color:var(--muted)">${esc(caption)}</div>` : ''}`;
     box.appendChild(card);
 
