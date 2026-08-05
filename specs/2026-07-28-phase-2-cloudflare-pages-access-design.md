@@ -1,7 +1,17 @@
 # Phase 2 — Cloudflare Pages + Access Design
 
 **Date:** 2026-07-28
-**Status:** Approved by user (this session), pending implementation plan.
+**Status:** **已出咗街 —— 2026-07-28。** 實作計劃係
+[`plans/2026-07-28-phase-2-cloudflare-pages-access.md`](../plans/2026-07-28-phase-2-cloudflare-pages-access.md)
+(注意:喺 top-level `plans/`,唔喺 `specs/plans/`)。Cloudflare 嗰邊嘅一次性設定做完
+(見下面「As-built notes」),CI 嗰步由 `c9d4ddc` 落實,同呢份設計逐項對得上
+(`.github/workflows/collect.yml:61-76`)。
+
+> 嗰份計劃啲 checkbox **一格都冇剔**,但嘢係真係出咗街 —— 同 plan-timeline 一樣。
+> 呢個 repo 嘅 checkbox 唔可以當進度睇;要知做咗未,睇下面個 verification
+> checklist(有日期同證據嗰啲)同埋 git log。
+
+剩低嘅淨係下面 checklist 兩格未剔嘅**人手登入測試**,要人真係收一次 OTP 先做得到。
 
 ## Goal
 
