@@ -52,6 +52,67 @@ def test_a_repo_with_plan_history_gets_a_chart(page, server):
     assert "已截斷" not in text
 
 
+def test_the_card_leads_with_the_five_pm_decision_metrics(page, server):
+    """PM 唔應該由三條線自己心算進度差距、scope 同目標日。"""
+    _serve(page, _load())
+    dash = _open(page, server)
+    dash.wait_for_selector("#burndownCards canvas", state="attached")
+    text = dash.inner_text("#burndownCards")
+    assert "落後計劃" in text
+    assert "實際進度比今日計劃落後 35 個百分點" in text
+    metrics = dash.locator("#burndownCards .burn-metric").evaluate_all(
+        "els => els.map(el => el.textContent.replace(/\\s+/g, ' ').trim())")
+    assert "完成進度 25% 3 / 12 已完成" in metrics
+    assert "剩餘工作 9 項未完成" in metrics
+    assert "目標日 08/06 剩 2 日" in metrics
+    assert "範圍變動 +2 起點 10 → 現在 12" in metrics
+    assert "預測完成 — 需要最少 7 日歷史" in metrics
+
+
+def test_the_card_names_freshness_source_and_keeps_task_dates_on_demand(page, server):
+    """趨勢同 task deadline 分層:來源/freshness 常駐,逐項期限按需要展開。"""
+    _serve(page, _load())
+    dash = _open(page, server)
+    dash.wait_for_selector("#burndownCards .burn-task-details", state="attached")
+    text = dash.inner_text("#burndownCards")
+    assert "數據截至 2026-08-04 · 每日 05:00 HKT 更新" in text
+    assert "來源：plan.md commit 歷史" in text
+    details = dash.locator("#burndownCards .burn-task-details")
+    assert details.evaluate("el => el.open") is False
+    assert "查看 4 項未完成工作的期限" in details.locator("summary").inner_text()
+
+
+def test_observed_remaining_and_scope_are_steps_not_invented_daily_slopes(page, server):
+    _serve(page, _load())
+    dash = _open(page, server)
+    dash.wait_for_selector("#burndownCards canvas", state="attached")
+    chart_options = dash.eval_on_selector(
+        "#burndownCards canvas",
+        "el => Chart.getChart(el).data.datasets.map(d => d.stepped || false)",
+    )
+    assert chart_options[:2] == ["before", "before"]
+    assert chart_options[2] is False  # 理想線先至係連續斜線
+
+
+def test_a_guarded_completion_forecast_is_visible_and_compared_with_target(page, server):
+    data = _load()
+    plan = data["repo_meta"]["acme/alpha"]["plan"]
+    plan.update(done=4, total=10, due_max="2026-08-10")
+    plan["history"] = [
+        {"date": "2026-07-20", "done": 0, "total": 10},
+        {"date": "2026-07-27", "done": 2, "total": 10},
+        {"date": "2026-08-03", "done": 4, "total": 10},
+    ]
+    _serve(page, data)
+    dash = _open(page, server)
+    dash.wait_for_selector("#burndownCards canvas", state="attached")
+    metric = dash.locator("#burndownCards .burn-metric").last.evaluate(
+        "el => el.textContent.replace(/\\s+/g, ' ').trim()")
+    assert metric.startswith("預測完成 08/27")
+    assert "中信心" in metric
+    assert "遲 17 日" in metric
+
+
 def test_a_failed_history_fetch_says_so_instead_of_drawing_a_flat_line(page, server):
     """讀唔到就要出聲。一條平線同一張消失咗嘅卡都係當「冇嘢做緊」,兩個都呃人。"""
     data = _load()
@@ -80,8 +141,11 @@ def test_a_single_observation_says_it_is_not_a_trend_yet(page, server):
         {"date": "2026-08-01", "done": 0, "total": 10}]
     _serve(page, data)
     dash = _open(page, server)
-    dash.wait_for_selector("#burndownCards canvas", state="attached")
-    assert "未成趨勢" in dash.inner_text("#burndownCards")
+    dash.wait_for_selector("#burndownCards .burn-chart-empty", state="attached")
+    assert dash.eval_on_selector_all("#burndownCards canvas", "els => els.length") == 0
+    text = dash.inner_text("#burndownCards")
+    assert "未有足夠觀測畫趨勢" in text
+    assert "未成趨勢" in text
 
 
 def test_a_truncated_history_says_the_ideal_line_moved(page, server):

@@ -187,7 +187,9 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 
 ### 項目 Burndown
 
-設咗 `plan_file` 嘅 repo,每個喺「項目 & 團隊」多一張 burndown 卡。**唔使加任何 config** — 兩條軸都由已有嘅嘢讀返嚟:
+設咗 `plan_file` 嘅 repo,每個喺「項目 & 團隊」多一張 burndown 卡。卡片先畀 PM 一句狀態判斷,再列完成進度、剩餘工作、目標日、scope 變動同預測完成五個數;三條趨勢線用嚟解釋原因,唔再要求讀者自己由圖心算。未完成工作的逐項期限預設收埋,需要時先展開。**唔使加任何 config** — 兩條軸都由已有嘅嘢讀返嚟:
+
+現時「project」嘅 identity 係 **一個 repo + 佢設定嘅 `plan_file`**。如果一個管理項目橫跨多個 repo,上游要先增加穩定 `project_id` 同 aggregation 規則;前端唔會靠相似 repo 名自行合併。
 
 | 軸 | 來源 |
 |---|---|
@@ -197,11 +199,34 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 
 三條線:**剩餘**(`total − done`,觀測之間拉平)、**總 scope**(`total`)、**理想**(由起點 scope 直線落到目標日嘅 0)。總 scope 條線係故意要有嘅 —— 完成度 % 回跌通常係 scope 浮現,唔係退步,冇呢條線個現象只會令人誤會。
 
+**Upstream data flow / cron contract:**
+
+```text
+target repo plan.md
+  ├─ Contents API ───────────────▶ 今日 done / total / due / open tasks
+  └─ Commits API + 每日最後 blob ─▶ [{date, done, total}] 歷史
+                                      │
+GitHub Actions collect.yml            ▼
+每日 21:00 UTC（05:00 HKT） ───────▶ /tmp/metrics.json + generated_at
+                                      ├─▶ private data repo
+                                      └─▶ Cloudflare Pages docs/data/metrics.json
+                                                        │
+                                                        ▼
+                                              browser 只讀 snapshot
+```
+
+- Schedule 以 `.github/workflows/collect.yml` 嘅 `0 21 * * *` 為唯一權威;改 cron 要同步改卡頭嘅 cadence 文案。push 到 collector / dashboard 相關檔案同手動 `workflow_dispatch` 都會額外跑一次。
+- Collector **stateless 重建** history,唔係每日 append 一點:同一份 repo history 重跑會出同一條線,唔會因為漏跑一晚永久斷點。代價係每次要讀 commit list 同最多 150 個觀測日嘅 blob。
+- `generated_at` 係 PM 判斷 freshness 嘅事實來源;排程時間只代表預期 cadence,唔代表嗰次 job 一定成功。超過 48 小時仍沿用全頁 stale-data banner。
+- Collector 成功先可以 deploy;private data repo publish 同 Cloudflare deploy 互為 fallback。history 個別讀取失敗寫 `history_error`,前端出明確錯誤卡而唔畫假平線。
+- Browser 唔直接打 GitHub API,亦唔持有 PAT;所有敏感讀取同 parsing 都留喺 nightly job。
+
 同「項目進度」一樣,burndown **唔跟** window selector(30/60/90/180)。
 
 **讀之前要知:**
 
 - **解像度 = `plan.md` 嘅 commit 頻率。** 一星期 commit 一次就一星期一點。個檔幾時改過,係我哋唯一真正觀測到嘅嘢。
+- **只有一個歷史點唔畫趨勢線。** 卡片嘅進度、目標日同期限照出,但圖位會明講資料不足;一條由單點拉到今日嘅平線好容易被誤讀成「一直冇進展」。
 - **起點行三層 fallback。** `plan.md` 個 heading 寫住 `start:YYYY-MM-DD` 就用佢(多過一個取最早);冇寫就用 repo 第一個 commit;連佢都攞唔到(空 repo、API 讀唔到)先至用第一日改過 `plan.md` 嗰日。條軸、理想線同 SPI 三樣都跟呢個起點 —— 所以一份開檔遲過 repo 嘅 `plan.md` 唔寫 `start:` 嘅話,理想線會過斜、SPI 會偏樂觀。
 - **起點早過第一個觀測嘅話,中間嗰段留白,唔畫線。** 嗰段時間我哋一個數都冇量度過;拉一條平線過去就等於話你聽「開檔第一日就已經有 N 個 task、一個都未做」,而一條作出嚟嘅線同一條真線,喺畫面上分唔開。
 - **`start:` 寫錯咗唔會靜靜哋跌走。** 唔係一個畫得出嘅日期(日曆上唔存在,或者離遠到爆條軸),又或者遲過第一個觀測(即係同 git 記錄矛盾 —— 採用佢就要切走真正量度過嘅點),兩種都唔採用,跌落下一層,而卡上會講明係邊一種。
@@ -214,7 +239,7 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 
 ### Plan Timeline 條
 
-同一張卡入面,burndown 下面多一條時間軸,答「邊件事、幾時到期」。**唔使加任何 config**,同 burndown 食同一份數據:
+同一張卡入面,「查看未完成工作的期限」展開之後有一條時間軸,答「邊件事、幾時到期」。**唔使加任何 config**,同 burndown 食同一份數據:
 
 | 嘢 | 來源 |
 |---|---|

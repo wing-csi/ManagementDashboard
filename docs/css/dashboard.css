@@ -489,10 +489,77 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
    底下,唔用 bare .t / .note — 呢兩個 class 名已經俾 .ms-row / .alerts /
    .ov-row 用緊,唔 scope 就會漏出去改咗人哋張卡。 */
 #burndownCards:not(:empty) { display: grid; gap: 14px; margin-top: 16px; }
-.burndown-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
-.burndown-card .t { font-size: var(--fs-sm); font-weight: 700; color: var(--ink); }
-.burndown-card .note { font-size: var(--fs-xs); color: var(--muted); margin-top: 6px; }
-.burndown-card .chart-box { height: 220px; margin-top: 10px; }
+.burndown-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+.burndown-card .t { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 700; color: var(--ink); }
+.burndown-card .note { font-size: var(--fs-xs); color: var(--muted); margin-top: 10px; }
+.burndown-card .chart-box { height: 250px; margin-top: 2px; }
+.burn-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
+.burn-eyebrow {
+  color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-xs);
+  letter-spacing: 0.12em; margin-bottom: 2px;
+}
+.burn-source { color: var(--muted); font-size: var(--fs-xs); line-height: 1.6; text-align: right; }
+.burn-source a { color: var(--ink); text-underline-offset: 2px; }
+.burn-callout {
+  display: flex; align-items: center; gap: 10px; margin-top: 16px;
+  border-left: 3px solid var(--line-strong); background: var(--paper); padding: 9px 12px;
+  font-size: var(--fs-sm);
+}
+.burn-callout:has(.is-off-track) { border-left-color: var(--alert); }
+.burn-callout:has(.is-at-risk) { border-left-color: var(--warn); }
+.burn-callout:has(.is-on-track), .burn-callout:has(.is-complete) { border-left-color: var(--good); }
+.burn-status {
+  flex: none; border-radius: 999px; padding: 2px 8px;
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 700;
+  background: var(--track); color: var(--muted);
+}
+.burn-status.is-off-track { background: #FCE9E6; color: var(--alert); }
+.burn-status.is-at-risk { background: #FFF3D6; color: var(--warn); }
+.burn-status.is-on-track, .burn-status.is-complete { background: #E8F4EC; color: var(--good); }
+.burn-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.burn-metric { min-width: 0; border: 1px solid var(--line); border-radius: 7px; padding: 9px 10px; }
+.burn-metric-label { color: var(--muted); font-size: var(--fs-xs); }
+.burn-metric-value {
+  margin-top: 2px; color: var(--ink); font-family: var(--font-display);
+  font-size: var(--fs-xl); font-weight: 700; line-height: 1.25;
+}
+.burn-metric-detail { color: var(--muted); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.burn-metric.is-bad .burn-metric-value { color: var(--alert); }
+.burn-metric.is-warn .burn-metric-value { color: var(--warn); }
+.burn-metric.is-good .burn-metric-value { color: var(--good); }
+.burn-metric.is-unknown .burn-metric-value { color: var(--muted); }
+.burn-chart-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  margin-top: 18px; font-size: var(--fs-sm);
+}
+.burn-chart-head span { color: var(--muted); font-size: var(--fs-xs); }
+.burn-chart-empty {
+  display: grid; place-items: center; min-height: 150px; margin-top: 8px;
+  border: 1px dashed var(--line-strong); border-radius: 7px; background: var(--paper);
+  color: var(--muted); padding: 20px; text-align: center;
+}
+.burn-chart-empty strong { color: var(--ink); font-size: var(--fs-sm); }
+.burn-chart-empty span { font-size: var(--fs-xs); }
+.burn-task-details { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.burn-task-details summary {
+  width: fit-content; color: var(--muted); cursor: pointer;
+  font-size: var(--fs-xs); font-weight: 700;
+}
+.burn-task-details[open] summary { color: var(--ink); }
+.burn-task-details .tl { margin-top: 10px; }
+.burn-error {
+  margin-top: 16px; border: 1px solid var(--alert); border-radius: 7px;
+  background: #FCE9E6; color: var(--alert); padding: 12px 14px; font-size: var(--fs-sm); font-weight: 700;
+}
+@media (max-width: 1000px) { .burn-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .burn-card-head { display: block; }
+  .burn-source { margin-top: 8px; text-align: left; }
+  .burn-callout { align-items: flex-start; }
+  .burn-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .burn-chart-head { display: block; }
+  .burndown-card .chart-box { height: 220px; }
+}
 /* Plan timeline 條:同一張卡入面,burndown 下面。條軸係 position:relative,
    啲 marker 用 left:% 定位,所以唔使 Chart.js —— Chart.js 4 冇 Gantt 型,
    為一條 bar 加個 CDN library 唔抵,而 CSS 版本 print 得出。 */
