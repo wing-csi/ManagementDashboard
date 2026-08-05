@@ -1,0 +1,54 @@
+{
+ "schema_version": 2,
+ "generated_at": "2026-08-04T00:00:00+00:00",
+ "window_days": 90,
+ "mode": "auto",
+ "repos": ["acme/alpha", "acme/beta"],
+ "people": {"Wing": ["wing-csi"], "Tony": ["tony-liu"]},
+ "tasks": [
+  {"date": "2026-07-20", "repo": "acme/alpha", "author": "wing-csi", "id": "1", "kind": "pr", "branch": "main", "title": "feat: add checkout", "level": "L3", "method": "label", "check": null, "additions": 40, "deletions": 2, "url": "https://example.test/1", "reviewed": true, "rework": 0, "rework_hours": null, "violations": [], "lead_hours": 12, "ci": "pass"},
+  {"date": "2026-07-19", "repo": "acme/alpha", "author": "wing-csi", "id": "2", "kind": "commit", "branch": "main", "title": "feat: wire the fee table", "level": "L3", "method": "label", "check": null, "additions": 30, "deletions": 1, "url": "https://example.test/2", "violations": []},
+  {"date": "2026-07-18", "repo": "acme/alpha", "author": "wing-csi", "id": "3", "kind": "commit", "branch": "main", "title": "refactor: extract fee calculator", "level": "L2", "method": "label", "check": null, "additions": 25, "deletions": 20, "url": "https://example.test/3", "violations": []},
+  {"date": "2026-07-17", "repo": "acme/alpha", "author": "wing-csi", "id": "4", "kind": "commit", "branch": "main", "title": "chore: bump deps", "level": "L1", "method": "label", "check": null, "additions": 6, "deletions": 6, "url": "https://example.test/4", "violations": []},
+  {"date": "2026-07-16", "repo": "acme/alpha", "author": "wing-csi", "id": "5", "kind": "commit", "branch": "main", "title": "docs: note the fee rounding rule", "level": "L1", "method": "label", "check": null, "additions": 12, "deletions": 0, "url": "https://example.test/5", "violations": []},
+  {"date": "2026-07-15", "repo": "acme/alpha", "author": "wing-csi", "id": "6", "kind": "commit", "branch": "main", "title": "test: cover the rounding edge", "level": "L2", "method": "label", "check": null, "additions": 40, "deletions": 0, "url": "https://example.test/6", "violations": []},
+  {"date": "2026-07-14", "repo": "acme/beta", "author": "tony-liu", "id": "7", "kind": "commit", "branch": "main", "title": "feat: beta onboarding screen", "level": "L3", "method": "label", "check": null, "additions": 90, "deletions": 4, "url": "https://example.test/7", "violations": []},
+  {"date": "2026-07-13", "repo": "acme/beta", "author": "tony-liu", "id": "8", "kind": "commit", "branch": "main", "title": "feat: beta settings pane", "level": "L3", "method": "label", "check": null, "additions": 70, "deletions": 2, "url": "https://example.test/8", "violations": []},
+  {"date": "2026-07-12", "repo": "acme/beta", "author": "tony-liu", "id": "9", "kind": "commit", "branch": "main", "title": "style: tighten the beta header", "level": "L1", "method": "label", "check": null, "additions": 8, "deletions": 8, "url": "https://example.test/9", "violations": []},
+  {"date": "2026-07-11", "repo": "acme/beta", "author": "tony-liu", "id": "10", "kind": "commit", "branch": "main", "title": "chore: beta lint config", "level": "L1", "method": "label", "check": null, "additions": 5, "deletions": 5, "url": "https://example.test/10", "violations": []}
+ ],
+ "repo_meta": {
+  "acme/alpha": {
+   "owner": "Wing", "disk_kb": 1024,
+   "languages": {"items": [{"name": "Python", "bytes": 5000}]},
+   "deployments": [], "releases": [], "tags": [], "closed_unmerged": [], "issues": null,
+   "defects": {
+    "path": "docs/defects.md",
+    "truncated": false,
+    "items": [
+     {"title": "匯出 CSV 中文亂碼", "severity": "P1", "found": "2026-07-14", "fixed": null, "open": true},
+     {"title": "登入後 token 冇 refresh", "severity": "P0", "found": "2026-07-20", "fixed": null, "open": true},
+     {"title": "資產統計金額用咗股數", "severity": "P1", "found": "2026-07-02", "fixed": "2026-07-05", "open": false},
+     {"title": "冇日期嘅舊 bug", "severity": null, "found": null, "fixed": null, "open": true},
+     {"title": "窗口外發現嘅 bug", "severity": "P2", "found": "2019-01-01", "fixed": null, "open": true}
+    ]
+   },
+   "plan": {
+    "done": 3, "total": 12, "path": "plan.md", "ref": null,
+    "due_max": "2026-08-06", "history_truncated": false,
+    "sections": [{"title": "Phase 2", "done": 3, "total": 12}],
+    "open_tasks": [],
+    "history": [
+     {"date": "2026-08-01", "done": 0, "total": 10},
+     {"date": "2026-08-03", "done": 3, "total": 12}
+    ]
+   }
+  },
+  "acme/beta": {
+   "owner": "Tony", "disk_kb": 512,
+   "languages": {"items": [{"name": "TypeScript", "bytes": 4000}]},
+   "deployments": [], "releases": [], "tags": [], "closed_unmerged": [], "issues": null
+  }
+ },
+ "errors": []
+}

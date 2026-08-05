@@ -428,6 +428,14 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .proj-list .empty { color: var(--muted); font-size: var(--fs-sm); }
 .ms-row { display: grid; grid-template-columns: 170px 1fr 120px; gap: 12px; align-items: center; margin-top: 8px; }
 .ms-row .t { font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 每個 repo 一張:plan.md history 餵嘅 burndown。scoped 喺 .burndown-card
+   底下,唔用 bare .t / .note — 呢兩個 class 名已經俾 .ms-row / .alerts /
+   .ov-row 用緊,唔 scope 就會漏出去改咗人哋張卡。 */
+#burndownCards:not(:empty) { display: grid; gap: 14px; margin-top: 16px; }
+.burndown-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.burndown-card .t { font-size: var(--fs-sm); font-weight: 700; color: var(--ink); }
+.burndown-card .note { font-size: var(--fs-xs); color: var(--muted); margin-top: 6px; }
+.burndown-card .chart-box { height: 220px; margin-top: 10px; }
 .ms-row .p { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--muted); text-align: right; }
 .overview, .defects { margin-bottom: 14px; }
 .ov-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; }
