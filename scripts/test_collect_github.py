@@ -1399,6 +1399,72 @@ def test_due_max_is_none_when_the_plan_has_no_dates():
     assert plan["due_max"] is None
 
 
+PLAN_BAD_DUE_MD = """# Remediation plan
+
+- [ ] P-01 打錯咗個月份 due:2026-13-01
+- [ ] P-02 打錯咗嗰日 due:2026-08-32
+- [ ] P-03 二月三十號 due:2026-02-30
+- [ ] P-04 正常嘅 due:2026-09-18
+"""
+
+
+def test_due_max_ignores_dates_that_do_not_exist_on_the_calendar():
+    """`PLAN_DUE_RE` 淨係夾個 shape,而 `due_max` 係字串 `max()` —— 所以
+    `2026-13-01` > `2026-09-18`,一個打字錯誤就贏晒同年所有真日期做咗個
+    項目死線。前端跟住 parse 出 NaN,張卡剩返個標題同一格白。"""
+    from collect_github import parse_plan_markdown
+    assert parse_plan_markdown(PLAN_BAD_DUE_MD)["due_max"] == "2026-09-18"
+
+
+def test_a_plan_whose_only_due_is_invalid_has_no_due_at_all():
+    """淨低一個爛日期 = 冇死線,唔係一個爛死線。"""
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown("# 計劃\n\n- [ ] 一件事 due:2026-08-32\n")
+    assert plan["due_max"] is None
+
+
+def test_an_invalid_heading_due_falls_back_to_the_task_dates():
+    """Heading 級 due: 贏 task 級,但佢要係一個真日期先算宣告到嘢 ——
+    打錯咗就等於冇寫,唔可以連 task 嗰邊都一齊拉冇埋。"""
+    from collect_github import parse_plan_markdown
+    md = "# Phase 2 due:2026-13-01\n\n- [ ] 一件事 due:2026-08-15\n"
+    assert parse_plan_markdown(md)["due_max"] == "2026-08-15"
+
+
+def test_an_invalid_due_is_reported_not_dropped_in_silence(capsys):
+    """靜靜哋掉走一個日期,同靜靜哋收咗佢一樣係呃人 —— 個 plan 檔喺人手
+    改嘅目標 repo 度,呢度唔出聲就冇人知要改。"""
+    from collect_github import parse_plan_markdown
+    parse_plan_markdown(PLAN_BAD_DUE_MD, "acme/alpha plan.md")
+    err = capsys.readouterr().err
+    assert "acme/alpha plan.md" in err
+    assert "2026-13-01" in err
+    assert err.isascii(), "呢啲字會出去 Windows console,非 ASCII 會變亂碼"
+
+
+def test_the_history_replay_does_not_repeat_the_warning(capsys):
+    """同一行爛日期會出現喺 150 個舊 blob 入面。逐個嗌一次,真正要改嗰個
+    檔嘅提示就會浸死喺自己嘅回音入面 —— 冇 source 就唔嗌。"""
+    from collect_github import parse_plan_markdown
+    parse_plan_markdown(PLAN_BAD_DUE_MD)
+    assert capsys.readouterr().err == ""
+
+
+def test_fetch_plan_file_names_the_repo_in_the_warning(capsys):
+    """個 parser 自己唔知係邊個 repo;唔喺 call site 帶落去,個 warning 就
+    講唔出要去邊度改。"""
+    from collect_github import fetch_plan_file
+
+    class BadDueClient:
+        def rest_raw(self, path: str) -> str:
+            return PLAN_BAD_DUE_MD
+
+    plan = fetch_plan_file(BadDueClient(), "acme/alpha", "docs/plan.md")
+    assert plan["due_max"] == "2026-09-18"
+    err = capsys.readouterr().err
+    assert "acme/alpha" in err and "docs/plan.md" in err
+
+
 def test_due_max_sees_tasks_beyond_the_open_task_cap():
     """open_tasks 封頂 50,但 due_max 要掃晒成個檔 — 第 51 個 task
     嘅日期一樣係項目死線嘅一部分。"""

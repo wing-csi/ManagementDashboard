@@ -40,7 +40,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from plan_history import fetch_plan_history
@@ -816,7 +816,38 @@ def _clean_plan_title(text: str) -> str:
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
-def parse_plan_markdown(text: str) -> dict | None:
+def _calendar_dues(values: list[str], source: str) -> list[str]:
+    """Drop `due:` dates that do not exist on the calendar, loudly.
+
+    PLAN_DUE_RE only matches the *shape* `\\d{4}-\\d{2}-\\d{2}`, and `due_max`
+    is a `max()` over strings — so one typo outranks every valid date in the
+    same year ('2026-13-01' > '2026-09-18', '2026-08-32' > '2026-08-31') and
+    becomes the project deadline. The frontend then parses it to NaN and draws
+    a card with a title, a blank chart and nothing to explain it. `plan.md` is
+    hand-edited in the *target* repo, so this is untrusted input crossing a
+    boundary and has to be validated here, not assumed.
+
+    `source` names the repo/file for the warning; empty means「唔好嘈」and is
+    what the history replay passes — the same bad line sits in all 150 old
+    blobs of the same file, and the operator only has one file to fix.
+    """
+    kept: list[str] = []
+    for value in values:
+        try:
+            date.fromisoformat(value)
+        except ValueError:
+            if source:
+                # ASCII only: this goes to a Windows console too, where a
+                # non-cp1252 character prints as a replacement glyph.
+                print(f"  ! warning: {source} has due:{value} - not a real "
+                      f"calendar date, ignored (it would win max() and become "
+                      f"the burndown deadline)", file=sys.stderr)
+            continue
+        kept.append(value)
+    return kept
+
+
+def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     """GitHub-flavored task-list plan: `- [ ]` open, `- [x]` done; headings = sections.
     Inline markers on tasks/headings: due:YYYY-MM-DD, !P0/!P1/!P2, #bug —
     task-level due overrides the section's. None if no checkboxes (not a plan).
@@ -824,7 +855,10 @@ def parse_plan_markdown(text: str) -> dict | None:
     `due_max` is the project's target date for the burndown: a heading-level
     due: wins (an explicit declaration), else the latest date on any checkbox,
     ticked included. Counting only open tasks would walk the deadline earlier
-    every time a late item lands."""
+    every time a late item lands. Calendar-invalid dates are discarded before
+    that max() — see `_calendar_dues()`.
+
+    `source` is only a label for those warnings (e.g. "acme/alpha plan.md")."""
     sections: list[dict] = []
     open_tasks: list[dict] = []
     heading_dues: list[str] = []
@@ -866,6 +900,10 @@ def parse_plan_markdown(text: str) -> dict | None:
                 })
     if total == 0:
         return None
+    # 一個 heading 寫住個唔存在嘅日期 = 佢乜都冇宣告到,所以照跌落 task 嗰邊,
+    # 唔係「有 heading due 但係 None」。
+    heading_dues = _calendar_dues(heading_dues, source)
+    task_dues = _calendar_dues(task_dues, source)
     return {"done": done, "total": total, "open_tasks": open_tasks,
             "due_max": max(heading_dues) if heading_dues else (max(task_dues) if task_dues else None),
             "sections": [s for s in sections if s["total"]][:12]}
@@ -963,7 +1001,8 @@ def fetch_plan_file(
 ) -> dict | None:
     """Project plan markdown maintained in the target repo (None if missing/not a plan)."""
     try:
-        plan = parse_plan_markdown(client.rest_raw(_contents_path(repo, path, ref)))
+        plan = parse_plan_markdown(client.rest_raw(_contents_path(repo, path, ref)),
+                                   f"{repo} {path}")
     except CollectError:
         return None
     if plan:
