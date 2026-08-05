@@ -615,7 +615,6 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 #statusFilter [data-status="redline"].is-on { background: var(--alert); border-color: var(--alert); }
 #statusFilter [data-status="warning"].is-on,
 #statusFilter [data-status="suspect"].is-on,
-#statusFilter [data-status="rework"].is-on,
 #statusFilter [data-status="ci-fail"].is-on { background: var(--warn); border-color: var(--warn); color: var(--ink); }
 @media (max-width: 760px) {
   #taskSearch, .task-filter-stack { min-width: 100%; width: 100%; }
@@ -639,7 +638,25 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 /* 96px held "48% (185/387)" on one line at 11px; at 14px it wrapped into two. */
 .qrow { display: grid; grid-template-columns: 44px 200px 132px; gap: 12px; align-items: center; margin-bottom: 8px; }
 .qrow .p { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--muted); text-align: right; }
-.rework { color: var(--warn); font-family: var(--font-mono); font-size: var(--fs-xs); margin-left: 6px; }
+.pr-cell { font-family: var(--font-mono); }
+.no-pr {
+  display: inline-block;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.commit-ref {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-decoration: none;
+}
+.commit-ref:hover { color: var(--ink); text-decoration: underline; }
 /* Three across, two rows. Five across left the sixth card (缺陷率) orphaned on
    a row of its own at the far left, which reads as a bug rather than a layout.
    No test caught it — there was no overflow and no type violation, only a

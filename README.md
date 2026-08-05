@@ -46,7 +46,7 @@ scroll 到幾底都改到 repo / branch / 成員 / window,唔使碌返上去。
 | **品質** | RAG 燈、品質 × 自動化、各 Level 修復佔比、Defect 追蹤 |
 | **項目 & 團隊** | 項目進度(milestones / 延誤 / 建議)、Repo 概覽、貢獻者 |
 | **產品 & 發佈** | Roadmap / epics、release readiness、產品採用、客戶成果指標 |
-| **Tasks** | 最近 Tasks — 搜尋(title / author / branch)、Level + 狀態篩選、每頁 25 行 |
+| **Tasks** | 最近 Tasks — 每行列明所屬 PR(direct commit 標示「無 PR」)、搜尋(title / author / branch / PR)、Level + 狀態篩選、每頁 25 行 |
 
 **分享某個分頁**:URL 後面加 `#quality`、`#projects`、`#product`、`#tasks`(`#overview` 係
 預設)。認唔到嘅 hash 會落返總覽。分頁狀態同 `?owner=` 係兩回事 — hash 係
@@ -274,14 +274,15 @@ Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1
 
 | 標記 | 意思 |
 |---|---|
-| `#N` / hex | PR 號 / commit sha,click 去 GitHub |
-| `↩N` | 呢個 PR 被打回(merge 之前嘅 CHANGES_REQUESTED)N 輪 |
+| `#N` | task 所屬 PR,click 去 GitHub |
+| `無 PR` + hex | direct commit 冇所屬 PR;hex 可 click 去 GitHub |
 | ⚠(黃) | level 聲稱同 PR 行為矛盾,hover 見原因(唔會自動降級) |
 | ⛔(紅) | 中咗治理紅線,hover 見邊條 |
 | !(黃) | 中咗治理警告(未經 review / 超大 PR),hover 見邊條 |
 
-表格可將 Level 同狀態一齊收窄。狀態包括紅線、治理警告、Level 矛盾、被打回同
-CI 失敗;再輸入搜尋字會同時套用。每頁顯示 25 rows,下面註明篩選後總數。
+表格可將 Level 同狀態一齊收窄。狀態包括紅線、治理警告、Level 矛盾同 CI 失敗;
+再輸入搜尋字會同時套用。每頁顯示 25 rows,下面註明篩選後總數。PR 被打回屬
+PR-level 品質指標,留喺品質頁。
 
 ## 使用注意(點樣用得其所)
 
@@ -384,7 +385,8 @@ Dashboard 有一欄量度「自動化程度同輸出質量嘅關係」:
 | PR 打回率 | 收過 merge 之前嘅 `CHANGES_REQUESTED` 嘅 PR ÷ **有人 review 過**嘅 PR | 字面意義嘅「被打回重做」,直接嚟自 GitHub review 記錄 |
 | 各 Level 修復佔比 | 每個 level 入面 fix tasks 嘅比例 | 「自動化越高係咪越多手尾」嘅切面 |
 
-表格 Task 欄嘅 `↩N` badge = 呢個 PR 被打回 N 輪;修復佔比較上一段升 ≥15pt 且 ≥30% 會出異常提醒。
+Tasks 表格以「所屬 PR」欄交代 task traceability;PR 打回輪數留喺品質指標。修復佔比
+較上一段升 ≥15pt 且 ≥30% 會出異常提醒。
 
 Attribution caveat:修復佔比量度嘅係**工作構成**,唔係「AI 寫錯率」— 一個 fix task 修嘅可能係任何 level 引入嘅問題,fix 本身嘅 level 唔代表邊個惹禍。打回率就冇呢個問題,打回打嘅係嗰個 PR 自己。打回只計 merge 之前收到嘅 CHANGES_REQUESTED —— GitHub 容許 review 已經 merge 咗嘅 PR,但嗰陣代碼已經出咗,唔算返工過。分母用「有人 review 過嘅 PR」而唔係全部 merged PR:一個冇人 review 過就 merge 咗嘅 PR(auto-merge、或者中咗「未經 review 就 merge」嗰條治理警告)根本冇機會被打回,擺入分母等同當佢「通過咗 review」。作者 comment 自己個 PR 唔算 review。已經被 dismiss 嘅打回一樣照計 — GitHub 會將佢個 state 改成 `DISMISSED`,但打回呢件事發生過。冇 PR flow 嘅 repo(全 direct commit)打回率會顯示「無 PR」,本身就係一個發現。
 

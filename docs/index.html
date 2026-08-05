@@ -371,10 +371,10 @@
     <section class="card">
       <div class="card-head">
         <h2>最近 Tasks</h2>
-        <span class="card-note" id="tableNote">source: GitHub GraphQL API</span>
+        <span class="card-note" id="tableNote">每個 task 顯示所屬 PR · direct commit 標示無 PR</span>
       </div>
       <div class="table-controls">
-        <input type="search" id="taskSearch" placeholder="搜尋 title / author / branch" aria-label="搜尋 tasks">
+        <input type="search" id="taskSearch" placeholder="搜尋 title / author / branch / PR" aria-label="搜尋 tasks">
         <div class="task-filter-stack">
           <div class="filter-group">
             <span class="filter-label" id="levelFilterLabel">Level</span>
@@ -395,7 +395,6 @@
               <button type="button" class="lvbtn" data-status="redline" aria-pressed="false">紅線</button>
               <button type="button" class="lvbtn" data-status="warning" aria-pressed="false">治理警告</button>
               <button type="button" class="lvbtn" data-status="suspect" aria-pressed="false">Level 矛盾</button>
-              <button type="button" class="lvbtn" data-status="rework" aria-pressed="false">被打回</button>
               <button type="button" class="lvbtn" data-status="ci-fail" aria-pressed="false">CI 失敗</button>
             </div>
           </div>
@@ -404,7 +403,7 @@
       <div class="table-scroll">
         <table>
         <colgroup>
-          <col style="width:116px"><col style="width:158px"><col style="width:112px"><col style="width:84px">
+          <col style="width:116px"><col style="width:158px"><col style="width:112px"><col style="width:118px">
           <col style="width:150px"><col><col style="width:92px"><col style="width:88px">
         </colgroup>
           <thead>
@@ -412,7 +411,7 @@
               <th class="sortable" data-key="date">日期<span class="arrow"></span></th>
               <th>Repo</th>
               <th>Author</th>
-              <th>Task</th>
+              <th>所屬 PR</th>
               <th>Branch</th>
               <th>Title</th>
               <th class="sortable" data-key="level">Level<span class="arrow"></span></th>

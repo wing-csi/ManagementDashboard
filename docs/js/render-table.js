@@ -227,7 +227,9 @@ function matchesFilters(t) {
   if (!taskMatchesStatus(t, state.taskStatus)) return false;
   const q = state.search.trim().toLowerCase();
   if (!q) return true;
-  return [t.title, t.author, t.branch].some((v) => (v || '').toLowerCase().includes(q));
+  const prRef = t.kind === 'pr' ? `#${t.id}` : '';
+  return [t.title, t.author, t.branch, t.id, prRef]
+    .some((v) => (v || '').toLowerCase().includes(q));
 }
 
 /** Status is a second, independent task-table dimension. Governance warnings
@@ -238,10 +240,19 @@ export function taskMatchesStatus(t, status) {
     case 'redline': return violations.some((v) => VIOLATION_META[v]?.red === true);
     case 'warning': return violations.some((v) => VIOLATION_META[v]?.red !== true);
     case 'suspect': return (t.check || '').startsWith('suspect');
-    case 'rework': return (t.rework || 0) > 0;
     case 'ci-fail': return t.ci === 'fail';
     default: return true;
   }
+}
+
+/** Make the parent PR explicit. A direct commit has no parent PR, but its SHA
+ * remains available as a secondary link so the row is still traceable. */
+export function taskPullRequestMarkup(t) {
+  if (t.kind === 'pr') {
+    return `<a class="tlink pr-ref" href="${esc(t.url)}" target="_blank" rel="noopener" aria-label="PR #${esc(t.id)}">#${esc(t.id)}</a>`;
+  }
+  return `<span class="no-pr" title="Direct commit · 無所屬 PR">無 PR</span>`
+    + `<a class="commit-ref" href="${esc(t.url)}" target="_blank" rel="noopener" title="Commit ${esc(t.id)}">${esc(t.id)}</a>`;
 }
 
 function violationFlags(t) {
@@ -273,7 +284,7 @@ export function renderTable() {
       <td class="mono">${r.date}</td>
       <td class="repo" title="${esc(r.repo)}">${esc(r.repo.split('/').pop())}</td>
       <td class="mono" style="font-size:var(--fs-xs)" title="${esc(r.author || '')}">${esc(r.author || '–')}</td>
-      <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.kind === 'pr' ? '#' + esc(r.id) : esc(r.id)}</a>${(r.rework || 0) > 0 ? `<span class="rework" title="被打回 ${r.rework} 輪">↩${r.rework}</span>` : ''}</td>
+      <td class="pr-cell">${taskPullRequestMarkup(r)}</td>
       <td class="branch" title="${esc(r.branch || '')}">${esc(r.branch || '–')}</td>
       <td class="subject" title="${esc(r.title)}">${typeChip(r.title)}${esc(r.title)}</td>
       <td class="lvlcell">${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}${r.check && r.check.indexOf('suspect') === 0 ? `<span class="flag" title="${esc(r.check)}">⚠</span>` : ''}${violationFlags(r)}</td>
