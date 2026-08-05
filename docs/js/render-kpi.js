@@ -4,35 +4,39 @@ import { state, $, pct, esc, windowTasks, repoInScope } from './data.js';
 import {
   LEVELS, META, UNTAGGED_COLOR, INK, VIOLATION_META, median, fmtHours,
   statsFromTasks, weekL3pct, fillGaps, metaInWindow, defectsInScope,
-} from './aggregate.js';
+} from './aggregate.js?v=zh-20260805-3';
+
+const MODE_LABEL = { auto: '自動', manual: '手動' };
+const METHOD_LABEL = { label: '標籤', rule: '規則', trailer: '尾註', inference: '推斷' };
+const EVENT_LABEL = { deployments: '部署', tags: '標籤', releases: '發佈' };
 
 function setDelta(el, curr, prev, unit) {
   if (curr == null || prev == null) { el.textContent = ''; return; }
   const d = curr - prev;
   const cls = Math.abs(d) < 0.05 ? 'flat' : d > 0 ? 'up' : 'down';
   el.className = 'delta ' + cls;
-  el.textContent = `${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(1)}${unit} vs 前一段`;
+  el.textContent = `${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(1)}${unit}，較上一段`;
 }
 
 export function renderKPIs(cur, prev) {
   const l3 = pct(cur.l3plus, cur.tagged);
   $('kpiL3').innerHTML = l3 == null ? '–' : `${l3}<span class="unit">%</span>`;
-  setDelta($('kpiL3d'), l3 && +l3, pct(prev.l3plus, prev.tagged) && +pct(prev.l3plus, prev.tagged), 'pt');
+  setDelta($('kpiL3d'), l3 && +l3, pct(prev.l3plus, prev.tagged) && +pct(prev.l3plus, prev.tagged), ' 個百分點');
 
   const loc = pct(cur.insAi, cur.insTotal);
   $('kpiLoc').innerHTML = loc == null ? '–' : `${loc}<span class="unit">%</span>`;
-  setDelta($('kpiLocd'), loc && +loc, pct(prev.insAi, prev.insTotal) && +pct(prev.insAi, prev.insTotal), 'pt');
+  setDelta($('kpiLocd'), loc && +loc, pct(prev.insAi, prev.insTotal) && +pct(prev.insAi, prev.insTotal), ' 個百分點');
 
   $('kpiTasks').textContent = cur.tagged.toLocaleString();
-  $('kpiTasksSub').textContent = `共 ${cur.total.toLocaleString()} tasks · mode: ${state.data.mode || '–'}`;
+  $('kpiTasksSub').textContent = `共 ${cur.total.toLocaleString()} 項工作 · 模式：${MODE_LABEL[state.data.mode] || state.data.mode || '–'}`;
   setDelta($('kpiTasksd'), cur.tagged, prev.total ? prev.tagged : null, ' 個');
 
   const cov = pct(cur.tagged, cur.total);
   const covEl = $('kpiCov');
   covEl.innerHTML = cov == null ? '–' : `${cov}<span class="unit">%</span>`;
   covEl.classList.toggle('warned', cov != null && +cov < 80);
-  $('kpiCovSub').textContent = `未分級 ${cur.untagged} 個 task`;
-  setDelta($('kpiCovd'), cov && +cov, pct(prev.tagged, prev.total) && +pct(prev.tagged, prev.total), 'pt');
+  $('kpiCovSub').textContent = `未分級 ${cur.untagged} 項工作`;
+  setDelta($('kpiCovd'), cov && +cov, pct(prev.tagged, prev.total) && +pct(prev.tagged, prev.total), ' 個百分點');
 }
 
 export function renderSpectrum(cur) {
@@ -40,7 +44,8 @@ export function renderSpectrum(cur) {
   const legend = $('legend');
   strip.innerHTML = '';
   legend.innerHTML = '';
-  const parts = Object.entries(cur.methods).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`);
+  const parts = Object.entries(cur.methods).sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${METHOD_LABEL[k] || k} ${v}`);
   $('specNote').textContent = `已分級 ${cur.tagged} / ${cur.total}` + (parts.length ? ' · ' + parts.join(' · ') : '');
 
   const total = cur.total || 1;
@@ -112,7 +117,7 @@ export function renderChart(weeklyRows) {
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10, padding: 12 } } },
       scales: {
         x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'tasks' } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: '工作數' } },
         y2: { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: (v) => v + '%' } },
       },
     },
@@ -129,40 +134,40 @@ export function renderAlerts(weeklyRows, cur, prev) {
     const a = weekL3pct(active[active.length - 2]);
     const b = weekL3pct(active[active.length - 1]);
     const d = b - a;
-    if (d <= -10) alerts.push({ sig: 'red', t: `L3+ 佔比週環比下跌 ${Math.abs(d).toFixed(0)}pt`, d: `${a.toFixed(0)}% → ${b.toFixed(0)}%。檢查 task 類型有無轉變,或者 harness / 工具鏈出咗問題。` });
-    else if (d >= 10) alerts.push({ sig: 'ink', t: `L3+ 佔比週環比上升 ${d.toFixed(0)}pt`, d: `${a.toFixed(0)}% → ${b.toFixed(0)}%。` });
+    if (d <= -10) alerts.push({ sig: 'red', t: `L3+ 佔比週環比下跌 ${Math.abs(d).toFixed(0)} 個百分點`, d: `${a.toFixed(0)}% → ${b.toFixed(0)}%。檢查工作類型有無轉變，或者測試框架 / 工具鏈出咗問題。` });
+    else if (d >= 10) alerts.push({ sig: 'ink', t: `L3+ 佔比週環比上升 ${d.toFixed(0)} 個百分點`, d: `${a.toFixed(0)}% → ${b.toFixed(0)}%。` });
   }
   const cov = cur.total ? (cur.tagged / cur.total) * 100 : null;
-  if (cov != null && cov < 80) alerts.push({ sig: 'amber', t: `分級覆蓋率偏低(${cov.toFixed(0)}%)`, d: '為 PR 加 ai-level label 或喺 commit / PR body 加 AI-Level trailer,否則指標會失真。' });
+  if (cov != null && cov < 80) alerts.push({ sig: 'amber', t: `分級覆蓋率偏低（${cov.toFixed(0)}%）`, d: '為 PR 加上 ai-level 標籤，或在提交 / PR 內文加上 AI-Level 尾註，否則指標會失真。' });
 
   const curPct = cur.tagged ? (cur.l3plus / cur.tagged) * 100 : null;
   const prevPct = prev.tagged ? (prev.l3plus / prev.tagged) * 100 : null;
   if (curPct != null && prevPct != null && curPct >= 30 && prevPct < 30) {
-    alerts.push({ sig: 'ink', t: 'L3+ 佔比突破 30% 里程碑', d: `本段 ${curPct.toFixed(1)}%,對上一段 ${prevPct.toFixed(1)}%。` });
+    alerts.push({ sig: 'ink', t: 'L3+ 佔比突破 30% 里程碑', d: `本段 ${curPct.toFixed(1)}%，上一段 ${prevPct.toFixed(1)}%。` });
   }
   const lastTwo = active.slice(-2);
   const hi = (w) => (w.by_level.L4 || 0) + (w.by_level.L5 || 0);
   if (lastTwo.length === 2 && lastTwo.every((w) => hi(w) === 0) && (cur.byLevel.L4 + cur.byLevel.L5) > 0) {
-    alerts.push({ sig: 'amber', t: '近兩週無 L4+ task', d: '高自動化流程(end-to-end + auto verification)可能停咗用。' });
+    alerts.push({ sig: 'amber', t: '近兩週無 L4+ 工作', d: '高度自動化流程（端對端流程 + 自動驗證）可能已停用。' });
   }
   const vtypes = Object.entries(cur.violationCounts)
     .sort((a, b) => ((VIOLATION_META[b[0]] || {}).red ? 1 : 0) - ((VIOLATION_META[a[0]] || {}).red ? 1 : 0) || b[1] - a[1]);
   for (const [type, n] of vtypes) {
     const vm = VIOLATION_META[type] || { label: type, red: false };
     alerts.push({ sig: vm.red ? 'red' : 'amber',
-      t: `${vm.red ? '紅線' : '警告'}:${n} 個 task ${vm.label}`,
-      d: vm.red ? '規範四紅線 — 需要 review 並跟進;表格 ⛔ 標記咗涉事 rows。' : '表格 ⛔ 標記咗涉事 rows。' });
+      t: `${vm.red ? '紅線' : '警告'}：${n} 項工作 ${vm.label}`,
+      d: vm.red ? '規範四紅線 — 需要審核並跟進；表格以 ⛔ 標記涉事列。' : '表格以 ⛔ 標記涉事列。' });
   }
   const cf = cur.total ? (cur.fixTasks / cur.total) * 100 : null;
   const pf = prev.total ? (prev.fixTasks / prev.total) * 100 : null;
   if (cf != null && pf != null && cf - pf >= 15 && cf >= 30) {
-    alerts.push({ sig: 'amber', t: `修復佔比上升 ${(cf - pf).toFixed(0)}pt`, d: `${pf.toFixed(0)}% → ${cf.toFixed(0)}%,可能係前一段輸出嘅質量問題浮現緊。` });
+    alerts.push({ sig: 'amber', t: `修復佔比上升 ${(cf - pf).toFixed(0)} 個百分點`, d: `${pf.toFixed(0)}% → ${cf.toFixed(0)}%，可能係前一段輸出嘅質量問題浮現緊。` });
   }
   if (cur.suspects > 0) {
-    alerts.push({ sig: 'amber', t: `${cur.suspects} 個 task 嘅 level 聲稱同 PR 行為有矛盾`, d: '表格 ⚠ 標記嘅 rows:聲稱 L4/L5 但觀察到人工介入(review / 混合 commits / 冇 test),建議覆核。' });
+    alerts.push({ sig: 'amber', t: `${cur.suspects} 項工作的級別聲稱與 PR 行為有矛盾`, d: '表格以 ⚠ 標記相關列：聲稱 L4/L5，但觀察到人工介入（審核 / 混合提交 / 無測試），建議覆核。' });
   }
   if (state.data.errors && state.data.errors.length) {
-    alerts.push({ sig: 'amber', t: `${state.data.errors.length} 個 repo 收集失敗`, d: esc(state.data.errors[0]) });
+    alerts.push({ sig: 'amber', t: `${state.data.errors.length} 個程式庫收集失敗`, d: esc(state.data.errors[0]) });
   }
 
   if (!alerts.length) {
@@ -182,13 +187,13 @@ export function renderDora(cur, meta) {
   const weeks = state.windowDays / 7;
   if (!deployEvents) {
     $('dDeploy').textContent = '–';
-    $('dDeploySub').textContent = '無 tag / release / deployment 記錄';
+    $('dDeploySub').textContent = '無標籤 / 發佈 / 部署記錄';
   } else if (deployEvents / weeks >= 1) {
     $('dDeploy').innerHTML = (deployEvents / weeks).toFixed(1) + '<span class="unit">次/週</span>';
-    $('dDeploySub').textContent = `${deployEvents} 次(${src})`;
+    $('dDeploySub').textContent = `${deployEvents} 次（${EVENT_LABEL[src]}）`;
   } else {
     $('dDeploy').innerHTML = deployEvents + '<span class="unit">次</span>';
-    $('dDeploySub').textContent = `${state.windowDays} 日內(${src})· 平均每 ${(weeks / deployEvents).toFixed(1)} 週 1 次`;
+    $('dDeploySub').textContent = `${state.windowDays} 日內（${EVENT_LABEL[src]}）· 平均每 ${(weeks / deployEvents).toFixed(1)} 週 1 次`;
   }
   $('dLead').innerHTML = fmtHours(median(cur.leads));
   // 回退密度 — 補救 task ÷ 同一個窗口同範圍內嘅全部 task。
@@ -207,8 +212,8 @@ export function renderDora(cur, meta) {
   $('dCfrSub').textContent = cur.total
     // 短過 `revert / hotfix / regression` — 嗰句喺 16px 之下會斷成兩三行,
     // 而且斷喺 slash 中間。訊號集嘅細節喺 README,唔使塞落一格 DORA 卡。
-    ? `${cur.remedyTasks} / ${cur.total} 個 task 屬補救`
-    : '此範圍內無 task';
+    ? `${cur.remedyTasks} / ${cur.total} 項工作屬補救`
+    : '此範圍內無工作';
   $('dMttr').innerHTML = fmtHours(median(cur.fixLeads));
 }
 
@@ -236,15 +241,15 @@ function repoRag(repo) {
   const sec = (q && q.security) || {};
   let color = '#9AA5A0', label = '資料不足';
   if (ciRate != null || q) {
-    if ((sec.critical || 0) > 0 || (ciRate != null && ciRate < 75)) { color = 'var(--alert)'; label = 'RED'; }
-    else if ((sec.high || 0) > 0 || (ciRate != null && ciRate < 90)) { color = 'var(--warn)'; label = 'AMBER'; }
-    else { color = '#2E7D4F'; label = 'GREEN'; }
+    if ((sec.critical || 0) > 0 || (ciRate != null && ciRate < 75)) { color = 'var(--alert)'; label = '紅'; }
+    else if ((sec.high || 0) > 0 || (ciRate != null && ciRate < 90)) { color = 'var(--warn)'; label = '黃'; }
+    else { color = '#2E7D4F'; label = '綠'; }
   }
   const bits = [];
-  if (ciRate != null) bits.push(`CI pass ${ciRate.toFixed(0)}%(${cur.ciPass}/${cur.ciTotal})`);
-  if (q && q.coverage != null) bits.push(`coverage ${q.coverage}%`);
-  if (q && q.security) bits.push(`security C${sec.critical || 0}/H${sec.high || 0}/M${sec.medium || 0}`);
-  if (!bits.length) bits.push('無 CI checks / quality file');
+  if (ciRate != null) bits.push(`CI 通過率 ${ciRate.toFixed(0)}%（${cur.ciPass}/${cur.ciTotal}）`);
+  if (q && q.coverage != null) bits.push(`測試覆蓋率 ${q.coverage}%`);
+  if (q && q.security) bits.push(`安全性：嚴重 ${sec.critical || 0} / 高 ${sec.high || 0} / 中 ${sec.medium || 0}`);
+  if (!bits.length) bits.push('無 CI 檢查 / 品質數據檔');
   return { color, label, tip: bits.join(' · ') };
 }
 
@@ -269,7 +274,7 @@ export function renderRag() {
 export function renderQuality(cur) {
   const fp = pct(cur.fixTasks, cur.total);
   $('qFix').innerHTML = fp == null ? '–' : `${fp}<span class="unit">%</span>`;
-  $('qFixSub').textContent = `${cur.fixTasks} 個 fix / revert task,共 ${cur.total} 個`;
+  $('qFixSub').textContent = `${cur.fixTasks} 項修復 / 回退工作，共 ${cur.total} 項`;
   // 打回率 分母係「有人 review 過」嘅 PR — 冇人 review 過嘅 PR 根本冇得被打回,
   // 擺入分母等同當佢「通過咗 review」。
   const rp = pct(cur.reworkPRs, cur.reviewedPRs);
@@ -277,19 +282,19 @@ export function renderQuality(cur) {
   if (cur.reviewedPRs) {
     const mr = median(cur.reworkRounds);
     $('qReworkSub').textContent =
-      `${cur.reworkPRs} / ${cur.reviewedPRs} 個有 review 嘅 PR 被打回`
+      `${cur.reworkPRs} / ${cur.reviewedPRs} 個經審核的 PR 被打回`
       + (mr == null ? '' : ` · 中位 ${mr} 輪`);
   } else {
     $('qReworkSub').textContent = cur.prTotal
-      ? '此範圍內無經 review 嘅 PR'
+      ? '此範圍內無經審核的 PR'
       : '此範圍內無 PR';
   }
 
   $('qTurn').innerHTML = fmtHours(median(cur.reworkTurnarounds));
   $('qTurnSub').textContent = cur.reworkTurnarounds.length
-    ? `由第一次打回到 merge · ${cur.reworkTurnarounds.length} 個 PR`
+    ? `由第一次打回到合併 · ${cur.reworkTurnarounds.length} 個 PR`
     : (cur.reworkPRs
-      ? '被打回嘅 PR 都係 merge 之後先收到打回,冇返工時間可計'
+      ? '被打回的 PR 都是在合併後才收到打回，無返工時間可計'
       : '此範圍內無被打回嘅 PR');
 
   const meta = metaInWindow();
@@ -299,9 +304,9 @@ export function renderQuality(cur) {
     ? pct(cur.prTotal, cur.prTotal + meta.closedUnmerged) : null;
   $('qAccept').innerHTML = ap == null ? '–' : `${ap}<span class="unit">%</span>`;
   $('qAcceptSub').textContent = state.person !== 'all'
-    ? '需要全員範圍(closed PR 冇 person 維度)'
+    ? '需要全員範圍（已關閉 PR 無人員維度）'
     : ((cur.prTotal + meta.closedUnmerged)
-      ? `${cur.prTotal} merged / ${meta.closedUnmerged} 個 close 咗冇 merge`
+      ? `${cur.prTotal} 個已合併 / ${meta.closedUnmerged} 個已關閉但未合併`
       : '此範圍內無 PR');
   $('qMeaning').textContent = (cur.meaningful / (state.windowDays / 7)).toFixed(1);
 
@@ -314,14 +319,14 @@ export function renderQuality(cur) {
     // '–' 係「未設定」。一個實測 0.0% 係一個強好多嘅主張(呢個 window 交付
     // 咗嘢而一個缺陷都冇),兩者一定要分得開。
     $('qDefect').innerHTML = '–';
-    $('qDefectSub').textContent = '未有 repo 設定 defect_file';
+    $('qDefectSub').textContent = '未有程式庫設定缺陷數據檔';
   } else {
     const denom = repoWideTaskCount();
     const dr = pct(dfx.found, denom);
     $('qDefect').innerHTML = dr == null ? '–' : `${dr}<span class="unit">%</span>`;
-    const bits = [`${dfx.found} 個 ${state.windowDays} 日內發現 / ${denom} 個 task`,
+    const bits = [`${dfx.found} 個在 ${state.windowDays} 日內發現 / ${denom} 項工作`,
                   `${dfx.open} 個未修`];
-    if (dfx.undated) bits.push(`${dfx.undated} 個冇 found: 日期`);
+    if (dfx.undated) bits.push(`${dfx.undated} 個無發現日期`);
     if (dfx.truncated) bits.push('清單已截斷');
     $('qDefectSub').textContent = bits.join(' · ');
   }
@@ -339,7 +344,7 @@ export function renderQuality(cur) {
       <span class="p">${share.toFixed(0)}% (${f}/${n})</span>`;
     box.appendChild(row);
   }
-  if (!box.children.length) box.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-sm)">未有已分級 tasks</div>';
+  if (!box.children.length) box.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-sm)">未有已分級工作</div>';
 }
 
 /** 標示邊啲區塊喺揀咗人之後,數字仍然係全 repo 範圍。 */

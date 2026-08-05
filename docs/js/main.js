@@ -1,21 +1,21 @@
 import { state, $, esc, loadData, windowTasks, precedingTasks, LoadError, repoInScope, singleRepo } from './data.js';
 import { buildPersonIndex, personOptions } from './people.js';
-import { statsFromTasks, buildWeekly, metaInWindow } from './aggregate.js';
+import { statsFromTasks, buildWeekly, metaInWindow } from './aggregate.js?v=zh-20260805-3';
 import {
   renderKPIs, renderSpectrum, renderChart, renderAlerts, renderDora,
   renderRag, renderQuality, setScopeNotes,
-} from './render-kpi.js';
-import { renderProjects } from './render-project.js';
-import { renderBurndown } from './render-burndown.js';
-import { renderOverview, renderDefects, renderTable } from './render-table.js';
-import { renderProductOutcomes } from './render-product.js';
-import { renderManagement } from './render-management.js';
+} from './render-kpi.js?v=zh-20260805-3';
+import { renderProjects } from './render-project.js?v=zh-20260805-3';
+import { renderBurndown } from './render-burndown.js?v=zh-20260805-3';
+import { renderOverview, renderDefects, renderTable } from './render-table.js?v=zh-20260805-3';
+import { renderProductOutcomes } from './render-product.js?v=zh-20260805-3';
+import { renderManagement } from './render-management.js?v=zh-20260805-3';
 import { initTabs } from './tabs.js';
 
 /** eyebrow 要講明而家係邊個嘅視角,否則 filtered dashboard 會被當成全隊數字。 */
 export function renderEyebrow() {
   const repos = state.data.repos || [];
-  const base = (repos.length === 1 ? repos[0].toUpperCase() : `${repos.length} REPOS`) + ' · GITHUB TELEMETRY';
+  const base = (repos.length === 1 ? repos[0].toUpperCase() : `${repos.length} 個程式庫`) + ' · GITHUB 數據監測';
   $('eyebrow').textContent = state.person === 'all' ? base : `${base} · 負責人 ${state.person}`;
 }
 
@@ -52,7 +52,7 @@ export function render() {
     $('loadErrorDetail').textContent =
       e instanceof LoadError && e.status === 401
         ? '需要登入。'
-        : `(${e instanceof LoadError ? e.status : 'network'})`;
+        : `（${e instanceof LoadError ? e.status : '網絡錯誤'}）`;
     return;
   }
   state.data = data;
@@ -77,12 +77,12 @@ export function render() {
     : '';
   const repoOptions = repos.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
   const repoGroup = ownerCounts.size
-    ? `<optgroup label="個別 repo">${repoOptions}</optgroup>` : repoOptions;
-  $('repoSel').innerHTML = `<option value="all">全部 repos</option>` + ownerGroup + repoGroup;
+    ? `<optgroup label="個別程式庫">${repoOptions}</optgroup>` : repoOptions;
+  $('repoSel').innerHTML = `<option value="all">全部程式庫</option>` + ownerGroup + repoGroup;
 
   const ts = data.generated_at.replace('T', ' ').slice(0, 16) + ' UTC';
   $('stamp').textContent = ts;
-  $('footStamp').textContent = 'generated ' + ts;
+  $('footStamp').textContent = '產生於 ' + ts;
 
   const rebuildBranches = () => {
     const sel = $('branchSel');
@@ -90,9 +90,9 @@ export function render() {
     if (!only) {
       // branch 名喺唔同 repo 之間冇比較意義 — 唔係單一 repo 就鎖死
       state.branch = 'all';
-      sel.innerHTML = `<option value="all">全部 branches</option>`;
+      sel.innerHTML = `<option value="all">全部分支</option>`;
       sel.disabled = true;
-      sel.title = '揀咗單一 repo 先可以 filter branch';
+      sel.title = '選擇單一程式庫後才可篩選分支';
       return;
     }
     sel.disabled = false;
@@ -103,7 +103,7 @@ export function render() {
     }
     const branches = [...set].sort();
     if (state.branch !== 'all' && !set.has(state.branch)) state.branch = 'all';
-    sel.innerHTML = `<option value="all">全部 branches</option>` +
+    sel.innerHTML = `<option value="all">全部分支</option>` +
       branches.map((b) => `<option value="${esc(b)}"${b === state.branch ? ' selected' : ''}>${esc(b)}</option>`).join('');
   };
 

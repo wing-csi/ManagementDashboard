@@ -2,18 +2,15 @@ import { state, $, esc, refDate, repoInScope, toDate, windowTasks } from './data
 
 const BLOCKER_RE = /^(p0|critical|blocker|urgent|priority:\s*(urgent|highest))$/i;
 const READINESS = {
-  ready: { label: 'Ready', color: 'var(--good)' },
-  'on-track': { label: 'On track', color: '#5F8CC6' },
-  watch: { label: 'Watch', color: 'var(--warn)' },
-  'at-risk': { label: 'At risk', color: 'var(--alert)' },
-  unavailable: { label: '未有 scope', color: '#9AA5A0' },
+  ready: { label: '已準備', color: 'var(--good)' },
+  'on-track': { label: '進度正常', color: '#5F8CC6' },
+  watch: { label: '需要留意', color: 'var(--warn)' },
+  'at-risk': { label: '存在風險', color: 'var(--alert)' },
+  unavailable: { label: '未有範圍', color: '#9AA5A0' },
 };
+const SOURCE_LABEL = { milestone: '里程碑', plan: '計劃' };
 
 const scopedRepos = () => (state.data.repos || []).filter(repoInScope);
-const number = (value) => typeof value === 'number'
-  ? value.toLocaleString(undefined, { maximumFractionDigits: 1 })
-  : String(value);
-
 function releaseEvents(meta) {
   if ((meta.deployments || []).length) return meta.deployments;
   if ((meta.tags || []).length) return meta.tags;
@@ -49,7 +46,7 @@ export function readinessForRepo(repo, tasks, todayStr) {
     ? { title: milestone.title, done: milestone.closed || 0,
         total: (milestone.open || 0) + (milestone.closed || 0), due: milestone.due, source: 'milestone' }
     : plan && plan.total
-      ? { title: plan.path || 'plan', done: plan.done || 0, total: plan.total,
+      ? { title: plan.path || '計劃', done: plan.done || 0, total: plan.total,
           due: plan.due_max || null, source: 'plan' }
       : null;
   const open = ((meta.issues || {}).open || []).filter((i) =>
@@ -96,15 +93,15 @@ function renderReadiness(rows) {
     const meta = READINESS[row.status];
     const progress = row.progress == null ? '–' : `${row.progress.toFixed(0)}%`;
     const ci = row.ciPass == null ? 'CI 無數據' : `CI ${row.ciPass.toFixed(0)}%`;
-    const due = row.scope?.due ? `due ${row.scope.due}` : '未設 due date';
+    const due = row.scope?.due ? `期限 ${row.scope.due}` : '未設期限';
     const last = row.lastRelease ? `上次發佈 ${row.lastRelease}` : '未有發佈記錄';
     return `<article class="release-row">
       <div class="release-title"><span class="readiness-dot" style="background:${meta.color}"></span>
         <strong>${esc(row.repo.split('/').pop())}</strong><span class="readiness-state">${meta.label}</span></div>
-      <div class="release-scope">${row.scope ? `${esc(row.scope.title)} · ${progress}` : '未有 milestone / plan scope'}</div>
-      <div class="release-meta"><span>${row.blockers} blockers</span><span>${ci}</span><span>${due}</span><span>${last}</span></div>
+      <div class="release-scope">${row.scope ? `${esc(row.scope.title)} · ${progress}` : '未有里程碑 / 計劃範圍'}</div>
+      <div class="release-meta"><span>${row.blockers} 個阻礙項目</span><span>${ci}</span><span>${due}</span><span>${last}</span></div>
     </article>`;
-  }).join('') || '<p class="outcome-empty">呢個 scope 未有 repo。</p>';
+  }).join('') || '<p class="outcome-empty">此範圍內沒有程式庫。</p>';
 }
 
 function renderRoadmap(items) {
@@ -112,39 +109,12 @@ function renderRoadmap(items) {
   $('productRoadmap').innerHTML = shown.map((item) => {
     const pct = item.total ? (item.done / item.total) * 100 : 0;
     return `<div class="roadmap-row">
-      <div class="roadmap-label"><strong>${esc(item.title)}</strong><span>${esc(item.repo.split('/').pop())} · ${item.source}</span></div>
+      <div class="roadmap-label"><strong>${esc(item.title)}</strong><span>${esc(item.repo.split('/').pop())} · ${SOURCE_LABEL[item.source] || item.source}</span></div>
       <span class="bar-track"><span class="bar-fill" style="width:${pct}%;background:#5F8CC6"></span></span>
       <span class="roadmap-value">${item.done}/${item.total}${item.due ? ` · ${esc(item.due)}` : ''}</span>
     </div>`;
-  }).join('') || '<p class="outcome-empty">未有 milestones 或 plan sections。</p>';
-  $('productRoadmapNote').textContent = items.length > shown.length ? `顯示 ${shown.length} / ${items.length}` : `${items.length} 個 epic`;
-}
-
-function outcomeCard(repo, metric, updatedAt) {
-  const change = typeof metric.change === 'number' ? metric.change : null;
-  const lowerIsBetter = metric.direction === 'down';
-  const good = change == null ? null : lowerIsBetter ? change <= 0 : change >= 0;
-  const sign = change != null && change > 0 ? '+' : '';
-  const target = metric.target == null ? '' : `<span>目標 ${esc(number(metric.target))}${esc(metric.unit || '')}</span>`;
-  return `<article class="outcome-metric">
-    <div class="outcome-label">${esc(metric.label)}</div>
-    <div class="outcome-value">${esc(number(metric.value))}<span>${esc(metric.unit || '')}</span></div>
-    <div class="outcome-meta"><span>${esc(repo.split('/').pop())}</span>${target}
-      ${change == null ? '' : `<span class="${good ? 'outcome-good' : 'outcome-bad'}">${sign}${change.toFixed(1)}%</span>`}
-      ${updatedAt ? `<span>updated ${esc(updatedAt.slice(0, 10))}</span>` : ''}
-    </div>
-    ${metric.note ? `<p>${esc(metric.note)}</p>` : ''}
-  </article>`;
-}
-
-function renderOutcomeGroup(id, repos, key) {
-  const rm = state.data.repo_meta || {};
-  const cards = [];
-  for (const repo of repos) {
-    const outcomes = (rm[repo] || {}).outcomes;
-    for (const metric of outcomes?.[key] || []) cards.push(outcomeCard(repo, metric, outcomes.updated_at));
-  }
-  $(id).innerHTML = cards.join('') || `<p class="outcome-empty">未接通 ${key === 'adoption' ? '產品採用' : '客戶成果'}數據。設定 outcomes_file 後會喺呢度顯示。</p>`;
+  }).join('') || '<p class="outcome-empty">未有里程碑或計劃分段。</p>';
+  $('productRoadmapNote').textContent = items.length > shown.length ? `顯示 ${shown.length} / ${items.length}` : `${items.length} 個大型工作項`;
 }
 
 export function renderProductOutcomes() {
@@ -164,6 +134,4 @@ export function renderProductOutcomes() {
   $('productOutcomeCoverage').textContent = repos.length ? `${withOutcomes}/${repos.length}` : '–';
   renderReadiness(rows);
   renderRoadmap(items);
-  renderOutcomeGroup('adoptionMetrics', repos, 'adoption');
-  renderOutcomeGroup('customerMetrics', repos, 'customer');
 }

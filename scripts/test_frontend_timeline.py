@@ -63,7 +63,7 @@ def test_the_header_reports_spi_days_left_and_overdue_count(page, server):
     assert "SPI 0.42" in head      # 3/12 done ÷ 3/5 elapsed
     assert "嚴重落後" in head
     assert "剩 2 日" in head
-    assert "2 個 task 過咗期" in head
+    assert "2 項工作過咗期" in head
 
 
 def test_a_marker_carries_its_tasks_in_the_tooltip(page, server):
@@ -141,7 +141,7 @@ def test_invalid_task_dues_are_counted_in_the_note(page, server):
     _serve(page, data)
     dash = _open(page, server)
     dash.wait_for_selector("#burndownCards .tl", state="attached")
-    assert "1 個" in dash.inner_text("#burndownCards .tl")
+    assert "1 項工作" in dash.inner_text("#burndownCards .tl")
 
 
 def test_a_failed_history_fetch_draws_no_strip_at_all(page, server):

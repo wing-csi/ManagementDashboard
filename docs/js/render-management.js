@@ -1,20 +1,21 @@
 import { state, $, esc, repoInScope, windowTasks } from './data.js';
-import { deriveManagement } from './management.js';
-import { stalenessMessage } from './staleness.js';
+import { deriveManagement } from './management.js?v=zh-20260805-3';
+import { stalenessMessage } from './staleness.js?v=zh-20260805-3';
 
 const STATUS = {
-  'on-track': { label: 'On track', cls: 'is-good' },
-  'at-risk': { label: 'At risk', cls: 'is-warn' },
-  'off-track': { label: 'Off track', cls: 'is-bad' },
-  unknown: { label: 'Unknown', cls: 'is-unknown' },
+  'on-track': { label: '進度正常', cls: 'is-good' },
+  'at-risk': { label: '存在風險', cls: 'is-warn' },
+  'off-track': { label: '偏離計劃', cls: 'is-bad' },
+  unknown: { label: '未知', cls: 'is-unknown' },
 };
 const HEALTH = {
-  healthy: ['Fresh', 'is-good'], attention: ['Needs attention', 'is-warn'],
-  stale: ['Stale', 'is-bad'], unreadable: ['Unknown', 'is-unknown'],
-  future: ['Clock mismatch', 'is-bad'], unknown: ['Unknown', 'is-unknown'],
+  healthy: ['最新', 'is-good'], attention: ['需要關注', 'is-warn'],
+  stale: ['已過時', 'is-bad'], unreadable: ['未知', 'is-unknown'],
+  future: ['時鐘不一致', 'is-bad'], unknown: ['未知', 'is-unknown'],
 };
+const CONFIDENCE = { actual: '實際', high: '高', medium: '中', low: '低' };
 const FORECAST_REASON = {
-  'no-plan': '未有 plan', 'not-enough-history': '觀測點不足',
+  'no-plan': '未有計劃', 'not-enough-history': '觀測點不足',
   'history-too-short': '歷史少過 7 日', 'no-observed-progress': '未觀測到完成進度',
 };
 
@@ -41,33 +42,33 @@ function renderHeadline(summary) {
   const counts = Object.fromEntries(Object.keys(STATUS).map((key) => [key, 0]));
   for (const project of summary.projects) counts[project.status]++;
   const parts = [];
-  if (counts['off-track']) parts.push(`${counts['off-track']} off track`);
-  if (counts['at-risk']) parts.push(`${counts['at-risk']} at risk`);
-  if (counts.unknown) parts.push(`${counts.unknown} unknown`);
-  if (!parts.length) parts.push(`${counts['on-track']} on track`);
+  if (counts['off-track']) parts.push(`${counts['off-track']} 個偏離計劃`);
+  if (counts['at-risk']) parts.push(`${counts['at-risk']} 個存在風險`);
+  if (counts.unknown) parts.push(`${counts.unknown} 個未知`);
+  if (!parts.length) parts.push(`${counts['on-track']} 個進度正常`);
   setMetric('managementStatus', meta.label, parts.join(' · '), meta.cls);
 
   const [healthLabel, healthCls] = HEALTH[summary.health.status] || HEALTH.unknown;
   const c = summary.health.counts;
   setMetric('managementHealth', healthLabel,
-    `${c.planning}/${c.repos} planning · ${c.planHistory}/${c.repos} history · ${c.issueErrors + c.repoErrors} errors`,
+    `${c.planning}/${c.repos} 有計劃 · ${c.planHistory}/${c.repos} 有歷史 · ${c.issueErrors + c.repoErrors} 個錯誤`,
     healthCls);
 
   const scopeValue = summary.totals.scopeRepos
     ? summary.totals.currentScope.toLocaleString() : '–';
   const net = summary.totals.net;
-  const netLabel = net === 0 ? 'scope 無淨變動' : `${net > 0 ? '+' : ''}${net} net scope`;
+  const netLabel = net === 0 ? '範圍無淨變動' : `範圍淨變動 ${net > 0 ? '+' : ''}${net}`;
   setMetric('managementScope', scopeValue,
     summary.totals.historyRepos
-      ? `${netLabel} · +${summary.totals.added} added · −${summary.totals.removed} removed · ${summary.totals.historyRepos}/${summary.totals.scopeRepos} histories`
+      ? `${netLabel} · 新增 ${summary.totals.added} · 移除 ${summary.totals.removed} · ${summary.totals.historyRepos}/${summary.totals.scopeRepos} 有歷史`
       : summary.totals.scopeRepos
-        ? `${summary.totals.scopeRepos} plans · scope history unavailable`
-      : '未有 plan history', summary.totals.scopeRepos ? '' : 'is-unknown');
+        ? `${summary.totals.scopeRepos} 個計劃 · 無範圍歷史`
+      : '未有計劃歷史', summary.totals.scopeRepos ? '' : 'is-unknown');
 
   setMetric('managementForecast', `${summary.totals.forecastable}/${summary.totals.planning}`,
     summary.totals.planning
-      ? `${summary.totals.forecastLate} projected late · 有 planning scope 嘅 repo`
-      : '未有 planning scope', summary.totals.forecastable ? '' : 'is-unknown');
+      ? `${summary.totals.forecastLate} 個預測延誤 · 有計劃範圍的程式庫`
+      : '未有計劃範圍', summary.totals.forecastable ? '' : 'is-unknown');
 }
 
 function renderAttention(items) {
@@ -85,7 +86,7 @@ function renderAttention(items) {
 function forecastText(forecast) {
   if (forecast.status === 'complete') return '已完成';
   if (forecast.status !== 'forecast') return FORECAST_REASON[forecast.reason] || '預測不可用';
-  return `預測 ${forecast.projected} · ${forecast.confidence} confidence`
+  return `預測 ${forecast.projected} · ${CONFIDENCE[forecast.confidence] || forecast.confidence}信心`
     + (forecast.late ? ' · 遲過目標日' : '');
 }
 
@@ -97,20 +98,20 @@ function renderProjects(projects) {
       ? `<a href="${esc(project.url)}" target="_blank" rel="noopener">${name}</a>` : name;
     const progress = project.progress == null ? '–' : `${project.progress.toFixed(0)}%`;
     const change = project.scopeChange?.available
-      ? `${project.scopeChange.net >= 0 ? '+' : ''}${project.scopeChange.net} scope`
-      : 'scope history unavailable';
+      ? `範圍 ${project.scopeChange.net >= 0 ? '+' : ''}${project.scopeChange.net}`
+      : '無範圍歷史';
     const reason = project.reasons.length ? project.reasons.join(' · ') : '冇已知風險';
     return `<article class="management-project ${meta.cls}">
       <div class="management-project-head"><span class="management-dot"></span>
         <strong>${title}</strong><span>${meta.label}</span></div>
       <div class="management-project-grid">
-        <span>${project.scope ? `${esc(project.scope.title)} · ${progress}` : '未有 planning scope'}</span>
+        <span>${project.scope ? `${esc(project.scope.title)} · ${progress}` : '未有計劃範圍'}</span>
         <span>${esc(forecastText(project.forecast))}</span>
         <span>${esc(change)}</span>
       </div>
-      <small>${esc(reason)}${project.owner ? ` · owner ${esc(project.owner)}` : ''}</small>
+      <small>${esc(reason)}${project.owner ? ` · 負責人 ${esc(project.owner)}` : ''}</small>
     </article>`;
-  }).join('') || '<p class="management-empty">呢個 scope 冇 repo。</p>';
+  }).join('') || '<p class="management-empty">此範圍內沒有程式庫。</p>';
 }
 
 export function renderManagement() {

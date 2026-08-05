@@ -160,7 +160,7 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 ```
 
 - **打勾係狀態嘅唯一真相**。一個 `- [ ]` 就算擺喺「已修」標題下面都仍然算未修 — heading 純粹俾人分組,唔咁定義嘅話兩個訊號打交就冇得判。
-- 標記:`!P0`–`!P3` severity(沿用 plan file 同一條 regex)、`found:YYYY-MM-DD`、`fixed:YYYY-MM-DD`、`fixed-by:Name`。`fixed-by:` 會餵 Repo 概覽嘅 Defect 修復 pie;已修但冇寫會歸入「已修 · 未指定」,未修則獨立一塊,所以 pie 分母永遠係登記冊全部 defects。
+- 標記:`!P0`–`!P3` severity(沿用 plan file 同一條 regex)、`found:YYYY-MM-DD`、`fixed:YYYY-MM-DD`、`fixed-by:Name`。Repo 概覽嘅 Defect 修復 pie 同 Defect 追蹤表一樣,合併 `bug` Issues、plan `#bug` tasks 同 defect register;已修但冇修復負責人會歸入「已修 · 未指定」,未修則獨立一塊。
 - **`found:` 可以唔寫**。冇日期嘅項目照樣入未修積壓(積壓係快照,唔需要日期),但入唔到窗口比率,而卡上會講明「N 個冇 found: 日期」。默默截走會令個率虛低而你睇唔出。
 - 冇任何 checkbox 嘅檔案當「冇登記冊」處理,唔會當成「零缺陷」。
 - 上限 500 條,超過會喺卡上標「清單已截斷」。
@@ -180,7 +180,7 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 
 **完成度嘅前提:成個 project plan 要拆晒落 Issues。** 個 % 嘅分母係「已開咗嘅 issues」,唔係 project 實際 scope — 如果邊做邊開 issue,佢量度嘅只係已知 backlog 嘅消化率,會系統性高估進度;而每次補開新 issues,% 會回跌 — 呢個唔係 bug,係 scope 浮現緊。想個 % 反映真進度:
 
-- **或者用 plan file**:config 設 `plan_file = "docs/project-plan.md"`,collector 讀 markdown checkboxes(`- [ ]` 未做 / `- [x]` 做咗),`#` heading 做 section 出 progress bars — 啱晒 plan 本身喺 markdown 嘅 workflow(例如 project brief)。task / heading 可以帶 inline 標記:`due:YYYY-MM-DD`(task 級 override section 級)、`start:YYYY-MM-DD`(**只喺 heading 有效**,宣告項目起點,多過一個取最早)、`!P0`/`!P1`/`!P2`、`#bug`;task 另外可加 `assignee:Name`。有咗呢啲,「異常 tasks」、「今日建議」、**Defect 追蹤**同 Repo 概覽嘅 Plan 工作分配 pie 都食到 plan file。工作分配嘅公式係該人 task 數 ÷ plan 全部 checkboxes,未寫 assignee 嘅會歸入「未指定」,所以永遠加埋 100%。冇標記嘅 plain checkbox 仍然入完成度;plan tasks 冇「更新時間」概念,所以呆滯偵測仍然只有 Issues 做到。
+- **或者用 plan file**:config 設 `plan_file = "docs/project-plan.md"`,collector 讀 markdown checkboxes(`- [ ]` 未做 / `- [x]` 做咗),`#` heading 做 section 出 progress bars — 啱晒 plan 本身喺 markdown 嘅 workflow(例如 project brief)。task / heading 可以帶 inline 標記:`due:YYYY-MM-DD`(task 級 override section 級)、`start:YYYY-MM-DD`(**只喺 heading 有效**,宣告項目起點,多過一個取最早)、`!P0`/`!P1`/`!P2`、`#bug`;task 另外可加 `assignee:Name`。有咗呢啲,「異常 tasks」、「今日建議」、**Defect 追蹤**同 Repo 概覽嘅 Plan 工作分配 pie 都食到 plan file。工作分配嘅公式係該人 task 數 ÷ plan 全部 checkboxes;task 有 `assignee:` 就用 task 負責人,否則用 config 嘅 repo `owner`,兩個都冇先歸入「未指定」,所以永遠加埋 100%。冇標記嘅 plain checkbox 仍然入完成度;plan tasks 冇「更新時間」概念,所以呆滯偵測仍然只有 Issues 做到。
 - 以 **milestone 做 scope 單位** — 開新階段時,一次過將該階段全部 tasks 拆晒做 issues 掛入 milestone、設 due date。咁 milestone bar 先係可信嘅完成度,repo 級總 % 只當參考(佢永遠受「未開嘅嘢睇唔到」影響)。
 - 未估到細節嘅探索性工作,開一個 placeholder issue(例:`spike: X 方案調研`),令 scope 至少喺個分母度。
 - 見到 % 跌,先問「係咪開咗新 issues」,唔好直接當退步。
@@ -257,7 +257,7 @@ Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1
 | `#bug` | 標明係 defect | checkbox 只入完成度,唔會出現喺 Defect 表 |
 | `!P1` / `!P2` / `!P3` | Severity → High / Medium / Low(`!P0` 亦當 High) | Severity 欄顯示 `—` |
 | `due:YYYY-MM-DD` | Due 欄。寫喺 `#` heading 就成個 section 共用,task 自己寫會 override | Due 欄顯示 `–` |
-| `assignee:Name` | Assignee 欄 + Repo 概覽 Plan 工作分配 pie | Assignee 顯示 `–`,pie 歸入「未指定」 |
+| `assignee:Name` | Assignee 欄 + Repo 概覽 Plan 工作分配 pie | 沒有 repo `owner` 時 Assignee 才顯示 `–`,pie 歸入「未指定」 |
 
 `P-01 · CI ·` 呢類前綴純粹係你自己嘅編號同分類,dashboard 原樣顯示、唔會解析 — 想點編都得。
 
@@ -266,7 +266,7 @@ Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1
 **幾點要知:**
 
 - 表最多顯示 10 行,右上角會寫實際總數(例:`11 項,顯示頭 10`),唔會靜靜截走。
-- Defect 登記冊已修項目嘅 Assignee 欄顯示 `fixed-by:`;plan task 顯示 `assignee:`。兩個 marker 都接受可選嘅 `@` 前綴,但名中間唔可以有空格。
+- Defect 登記冊已修項目嘅 Assignee 欄顯示 `fixed-by:`;plan task 優先顯示 `assignee:`,冇寫就用 repo `owner`。兩個 marker 都接受可選嘅 `@` 前綴,但名中間唔可以有空格。
 - Plan file 睇唔到「已修好」歷史(打勾就消失)。想睇 Fixed 記錄要用 Issues — closed 嘅 `bug` issue 會以 Fixed 狀態留喺表入面。
 - 兩個來源可以同時用:同一個 repo 可以一邊開 issues、一邊喺 plan file 記,兩邊都會入表。
 

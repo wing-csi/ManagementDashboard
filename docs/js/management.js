@@ -1,6 +1,6 @@
 import { DAY, realDate, toISO, toMs } from './plan-dates.js';
 import { timelineStrip } from './timeline.js';
-import { staleness } from './staleness.js';
+import { staleness } from './staleness.js?v=zh-20260805-3';
 
 const HIGH_RE = /^(p0|p1|critical|high|blocker|urgent|priority:\s*(urgent|highest|high))$/i;
 const REDLINES = new Set([
@@ -8,6 +8,7 @@ const REDLINES = new Set([
   'cross-branch-merge', 'core-without-double-review',
 ]);
 const STATUS_RANK = { 'on-track': 0, unknown: 1, 'at-risk': 2, 'off-track': 3 };
+const CONFIDENCE = { actual: '實際', high: '高', medium: '中', low: '低' };
 
 const dateDiff = (from, to) => Math.round((toMs(to) - toMs(from)) / DAY);
 const addDays = (date, days) => toISO(toMs(date) + days * DAY);
@@ -110,7 +111,7 @@ export function dataHealth(data, repos, nowMs) {
 
 function planningScope(meta) {
   if (meta.plan && meta.plan.total > 0) {
-    return { source: 'plan', title: meta.plan.path || 'plan', done: meta.plan.done || 0,
+    return { source: 'plan', title: meta.plan.path || '計劃', done: meta.plan.done || 0,
              total: meta.plan.total, due: realDate(meta.plan.due_max) ? meta.plan.due_max : null };
   }
   const milestones = (meta.issues?.milestones || [])
@@ -142,8 +143,8 @@ export function projectOutlook(data, repo, tasks, todayStr, freshnessStatus = 'f
   const duePassed = !!scope?.due && scope.due < todayStr && scope.done < scope.total;
   const inputReasons = [];
   if (freshnessStatus !== 'fresh') inputReasons.push('快照唔新鮮');
-  if (meta.issues_error && !plan) inputReasons.push('Issues 收集失敗');
-  if (!scope) inputReasons.push('未有 planning scope');
+  if (meta.issues_error && !plan) inputReasons.push('GitHub Issue 收集失敗');
+  if (!scope) inputReasons.push('未有計劃範圍');
   let status = inputReasons.length ? 'unknown' : 'on-track';
   const reasons = [];
   if (inputReasons.length) {
@@ -155,7 +156,7 @@ export function projectOutlook(data, repo, tasks, todayStr, freshnessStatus = 'f
   } else {
     const overdue = overdueIssues.length + overduePlan.length;
     if (overdue) reasons.push(`${overdue} 個項目逾期`);
-    if (staleIssues) reasons.push(`${staleIssues} 個 issue 呆滯`);
+    if (staleIssues) reasons.push(`${staleIssues} 個 GitHub Issue 呆滯`);
     if (spi != null && spi < 0.8) reasons.push(`SPI ${spi}`);
     if (ciPass != null && ciPass < 90) reasons.push(`CI ${ciPass.toFixed(0)}%`);
     if (redlines) reasons.push(`${redlines} 個治理紅線`);
@@ -172,16 +173,16 @@ export function projectOutlook(data, repo, tasks, todayStr, freshnessStatus = 'f
 function attentionItems(data, projects, tasks, todayStr, health) {
   const items = [];
   if (health.freshness.status !== 'fresh') {
-    items.push({ severity: 'critical', kind: 'data', title: 'Dashboard 數據唔新鮮',
-      detail: `generated ${data.generated_at || '—'}`, url: null });
+    items.push({ severity: 'critical', kind: 'data', title: '儀表板數據唔新鮮',
+      detail: `產生時間 ${data.generated_at || '—'}`, url: null });
   }
   if (health.issueErrors.length) {
     items.push({ severity: 'critical', kind: 'data',
-      title: `${health.issueErrors.length} 個 repo 收集唔到 Issues`,
+      title: `${health.issueErrors.length} 個程式庫收集唔到 GitHub Issue`,
       detail: health.issueErrors[0].message, url: null });
   }
   for (const message of health.errors.slice(0, 2)) {
-    items.push({ severity: 'critical', kind: 'data', title: 'Repo 收集失敗', detail: message, url: null });
+    items.push({ severity: 'critical', kind: 'data', title: '程式庫收集失敗', detail: message, url: null });
   }
   const rm = data.repo_meta || {};
   for (const project of projects) {
@@ -190,20 +191,20 @@ function attentionItems(data, projects, tasks, todayStr, health) {
       if (!realDate(issue.due) || issue.due >= todayStr) continue;
       const high = (issue.labels || []).some((l) => HIGH_RE.test(l));
       items.push({ severity: high ? 'critical' : 'warning', kind: 'overdue',
-        title: issue.title, detail: `${project.repo.split('/').pop()} · due ${issue.due}`,
+        title: issue.title, detail: `${project.repo.split('/').pop()} · 期限 ${issue.due}`,
         url: issue.url || null });
     }
     for (const item of meta.plan?.open_tasks || []) {
       if (!realDate(item.due) || item.due >= todayStr) continue;
       items.push({ severity: HIGH_RE.test(item.priority || '') ? 'critical' : 'warning',
         kind: 'overdue', title: item.title,
-        detail: `${project.repo.split('/').pop()} · due ${item.due}`,
+        detail: `${project.repo.split('/').pop()} · 期限 ${item.due}`,
         url: project.url });
     }
     if (project.forecast.status === 'forecast' && project.forecast.late) {
       items.push({ severity: 'warning', kind: 'forecast',
         title: `${project.repo.split('/').pop()} 預測遲過目標日`,
-        detail: `預測 ${project.forecast.projected} · due ${project.forecast.due} · ${project.forecast.confidence} confidence`,
+        detail: `預測 ${project.forecast.projected} · 期限 ${project.forecast.due} · ${CONFIDENCE[project.forecast.confidence] || project.forecast.confidence}信心`,
         url: project.url });
     }
   }

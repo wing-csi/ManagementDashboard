@@ -72,7 +72,7 @@ def test_subtext_reports_both_sides_the_backlog_and_the_undated(defect_page, ser
     sub = page.text_content("#qDefectSub")
     assert "3" in sub and "10" in sub      # 3 found / 10 tasks
     assert "4 個未修" in sub                # the backlog, a snapshot
-    assert "found:" in sub                 # the undated defect is declared
+    assert "無發現日期" in sub             # the undated defect is declared
 
 
 def test_a_defect_found_outside_the_window_stays_in_the_backlog(defect_page, server):
@@ -88,7 +88,7 @@ def test_an_undated_defect_is_excluded_from_the_rate_but_declared(defect_page, s
     items = _load_fixture()["repo_meta"]["acme/alpha"]["defects"]["items"]
     assert sum(1 for i in items if i["found"] is None) == 1
     page = open_dashboard(defect_page, server)
-    assert "found:" in page.text_content("#qDefectSub")
+    assert "無發現日期" in page.text_content("#qDefectSub")
 
 
 # --------------------------- scope behaviour ---------------------------
@@ -129,7 +129,7 @@ def test_no_register_anywhere_reads_a_dash_not_zero(page, server):
     _serve(page, data)
     dash = open_dashboard(page, server)
     assert dash.text_content("#qDefect").strip() == "–"
-    assert "defect_file" in dash.text_content("#qDefectSub")
+    assert "缺陷數據檔" in dash.text_content("#qDefectSub")
 
 
 def test_a_register_with_nothing_found_in_window_reads_zero(page, server):
@@ -165,4 +165,4 @@ def test_the_table_shows_fixed_entries_as_fixed(defect_page, server):
     page = open_dashboard(defect_page, server)
     rows = page.eval_on_selector_all("#defectRows tr", "els => els.map(e => e.innerText)")
     fixed = [r for r in rows if "資產統計金額用咗股數" in r]
-    assert fixed and "Fixed" in fixed[0]
+    assert fixed and "已修" in fixed[0]

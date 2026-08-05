@@ -142,4 +142,4 @@ def test_rework_card_reads_dash_when_every_pr_is_unreviewed(page, server):
     _serve(page, data)
     dash = open_dashboard(page, server)
     assert dash.text_content("#qRework").strip() == "–"
-    assert "此範圍內無經 review 嘅 PR" in dash.text_content("#qReworkSub")
+    assert "此範圍內無經審核的 PR" in dash.text_content("#qReworkSub")

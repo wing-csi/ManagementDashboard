@@ -1,6 +1,6 @@
 import { state, $, esc, repoInScope } from './data.js';
 import { burndownSeries } from './burndown.js';
-import { timelineHTML } from './render-timeline.js';
+import { timelineHTML } from './render-timeline.js?v=zh-20260805-3';
 
 /** 每個 repo 一個 Chart 實例。state.chart 得一個位,係每週圖嘅;
  *  唔另開一本帳,重畫嗰陣舊 canvas 會漏返出嚟。 */
@@ -103,7 +103,7 @@ export function renderBurndown() {
     const card = document.createElement('div');
     card.className = 'burndown-card';
     card.innerHTML = `<div class="t">${esc(repo.split('/').pop())}
-        <span style="color:var(--muted)">· burndown(${esc(plan.path)})</span></div>
+        <span style="color:var(--muted)">· 燃盡圖（${esc(plan.path)}）</span></div>
       ${plan.history_error ? '' : '<div class="chart-box"><canvas></canvas></div>'}
       ${plan.history_error ? '' : timelineHTML(plan, today)}
       ${caption ? `<div class="note" style="color:var(--muted)">${esc(caption)}</div>` : ''}`;
@@ -119,7 +119,7 @@ export function renderBurndown() {
         datasets: [
           { label: '剩餘', data: series.remaining, borderColor: '#1F3A5F',
             pointRadius: 0, borderWidth: 2, tension: 0, spanGaps: false },
-          { label: '總 scope', data: series.scope, borderColor: '#8FA8CB',
+          { label: '總範圍', data: series.scope, borderColor: '#8FA8CB',
             pointRadius: 0, borderWidth: 1.5, borderDash: [2, 2], tension: 0 },
           { label: '理想', data: series.ideal, borderColor: '#9AA5A0',
             pointRadius: 0, borderWidth: 1.5, borderDash: [6, 4], tension: 0 },
@@ -136,7 +136,7 @@ export function renderBurndown() {
         scales: {
           x: { grid: { display: false } },
           y: { beginAtZero: true, ticks: { precision: 0 },
-               title: { display: true, text: 'tasks 剩餘' } },
+               title: { display: true, text: '剩餘工作數' } },
         },
       },
     }));

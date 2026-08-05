@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>自動化水平儀 · AI Autonomy Gauge</title>
+<title>AI 自動化水平儀</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="./css/dashboard.css">
 </head>
@@ -13,13 +13,13 @@
   <div class="chrome-inner">
     <header class="masthead">
       <div class="brand">
-        <h1>自動化水平儀 <small>AI AUTONOMY GAUGE</small></h1>
-        <div class="eyebrow" id="eyebrow">GITHUB TELEMETRY</div>
+        <h1>自動化水平儀 <small>AI 自動化水平儀</small></h1>
+        <div class="eyebrow" id="eyebrow">GITHUB 數據監測</div>
       </div>
       <div class="controls">
-        <span class="badge-demo" id="demoBadge">DEMO 數據 · 手動要求(?demo=1)</span>
-        <select id="repoSel" aria-label="Repo"></select>
-        <select id="branchSel" aria-label="Branch"></select>
+        <span class="badge-demo" id="demoBadge">示範數據 · 手動要求（?demo=1）</span>
+        <select id="repoSel" aria-label="程式庫"></select>
+        <select id="branchSel" aria-label="分支"></select>
         <select id="personSel" aria-label="貢獻者"></select>
         <select id="windowSel" aria-label="統計範圍">
           <option value="30">近 30 日</option>
@@ -31,12 +31,12 @@
       </div>
     </header>
     <div class="stale-banner" id="staleBanner" role="status" hidden></div>
-    <div class="tabs" role="tablist" aria-label="Dashboard 分頁">
+    <div class="tabs" role="tablist" aria-label="儀表板分頁">
       <button class="tab" id="tab-overview" data-tab="overview" role="tab" aria-controls="panel-overview" aria-selected="true">總覽</button>
       <button class="tab" id="tab-quality" data-tab="quality" role="tab" aria-controls="panel-quality" aria-selected="false">品質</button>
       <button class="tab" id="tab-projects" data-tab="projects" role="tab" aria-controls="panel-projects" aria-selected="false">項目 &amp; 團隊</button>
       <button class="tab" id="tab-product" data-tab="product" role="tab" aria-controls="panel-product" aria-selected="false">產品 &amp; 發佈</button>
-      <button class="tab" id="tab-tasks" data-tab="tasks" role="tab" aria-controls="panel-tasks" aria-selected="false">Tasks</button>
+      <button class="tab" id="tab-tasks" data-tab="tasks" role="tab" aria-controls="panel-tasks" aria-selected="false">工作</button>
     </div>
   </div>
 </div>
@@ -47,30 +47,30 @@
     <strong>載入數據失敗。</strong>
     <span id="loadErrorDetail"></span>
     <div style="margin-top:6px;color:var(--muted);font-size:var(--fs-sm)">
-      未登入或者 session 過期?<a href="./">重新登入</a>。想睇示範數據:<a href="./?demo=1">?demo=1</a>
+      未登入或者工作階段已過期？<a href="./">重新登入</a>。想睇示範數據：<a href="./?demo=1">?demo=1</a>
     </div>
   </div>
 
   <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
 
-    <section class="management-kpis" aria-label="Management summary">
+    <section class="management-kpis" aria-label="管理摘要">
       <div class="card kpi management-primary">
-        <div class="label">Portfolio delivery</div>
+        <div class="label">項目組合交付</div>
         <div class="value management-value" id="managementStatus">–</div>
         <div class="sub" id="managementStatusSub">–</div>
       </div>
       <div class="card kpi">
-        <div class="label">Data health</div>
+        <div class="label">數據健康狀態</div>
         <div class="value management-value" id="managementHealth">–</div>
         <div class="sub" id="managementHealthSub">–</div>
       </div>
       <div class="card kpi">
-        <div class="label">Current plan scope</div>
+        <div class="label">目前計劃範圍</div>
         <div class="value management-value" id="managementScope">–</div>
         <div class="sub" id="managementScopeSub">–</div>
       </div>
       <div class="card kpi">
-        <div class="label">Forecast coverage</div>
+        <div class="label">預測覆蓋率</div>
         <div class="value management-value" id="managementForecast">–</div>
         <div class="sub" id="managementForecastSub">–</div>
       </div>
@@ -79,15 +79,15 @@
     <section class="management-duo">
       <div class="card management-attention-card">
         <div class="card-head">
-          <h2>Executive attention</h2>
+          <h2>管理層需關注</h2>
           <span class="card-note">逾期 · 數據失敗 · 預測 · CI · 治理紅線</span>
         </div>
         <ul class="management-attention" id="managementAttention"></ul>
       </div>
       <div class="card">
         <div class="card-head">
-          <h2>Project outlook</h2>
-          <span class="card-note">規則式狀態 · 無資料一定係 Unknown</span>
+          <h2>項目前景</h2>
+          <span class="card-note">規則式狀態 · 無資料一律標示為「未知」</span>
         </div>
         <div class="management-projects" id="managementProjects"></div>
       </div>
@@ -102,18 +102,18 @@
         </div>
         <div class="hero-spark" id="heroSpark"></div>
         <div class="hero-foot">
-          <div class="sub">task 由 agent 主導完成的比例</div>
+          <div class="sub">工作由 AI 代理主導完成的比例</div>
           <span class="hero-tag">L3+L4+L5</span>
         </div>
       </div>
       <div class="card kpi">
-        <div class="label">出碼率(近似)</div>
+        <div class="label">出碼率（近似）</div>
         <div class="value" id="kpiLoc">–</div>
         <div class="delta" id="kpiLocd"></div>
-        <div class="sub">L2+ tasks 插入行數佔比</div>
+        <div class="sub">L2+ 工作插入行數佔比</div>
       </div>
       <div class="card kpi">
-        <div class="label">已分級 Tasks</div>
+        <div class="label">已分級工作</div>
         <div class="value" id="kpiTasks">–</div>
         <div class="delta" id="kpiTasksd"></div>
         <div class="sub" id="kpiTasksSub">–</div>
@@ -129,24 +129,24 @@
     <div class="dora-lead">DORA</div>
     <section class="dora-strip">
       <div class="d">
-        <div class="dl">部署頻率<span class="scope-note" hidden>全 repo 範圍</span></div>
+        <div class="dl">部署頻率<span class="scope-note" hidden>全程式庫範圍</span></div>
         <div class="dv" id="dDeploy">–</div>
         <div class="ds" id="dDeploySub">–</div>
       </div>
       <div class="d">
-        <div class="dl">Lead Time(至 merge)</div>
+        <div class="dl">前置時間（至合併）</div>
         <div class="dv" id="dLead">–</div>
-        <div class="ds">PR 開 → merge 中位數</div>
+        <div class="ds">PR 開啟 → 合併時間中位數</div>
       </div>
       <div class="d">
         <div class="dl">回退密度</div>
         <div class="dv" id="dCfr">–</div>
-        <div class="ds" id="dCfrSub">補救 task ÷ 全部 task</div>
+        <div class="ds" id="dCfrSub">補救工作 ÷ 全部工作</div>
       </div>
       <div class="d">
-        <div class="dl">MTTR(proxy)</div>
+        <div class="dl">MTTR（近似）</div>
         <div class="dv" id="dMttr">–</div>
-        <div class="ds">修復類 task 嘅 lead time 中位數</div>
+        <div class="ds">修復類工作的前置時間中位數</div>
       </div>
     </section>
 
@@ -165,8 +165,8 @@
     <section class="duo">
       <div class="card">
         <div class="card-head">
-          <h2>每週 Task 構成 × L3+ 趨勢</h2>
-          <span class="card-note">bar = tasks / 週 · line = L3+ %</span>
+          <h2>每週工作構成 × L3+ 趨勢</h2>
+          <span class="card-note">長條 = 每週工作數 · 折線 = L3+ %</span>
         </div>
         <div class="chart-box"><canvas id="weeklyChart"></canvas></div>
       </div>
@@ -183,11 +183,11 @@
     <section class="card quality">
       <div class="card-head">
         <h2>品質 × 自動化</h2>
-        <span class="card-note">fix / hotfix / revert 前綴 · PR 打回輪數(以 push 分隔)</span>
-        <span class="scope-note" hidden>RAG 燈全 repo 範圍</span>
+        <span class="card-note">fix / hotfix / revert 標題前綴 · PR 打回輪數（以推送分隔）</span>
+        <span class="scope-note" hidden>紅黃綠燈為全程式庫範圍</span>
       </div>
       <div class="rag" id="ragRow"></div>
-      <div class="ov-sub" id="ragHint" style="display:none;margin:-6px 0 14px">灰燈 = 無品質信號(要 PR 上有 CI checks,或 config 設 `quality_file`)— 詳見 README 品質指標</div>
+      <div class="ov-sub" id="ragHint" style="display:none;margin:-6px 0 14px">灰燈 = 無品質信號（PR 需要有 CI 檢查，或在設定檔指定 <code>quality_file</code>）— 詳見 README 品質指標</div>
       <div class="qgrid">
         <div class="kpi">
           <div class="label">修復佔比</div>
@@ -210,34 +210,34 @@
           <div class="sub" id="qAcceptSub">–</div>
         </div>
         <div class="kpi">
-          <div class="label">有效 tasks / 週</div>
+          <div class="label">每週有效工作數</div>
           <div class="value" id="qMeaning">–</div>
-          <div class="sub">改動 ≥10 行嘅 tasks</div>
+          <div class="sub">改動 ≥10 行的工作</div>
         </div>
         <div class="kpi">
-          <div class="label">缺陷率<span class="scope-note" id="qDefectScope" hidden>全 repo 範圍</span></div>
+          <div class="label">缺陷率<span class="scope-note" id="qDefectScope" hidden>全程式庫範圍</span></div>
           <div class="value" id="qDefect">–</div>
           <div class="sub" id="qDefectSub">–</div>
         </div>
       </div>
       <div class="qlevels">
-        <div class="label" style="font-size:var(--fs-sm);color:var(--muted);margin:16px 0 10px">各 Level 嘅修復佔比</div>
+        <div class="label" style="font-size:var(--fs-sm);color:var(--muted);margin:16px 0 10px">各級別的修復佔比</div>
         <div id="qLevels"></div>
       </div>
     </section>
 
     <section class="card defects">
       <div class="card-head">
-        <h2>Defect 追蹤</h2>
-        <span class="card-note">source: issues with bug label + plan file <code>#bug</code> · 開放行先 · <span id="defectCount"></span></span>
-        <span class="scope-note" hidden>全 repo 範圍</span>
+        <h2>缺陷追蹤</h2>
+        <span class="card-note">來源：有 bug 標籤的 GitHub Issue + 計劃檔 <code>#bug</code> · 未修優先 · <span id="defectCount"></span></span>
+        <span class="scope-note" hidden>全程式庫範圍</span>
       </div>
       <table>
         <colgroup>
           <col style="width:64px"><col style="width:130px"><col style="width:104px"><col>
           <col style="width:64px"><col style="width:120px"><col style="width:104px">
         </colgroup>
-        <thead><tr><th>ID</th><th>Repo</th><th>Severity</th><th>描述</th><th>狀態</th><th>Assignee</th><th>Due</th></tr></thead>
+        <thead><tr><th>編號</th><th>程式庫</th><th>嚴重程度</th><th>描述</th><th>狀態</th><th>負責人</th><th>期限</th></tr></thead>
         <tbody id="defectRows"></tbody>
       </table>
     </section>
@@ -249,15 +249,15 @@
     <section class="card projects">
       <div class="card-head">
         <h2>項目進度</h2>
-        <span class="card-note">source: GitHub Issues / Milestones · 完成度以已開 issues 計</span>
-        <span class="scope-note" hidden>全 repo 範圍</span>
+        <span class="card-note">來源：GitHub Issue / 里程碑 · 完成度以已建立的 Issue 計算</span>
+        <span class="scope-note" hidden>全程式庫範圍</span>
       </div>
       <div class="rag" id="projChips"></div>
       <div id="projMilestones"></div>
       <div id="burndownCards"></div>
       <div class="proj-duo">
         <div>
-          <div class="proj-h">異常 tasks(延誤 / 呆滯 &gt;14日)</div>
+          <div class="proj-h">異常工作（延誤 / 呆滯 &gt;14 日）</div>
           <ul class="proj-list" id="projLate"></ul>
         </div>
         <div>
@@ -269,32 +269,32 @@
 
     <section class="card overview">
       <div class="card-head">
-        <h2>Repo 概覽</h2>
-        <span class="card-note">languages 按 bytes · 月度活躍唔受 window 影響</span>
+        <h2>程式庫概覽</h2>
+        <span class="card-note">程式語言按位元組計算 · 月度活躍度不受統計範圍影響</span>
       </div>
       <div class="ov-grid">
-        <div><div class="proj-h">Codebase(語言構成)<span class="scope-note" hidden>全 repo 範圍</span></div><div id="ovLangs"></div></div>
-        <div><div class="proj-h">Commit types(window 內)</div><div id="ovTypes"></div></div>
+        <div><div class="proj-h">程式碼庫（語言構成）<span class="scope-note" hidden>全程式庫範圍</span></div><div id="ovLangs"></div></div>
+        <div><div class="proj-h">提交類型（統計範圍內）</div><div id="ovTypes"></div></div>
         <div><div class="proj-h">月度活躍(全收集範圍)</div><div id="ovMonthly"></div></div>
       </div>
       <div class="register-pies">
         <section class="register-pie" aria-labelledby="planAssignmentTitle">
           <div class="register-pie-head">
             <div>
-              <h3 id="planAssignmentTitle">Plan 工作分配</h3>
-              <p><code>assignee:Name</code> task 數 ÷ plan 總 task 數</p>
+              <h3 id="planAssignmentTitle">計劃工作分配</h3>
+              <p>工作負責人分佈 · 未標記則使用程式庫負責人</p>
             </div>
-            <span class="scope-note" hidden>全 repo 範圍</span>
+            <span class="scope-note" hidden>全程式庫範圍</span>
           </div>
           <div id="planAssignmentPie"></div>
         </section>
         <section class="register-pie" aria-labelledby="defectFixTitle">
           <div class="register-pie-head">
             <div>
-              <h3 id="defectFixTitle">Defect 修復分佈</h3>
-              <p><code>fixed-by:Name</code> · 未修亦計入總數</p>
+              <h3 id="defectFixTitle">缺陷修復分佈</h3>
+              <p>修復負責人分佈 · 未修亦計入總數</p>
             </div>
-            <span class="scope-note" hidden>全 repo 範圍</span>
+            <span class="scope-note" hidden>全程式庫範圍</span>
           </div>
           <div id="defectFixPie"></div>
         </section>
@@ -309,58 +309,41 @@
 
     <section class="product-kpis">
       <div class="card kpi">
-        <div class="label">Roadmap / Epics<span class="scope-note" hidden>全 repo 範圍</span></div>
+        <div class="label">路線圖 / 大型工作項<span class="scope-note" hidden>全程式庫範圍</span></div>
         <div class="value" id="productEpicTotal">–</div>
-        <div class="sub">milestones + plan sections</div>
+        <div class="sub">里程碑 + 計劃分段</div>
       </div>
       <div class="card kpi">
-        <div class="label">發佈次數<span class="scope-note" hidden>全 repo 範圍</span></div>
+        <div class="label">發佈次數<span class="scope-note" hidden>全程式庫範圍</span></div>
         <div class="value" id="productReleaseCount">–</div>
-        <div class="sub">目前 window · deployment/tag/release fallback</div>
+        <div class="sub">目前統計範圍 · 依次採用部署、標籤或發佈記錄</div>
       </div>
       <div class="card kpi">
-        <div class="label">Release ready<span class="scope-note" hidden>全 repo 範圍</span></div>
+        <div class="label">可發佈<span class="scope-note" hidden>全程式庫範圍</span></div>
         <div class="value" id="productReadyCount">–</div>
-        <div class="sub">ready / 有 planning scope repos</div>
+        <div class="sub">已準備 / 有計劃範圍的程式庫</div>
       </div>
       <div class="card kpi">
-        <div class="label">Outcome coverage<span class="scope-note" hidden>全 repo 範圍</span></div>
+        <div class="label">成果數據覆蓋率<span class="scope-note" hidden>全程式庫範圍</span></div>
         <div class="value" id="productOutcomeCoverage">–</div>
-        <div class="sub">有 outcomes_file / scoped repos</div>
+        <div class="sub">有成果數據檔 / 範圍內程式庫</div>
       </div>
     </section>
 
     <section class="product-duo">
       <div class="card">
         <div class="card-head">
-          <h2>Release readiness</h2>
-          <span class="card-note">scope 完成度 · blockers · CI · due date · 上次發佈</span>
+          <h2>發佈準備狀態</h2>
+          <span class="card-note">範圍完成度 · 阻礙項目 · CI · 期限 · 上次發佈</span>
         </div>
         <div class="release-list" id="releaseReadiness"></div>
       </div>
       <div class="card">
         <div class="card-head">
-          <h2>Roadmap / Epics</h2>
+          <h2>路線圖 / 大型工作項</h2>
           <span class="card-note" id="productRoadmapNote"></span>
         </div>
         <div id="productRoadmap"></div>
-      </div>
-    </section>
-
-    <section class="outcome-duo">
-      <div class="card">
-        <div class="card-head">
-          <h2>產品採用</h2>
-          <span class="card-note">activation · active users · feature usage</span>
-        </div>
-        <div class="outcome-metrics" id="adoptionMetrics"></div>
-      </div>
-      <div class="card">
-        <div class="card-head">
-          <h2>客戶成果</h2>
-          <span class="card-note">time saved · success · satisfaction · support load</span>
-        </div>
-        <div class="outcome-metrics" id="customerMetrics"></div>
       </div>
     </section>
 
@@ -370,14 +353,14 @@
 
     <section class="card">
       <div class="card-head">
-        <h2>最近 Tasks</h2>
-        <span class="card-note" id="tableNote">每個 task 顯示所屬 PR · direct commit 標示無 PR</span>
+        <h2>最近工作</h2>
+        <span class="card-note" id="tableNote">每項工作顯示所屬 PR · 直接提交標示為無 PR</span>
       </div>
       <div class="table-controls">
-        <input type="search" id="taskSearch" placeholder="搜尋 title / author / branch / PR" aria-label="搜尋 tasks">
+        <input type="search" id="taskSearch" placeholder="搜尋標題 / 作者 / 分支 / PR" aria-label="搜尋工作">
         <div class="task-filter-stack">
           <div class="filter-group">
-            <span class="filter-label" id="levelFilterLabel">Level</span>
+            <span class="filter-label" id="levelFilterLabel">級別</span>
             <div class="level-filter" id="levelFilter" role="group" aria-labelledby="levelFilterLabel">
               <button type="button" class="lvbtn is-on" data-level="all" aria-pressed="true">全部</button>
               <button type="button" class="lvbtn" data-level="L1" aria-pressed="false">L1</button>
@@ -394,7 +377,7 @@
               <button type="button" class="lvbtn is-on" data-status="all" aria-pressed="true">全部</button>
               <button type="button" class="lvbtn" data-status="redline" aria-pressed="false">紅線</button>
               <button type="button" class="lvbtn" data-status="warning" aria-pressed="false">治理警告</button>
-              <button type="button" class="lvbtn" data-status="suspect" aria-pressed="false">Level 矛盾</button>
+              <button type="button" class="lvbtn" data-status="suspect" aria-pressed="false">級別矛盾</button>
               <button type="button" class="lvbtn" data-status="ci-fail" aria-pressed="false">CI 失敗</button>
             </div>
           </div>
@@ -409,12 +392,12 @@
           <thead>
             <tr>
               <th class="sortable" data-key="date">日期<span class="arrow"></span></th>
-              <th>Repo</th>
-              <th>Author</th>
+              <th>程式庫</th>
+              <th>作者</th>
               <th>所屬 PR</th>
-              <th>Branch</th>
-              <th>Title</th>
-              <th class="sortable" data-key="level">Level<span class="arrow"></span></th>
+              <th>分支</th>
+              <th>標題</th>
+              <th class="sortable" data-key="level">級別<span class="arrow"></span></th>
               <th class="sortable" data-key="additions" style="text-align:right">± 行數<span class="arrow"></span></th>
             </tr>
           </thead>
@@ -428,11 +411,11 @@
   </div>
 
   <footer>
-    <span>資料來源:GitHub GraphQL API → scripts/collect_github.py → Actions(每日驗證)→ 本機睇</span>
+    <span>資料來源：GitHub GraphQL API → scripts/collect_github.py → GitHub Actions（每日驗證）→ 本機檢視</span>
     <span id="footStamp"></span>
   </footer>
 </div>
 
-<script type="module" src="./js/main.js"></script>
+<script type="module" src="./js/main.js?v=zh-20260805-3"></script>
 </body>
 </html>

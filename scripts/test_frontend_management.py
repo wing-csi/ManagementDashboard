@@ -35,8 +35,8 @@ def test_overview_renders_management_status_scope_and_attention(page, server):
     data["generated_at"] = datetime.now(timezone.utc).isoformat()
     serve(page, data)
     dash = open_dashboard(page, server)
-    assert dash.text_content("#managementStatus").strip() == "Off track"
-    assert dash.text_content("#managementHealth").strip() == "Fresh"
+    assert dash.text_content("#managementStatus").strip() == "偏離計劃"
+    assert dash.text_content("#managementHealth").strip() == "最新"
     assert dash.text_content("#managementScope").strip() == "12"
     assert dash.locator("#managementAttention li").count() > 0
     assert dash.locator("#managementProjects .management-project").count() == 2
@@ -64,6 +64,5 @@ def test_issue_collection_failure_is_not_silently_called_no_planning_data(page, 
     data["repo_meta"]["acme/beta"]["issues_error"] = "Resource not accessible by personal access token"
     serve(page, data)
     dash = open_dashboard(page, server)
-    assert dash.text_content("#managementHealth").strip() == "Needs attention"
-    assert "收集唔到 Issues" in dash.text_content("#managementAttention")
-
+    assert dash.text_content("#managementHealth").strip() == "需要關注"
+    assert "收集唔到 GitHub Issue" in dash.text_content("#managementAttention")

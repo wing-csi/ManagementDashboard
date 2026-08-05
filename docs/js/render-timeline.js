@@ -15,7 +15,7 @@ const NO_SPI = {
   'due-unusable': 'plan.md 個 due: 唔係一個有效日期 — 冇 SPI',
   'due-not-after-start': 'due: 唔遲過起點 — 冇 SPI',
   'not-started': '未開始',
-  'no-tasks': 'plan.md 冇 task',
+  'no-tasks': 'plan.md 冇工作',
 };
 
 function headHTML(s) {
@@ -31,7 +31,7 @@ function headHTML(s) {
       ? `剩 ${s.daysLeft} 日`
       : `<span class="tl-bad">遲咗 ${Math.abs(s.daysLeft)} 日</span>`);
   }
-  if (s.overdue > 0) bits.push(`<span class="tl-bad">${s.overdue} 個 task 過咗期</span>`);
+  if (s.overdue > 0) bits.push(`<span class="tl-bad">${s.overdue} 項工作過咗期</span>`);
   return `<div class="tl-head">${bits.join(' · ')}</div>`;
 }
 
@@ -49,13 +49,13 @@ function markerHTML(mk) {
 /** 條線一定要講嘅嘢。第一句每次都出:條線只畫未打勾嘅 task,唔講嘅話
  *  「做完嘢令條線變疏」同「一切順利」喺畫面上分唔開。 */
 function noteHTML(s) {
-  const bits = ['條線只畫未做嘅 task'];
+  const bits = ['條線只畫未做嘅工作'];
   if (s.allDone) bits.push('冇嘢剩低');
-  else if (!s.markers.length) bits.push('plan.md 啲 task 冇寫 due:');
-  if (s.dueReason === 'no-due') bits.push('冇目標日,條 bar 畫到今日為止');
-  if (s.dueReason === 'due-unusable') bits.push('目標日唔係一個有效日期,條 bar 畫到今日為止');
-  if (s.dueReason === 'due-not-after-start') bits.push('目標日唔遲過計劃起點,條 bar 畫到今日為止');
-  if (s.invalidDues > 0) bits.push(`${s.invalidDues} 個 task 嘅 due: 唔係有效日期,冇畫`);
+  else if (!s.markers.length) bits.push('plan.md 的工作冇寫 due:');
+  if (s.dueReason === 'no-due') bits.push('冇目標日，時間條畫到今日為止');
+  if (s.dueReason === 'due-unusable') bits.push('目標日唔係一個有效日期，時間條畫到今日為止');
+  if (s.dueReason === 'due-not-after-start') bits.push('目標日唔遲過計劃起點，時間條畫到今日為止');
+  if (s.invalidDues > 0) bits.push(`${s.invalidDues} 項工作的 due: 唔係有效日期，冇畫`);
   return `<div class="tl-note">${esc(bits.join(' · '))}</div>`;
 }
 

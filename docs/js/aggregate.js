@@ -44,13 +44,13 @@ export function isRemediation(t) {
   return REVERT_RE.test(title) && !NON_SHIPPING_REVERT_RE.test(title);
 }
 export const VIOLATION_META = {
-  'direct-push-main': { label: '直接 push 到受監察 branch(冇 PR)', red: true },
-  'forbidden-files': { label: 'commit 咗 .env / node_modules / __pycache__', red: true },
-  'workflow-deleted': { label: '刪除咗 GitHub Actions workflow', red: true },
-  'cross-branch-merge': { label: '跨 feature branch 合併', red: true },
+  'direct-push-main': { label: '直接推送到受監察分支（冇 PR）', red: true },
+  'forbidden-files': { label: '提交咗 .env / node_modules / __pycache__', red: true },
+  'workflow-deleted': { label: '刪除咗 GitHub Actions 工作流程', red: true },
+  'cross-branch-merge': { label: '跨功能分支合併', red: true },
   'core-without-double-review': { label: '核心模組改動欠二次複核', red: true },
-  'merged-without-review': { label: '未經任何 review 就 merge', red: false },
-  'oversized-pr': { label: '超大 PR(欠分階段提交)', red: false },
+  'merged-without-review': { label: '未經任何審核就合併', red: false },
+  'oversized-pr': { label: '超大 PR（欠分階段提交）', red: false },
 };
 export const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 export const fmtHours = (h) => h == null ? '–' : (h >= 48 ? (h / 24).toFixed(1) + '<span class="unit">日</span>' : h.toFixed(1) + '<span class="unit">小時</span>');

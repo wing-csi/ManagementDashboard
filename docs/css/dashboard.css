@@ -535,15 +535,15 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .register-pies { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
 .register-pie { border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
 .register-pie-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
-.register-pie h3 { font-size: var(--fs-sm); margin: 0; }
-.register-pie p { color: var(--muted); font-size: var(--fs-xs); margin-top: 4px; }
+.register-pie h3 { font-size: var(--fs-lg); margin: 0; }
+.register-pie p { color: var(--muted); font-size: var(--fs-sm); margin-top: 4px; }
 .pie-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: center; margin-top: 14px; }
 .pie-svg { display: block; width: 190px; height: 190px; overflow: visible; }
-.pie-track, .pie-slice { fill: none; stroke-width: 18; }
+.pie-track, .pie-slice { fill: none; stroke-width: 34; }
 .pie-track { stroke: var(--track); }
 .pie-slice { transform: rotate(-90deg); transform-origin: 50% 50%; }
-.pie-total { font-family: var(--font-mono); font-size: var(--fs-xl); font-weight: 700; fill: var(--ink); text-anchor: middle; }
-.pie-total-label { font-family: var(--font-body); font-size: var(--fs-xs); fill: var(--muted); text-anchor: middle; }
+.pie-total { font-family: var(--font-mono); font-size: var(--fs-metric); font-weight: 700; fill: var(--ink); text-anchor: middle; }
+.pie-total-label { font-family: var(--font-body); font-size: var(--fs-sm); fill: var(--muted); text-anchor: middle; }
 .pie-legend { display: grid; gap: 8px; min-width: 0; }
 .pie-legend-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: var(--fs-sm); padding: 3px 5px; border-radius: 5px; }
 .pie-legend-row.is-selected { background: #EAF0F8; box-shadow: inset 3px 0 0 var(--l4); }
@@ -680,7 +680,6 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 /* ---------- product & release outcomes ---------- */
 .product-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
 .product-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-.outcome-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .release-list { display: grid; gap: 10px; }
 .release-row { border-top: 1px solid var(--line); padding-top: 10px; }
 .release-row:first-child { border-top: 0; padding-top: 0; }
@@ -688,7 +687,7 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .readiness-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .readiness-state { color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-xs); }
 .release-scope { font-size: var(--fs-sm); margin-top: 3px; }
-.release-meta, .outcome-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-xs); margin-top: 3px; }
+.release-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-xs); margin-top: 3px; }
 .roadmap-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(100px, 1fr) auto; gap: 12px; align-items: center; border-top: 1px solid var(--line); padding: 8px 0; }
 .roadmap-row:first-child { border-top: 0; padding-top: 0; }
 .roadmap-label { min-width: 0; }
@@ -696,14 +695,7 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .roadmap-label strong { font-size: var(--fs-sm); }
 .roadmap-label span, .roadmap-value { color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-xs); }
 .roadmap-value { text-align: right; white-space: nowrap; }
-.outcome-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.outcome-metric { border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
-.outcome-label { color: var(--muted); font-size: var(--fs-sm); }
-.outcome-value { font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 700; line-height: 1.2; margin-top: 4px; }
-.outcome-value span { color: var(--muted); font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 500; margin-left: 4px; }
-.outcome-metric p, .outcome-empty { color: var(--muted); font-size: var(--fs-sm); margin-top: 7px; }
-.outcome-good { color: var(--good); }
-.outcome-bad { color: var(--alert); }
+.outcome-empty { color: var(--muted); font-size: var(--fs-sm); margin-top: 7px; }
 
 footer {
   margin-top: 22px;
@@ -731,7 +723,7 @@ footer {
   .management-kpis { grid-template-columns: repeat(2, 1fr); }
   .management-duo { grid-template-columns: 1fr; }
   .product-kpis { grid-template-columns: repeat(2, 1fr); }
-  .product-duo, .outcome-duo { grid-template-columns: 1fr; }
+  .product-duo { grid-template-columns: 1fr; }
   .qgrid { grid-template-columns: repeat(2, 1fr) !important; }
   .plan-duo { grid-template-columns: 1fr; }
   .plan-row { grid-template-columns: 90px 1fr 40px; }
@@ -757,7 +749,6 @@ footer {
   .management-kpis { grid-template-columns: 1fr; }
   .management-project-grid { grid-template-columns: 1fr; }
   .product-kpis { grid-template-columns: 1fr; }
-  .outcome-metrics { grid-template-columns: 1fr; }
   .roadmap-row { grid-template-columns: minmax(0, 1fr) 72px; gap: 8px; }
   .roadmap-row .bar-track { grid-column: 1; }
   .roadmap-value { grid-column: 2; grid-row: 1 / span 2; }

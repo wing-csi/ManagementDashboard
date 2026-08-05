@@ -58,13 +58,13 @@ def test_hash_deep_links_to_a_tab(page, server):
     assert visible_panels(page) == ["quality"]
 
 
-def test_product_tab_shows_release_and_outcome_signals(page, server):
+def test_product_tab_shows_release_signals_without_outcome_cards(page, server):
     open_dashboard(page, server, "?demo=1#product")
     assert visible_panels(page) == ["product"]
     assert page.locator("#releaseReadiness .release-row").count() == 2
     assert page.locator("#productRoadmap .roadmap-row").count() > 0
-    assert page.locator("#adoptionMetrics .outcome-metric").count() == 4
-    assert page.locator("#customerMetrics .outcome-metric").count() == 4
+    assert page.locator("#adoptionMetrics").count() == 0
+    assert page.locator("#customerMetrics").count() == 0
     assert page.text_content("#productOutcomeCoverage").strip() == "2/2"
 
 

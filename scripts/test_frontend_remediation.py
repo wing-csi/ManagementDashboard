@@ -155,4 +155,4 @@ def test_empty_scope_reads_a_dash(page, server):
     _serve(page, data)
     page.goto(f"{server}/", wait_until="networkidle")
     assert page.text_content("#dCfr").strip() == "–"
-    assert "無 task" in page.text_content("#dCfrSub")
+    assert "無工作" in page.text_content("#dCfrSub")
