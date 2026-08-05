@@ -535,14 +535,14 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .register-pies { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
 .register-pie { border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
 .register-pie-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
-.register-pie h3 { font-size: var(--fs-lg); margin: 0; }
+.register-pie h3 { font-size: var(--fs-xl); margin: 0; }
 .register-pie p { color: var(--muted); font-size: var(--fs-sm); margin-top: 4px; }
 .pie-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; align-items: center; margin-top: 14px; }
 .pie-svg { display: block; width: 190px; height: 190px; overflow: visible; }
 .pie-track, .pie-slice { fill: none; stroke-width: 34; }
 .pie-track { stroke: var(--track); }
 .pie-slice { transform: rotate(-90deg); transform-origin: 50% 50%; }
-.pie-total { font-family: var(--font-mono); font-size: var(--fs-metric); font-weight: 700; fill: var(--ink); text-anchor: middle; }
+.pie-total { font-family: var(--font-mono); font-size: var(--fs-title); font-weight: 700; fill: var(--ink); text-anchor: middle; }
 .pie-total-label { font-family: var(--font-body); font-size: var(--fs-sm); fill: var(--muted); text-anchor: middle; }
 .pie-legend { display: grid; gap: 8px; min-width: 0; }
 .pie-legend-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: var(--fs-sm); padding: 3px 5px; border-radius: 5px; }

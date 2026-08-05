@@ -143,17 +143,31 @@ def test_pie_viewbox_does_not_magnify_the_type_scale(page, server):
           screenScale: svg.getScreenCTM().a,
           totalSize: parseFloat(getComputedStyle(svg.querySelector('.pie-total')).fontSize),
           labelSize: parseFloat(getComputedStyle(svg.querySelector('.pie-total-label')).fontSize),
+          titleSize: parseFloat(getComputedStyle(document.querySelector('#planAssignmentTitle')).fontSize),
         })""",
     )
     assert sizes["viewBoxWidth"] == sizes["cssWidth"] == 190
     assert sizes["screenScale"] == pytest.approx(1, abs=0.05)
-    assert sizes["totalSize"] == 32
+    assert sizes["totalSize"] == 26
     assert sizes["labelSize"] == 14
+    assert sizes["titleSize"] == 22
+
+    defect_sizes = dash.eval_on_selector(
+        "#defectFixPie .pie-svg",
+        """svg => ({
+          totalSize: parseFloat(getComputedStyle(svg.querySelector('.pie-total')).fontSize),
+          titleSize: parseFloat(getComputedStyle(document.querySelector('#defectFixTitle')).fontSize),
+        })""",
+    )
+    assert defect_sizes["totalSize"] == 26
+    assert defect_sizes["titleSize"] == 22
 
 
 def test_pie_explanations_use_plain_readable_language(page, server):
     dash = _open(page, server)
+    assert dash.text_content("#planAssignmentTitle").strip() == "Plan 工作分配"
     assert dash.text_content("#planAssignmentTitle + p").strip() == \
-        "工作負責人分佈 · 未標記則使用程式庫負責人"
+        "assignee:Name task 數 ÷ plan 總 task 數 · 未標記則使用程式庫負責人"
+    assert dash.text_content("#defectFixTitle").strip() == "Defect 修復分佈"
     assert dash.text_content("#defectFixTitle + p").strip() == \
-        "修復負責人分佈 · 未修亦計入總數"
+        "fixed-by:Name · 未修亦計入總數"
