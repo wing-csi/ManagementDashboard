@@ -94,9 +94,30 @@ def test_a_truncated_history_says_the_ideal_line_moved(page, server):
     assert "已截斷" in dash.inner_text("#burndownCards")
 
 
-def test_old_metrics_without_any_plan_history_hide_the_section(page, server):
+def test_old_metrics_with_a_plan_but_no_history_hide_the_section(page, server):
     """向後兼容:舊 metrics.json 兩個 key 都冇,成個 section 收埋,唔係報錯,
-    亦唔會當佢係「讀唔到」而出一張錯嘅卡。"""
+    亦唔會當佢係「讀唔到」而出一張錯嘅卡。
+
+    `plan` 一定要留喺度。`fetch_plan_file` 早過呢個 feature,所以真實嘅
+    pre-feature 數據個 `plan` 係齊嘅(done/total/path/ref/sections/open_tasks),
+    淨係少咗 `history` 同 `history_error`。用 `meta.pop("plan")` 做 fixture 嘅話,
+    條 guard 嘅 `!plan` 一 short-circuit,第二半就永遠冇行過 —— 咁樣將條
+    guard 簡化成 `if (!plan) continue;` 都會全綠,但每一個舊 dashboard 都會
+    當「有 plan 冇歷史」= 有嘢畫,出一張空卡。"""
+    data = _load()
+    for meta in data["repo_meta"].values():
+        plan = meta.get("plan")
+        if plan:
+            plan.pop("history", None)
+            plan.pop("history_error", None)
+    assert data["repo_meta"]["acme/alpha"]["plan"]["total"] == 12  # 個 plan 仲喺度
+    _serve(page, data)
+    dash = _open(page, server)
+    assert dash.eval_on_selector("#burndownCards", "el => el.children.length") == 0
+
+
+def test_a_repo_with_no_plan_file_at_all_hides_the_section(page, server):
+    """冇設 `plan_file` 嘅 repo 連 `plan` key 都冇 —— 另一半條 guard。"""
     data = _load()
     for meta in data["repo_meta"].values():
         meta.pop("plan", None)
