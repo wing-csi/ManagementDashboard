@@ -1,37 +1,38 @@
+/** Snapshot freshness is pure calculation so callers can supply a fixed clock. */
 const HOUR = 3600e3;
-const DAY = 24 * HOUR;
+const DAY = 864e5;
 
-/** Decide whether a generated snapshot is safe to treat as current.
- *
- * `nowMs` is supplied by the caller so the rule stays deterministic in tests.
- * This is warning-only: the rest of the dashboard deliberately keeps using
- * generated_at as its reference date so one snapshot never mixes two clocks.
- */
+/** More than 48 hours means at least one nightly collection was missed. */
+export const STALE_MS = 48 * HOUR;
+
+/** Tolerate ordinary browser/collector clock skew before warning. */
+export const FUTURE_TOLERANCE_MS = HOUR;
+
+/** Return one freshness state without changing any dashboard calculations. */
 export function staleness(generatedAt, nowMs) {
-  const generatedMs = Date.parse(generatedAt || '');
+  const generatedMs = typeof generatedAt === 'string' ? Date.parse(generatedAt) : NaN;
   if (!Number.isFinite(generatedMs) || !Number.isFinite(nowMs)) {
-    return { status: 'unreadable', ageDays: null, ageHours: null };
+    return { status: 'unreadable', ageDays: null };
   }
+
   const ageMs = nowMs - generatedMs;
-  if (ageMs < -HOUR) {
-    return { status: 'future', ageDays: null, ageHours: null };
+  if (ageMs < -FUTURE_TOLERANCE_MS) {
+    return { status: 'future', ageDays: null };
   }
-  const ageHours = Math.max(0, ageMs / HOUR);
-  if (ageMs > 48 * HOUR) {
-    return { status: 'stale', ageDays: Math.floor(ageMs / DAY), ageHours };
+  if (ageMs > STALE_MS) {
+    return { status: 'stale', ageDays: Math.floor(ageMs / DAY) };
   }
-  return { status: 'fresh', ageDays: Math.floor(Math.max(0, ageMs) / DAY), ageHours };
+  return { status: 'fresh', ageDays: null };
 }
 
+const MESSAGE = {
+  stale: (result) => `數據係 ${result.ageDays} 日前嘅舊快照；所有「今日」、逾期同預測都以舊數據為準。`
+    + '請去 GitHub Actions 檢查最近嘅 collect 同 deploy run。',
+  unreadable: () => '讀唔到數據嘅時間戳，所以唔知呢頁係幾時嘅數。請查 metrics.json 個 generated_at。',
+  future: () => '數據嘅時間戳喺未來，部機或者 collector 個時間唔啱。呢頁所有「今日」、過期同 SPI 都信唔過。',
+};
+
 export function stalenessMessage(result) {
-  switch (result.status) {
-    case 'stale':
-      return `數據係 ${result.ageDays} 日前嘅；所有「今日」、逾期同預測都以舊快照為準。請檢查收集及部署。`;
-    case 'unreadable':
-      return '數據時間戳缺失或無法讀取；無法確認 dashboard 是否最新。';
-    case 'future':
-      return '數據時間戳比瀏覽器時間更遲；請檢查 collector 或電腦時鐘。';
-    default:
-      return '';
-  }
+  const build = MESSAGE[result.status];
+  return build ? build(result) : '';
 }

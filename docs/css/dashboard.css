@@ -134,14 +134,16 @@ body {
 .tab[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
 .stale-banner {
   border: 1px solid var(--alert);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: #FCE9E6;
   color: var(--alert);
   font-size: var(--fs-sm);
   font-weight: 700;
-  margin: 0 0 8px;
-  padding: 8px 12px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+  padding: 10px 14px;
 }
+.stale-banner[hidden] { display: none; }
 .stale-banner.is-unreadable, .stale-banner.is-future {
   border-color: var(--warn);
   background: #FFF3D6;
