@@ -250,14 +250,30 @@
       </div>
       <div class="table-controls">
         <input type="search" id="taskSearch" placeholder="搜尋 title / author / branch" aria-label="搜尋 tasks">
-        <div class="level-filter" id="levelFilter" role="group" aria-label="按 Level 篩選">
-          <button class="lvbtn is-on" data-level="all">全部</button>
-          <button class="lvbtn" data-level="L1">L1</button>
-          <button class="lvbtn" data-level="L2">L2</button>
-          <button class="lvbtn" data-level="L3">L3</button>
-          <button class="lvbtn" data-level="L4">L4</button>
-          <button class="lvbtn" data-level="L5">L5</button>
-          <button class="lvbtn" data-level="none">未分級</button>
+        <div class="task-filter-stack">
+          <div class="filter-group">
+            <span class="filter-label" id="levelFilterLabel">Level</span>
+            <div class="level-filter" id="levelFilter" role="group" aria-labelledby="levelFilterLabel">
+              <button type="button" class="lvbtn is-on" data-level="all" aria-pressed="true">全部</button>
+              <button type="button" class="lvbtn" data-level="L1" aria-pressed="false">L1</button>
+              <button type="button" class="lvbtn" data-level="L2" aria-pressed="false">L2</button>
+              <button type="button" class="lvbtn" data-level="L3" aria-pressed="false">L3</button>
+              <button type="button" class="lvbtn" data-level="L4" aria-pressed="false">L4</button>
+              <button type="button" class="lvbtn" data-level="L5" aria-pressed="false">L5</button>
+              <button type="button" class="lvbtn" data-level="none" aria-pressed="false">未分級</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label" id="statusFilterLabel">狀態</span>
+            <div class="level-filter" id="statusFilter" role="group" aria-labelledby="statusFilterLabel">
+              <button type="button" class="lvbtn is-on" data-status="all" aria-pressed="true">全部</button>
+              <button type="button" class="lvbtn" data-status="redline" aria-pressed="false">紅線</button>
+              <button type="button" class="lvbtn" data-status="warning" aria-pressed="false">治理警告</button>
+              <button type="button" class="lvbtn" data-status="suspect" aria-pressed="false">Level 矛盾</button>
+              <button type="button" class="lvbtn" data-status="rework" aria-pressed="false">被打回</button>
+              <button type="button" class="lvbtn" data-status="ci-fail" aria-pressed="false">CI 失敗</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="table-scroll">

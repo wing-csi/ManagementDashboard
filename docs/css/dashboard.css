@@ -415,7 +415,9 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .chip.L5 { background: var(--l5); color: #fff; }
 .chip.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
 .flag { color: var(--warn); margin-left: 6px; font-size: var(--fs-sm); cursor: help; }
-.vflag { color: var(--alert); margin-left: 6px; font-size: var(--fs-xs); cursor: help; }
+.vflag { margin-left: 6px; font-size: var(--fs-xs); cursor: help; }
+.vflag.is-red { color: var(--alert); }
+.vflag.is-warning { color: var(--warn); }
 .lvlcell { white-space: nowrap; min-width: 96px; }
 .lvlcell .flag, .lvlcell .vflag { vertical-align: middle; display: inline-block; }
 .projects { margin-bottom: 14px; }
@@ -500,7 +502,7 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 .table-note { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); margin-top: 10px; }
 
 /* ---------- task table controls ---------- */
-.table-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.table-controls { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 12px; }
 #taskSearch {
   font-family: var(--font-body);
   font-size: var(--fs-sm);
@@ -510,6 +512,16 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
   border-radius: 6px;
   padding: 6px 10px;
   min-width: 240px;
+}
+.task-filter-stack { display: grid; gap: 6px; flex: 1; min-width: 520px; }
+.filter-group { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.filter-label {
+  flex: 0 0 42px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-align: right;
 }
 .level-filter { display: flex; gap: 4px; flex-wrap: wrap; }
 .lvbtn {
@@ -524,6 +536,16 @@ td.lines .del { color: var(--muted); margin-left: 6px; }
 }
 .lvbtn:hover { color: var(--ink); }
 .lvbtn.is-on { background: var(--ink); border-color: var(--ink); color: #fff; }
+#statusFilter [data-status="redline"].is-on { background: var(--alert); border-color: var(--alert); }
+#statusFilter [data-status="warning"].is-on,
+#statusFilter [data-status="suspect"].is-on,
+#statusFilter [data-status="rework"].is-on,
+#statusFilter [data-status="ci-fail"].is-on { background: var(--warn); border-color: var(--warn); color: var(--ink); }
+@media (max-width: 760px) {
+  #taskSearch, .task-filter-stack { min-width: 100%; width: 100%; }
+  .filter-group { align-items: flex-start; }
+  .filter-label { flex-basis: auto; min-width: 42px; padding-top: 4px; }
+}
 .load-more {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);

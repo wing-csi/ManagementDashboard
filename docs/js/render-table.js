@@ -131,9 +131,33 @@ export function renderDefects() {
  *  永遠唔應該影響搵到啲乜。 */
 function matchesFilters(t) {
   if (state.level !== 'all' && (t.level || 'none') !== state.level) return false;
+  if (!taskMatchesStatus(t, state.taskStatus)) return false;
   const q = state.search.trim().toLowerCase();
   if (!q) return true;
   return [t.title, t.author, t.branch].some((v) => (v || '').toLowerCase().includes(q));
+}
+
+/** Status is a second, independent task-table dimension. Governance warnings
+ * stay separate from true red lines even though both live in `violations`. */
+export function taskMatchesStatus(t, status) {
+  const violations = t.violations || [];
+  switch (status) {
+    case 'redline': return violations.some((v) => VIOLATION_META[v]?.red === true);
+    case 'warning': return violations.some((v) => VIOLATION_META[v]?.red !== true);
+    case 'suspect': return (t.check || '').startsWith('suspect');
+    case 'rework': return (t.rework || 0) > 0;
+    case 'ci-fail': return t.ci === 'fail';
+    default: return true;
+  }
+}
+
+function violationFlags(t) {
+  const violations = t.violations || [];
+  const title = (list) => esc(list.map((v) => (VIOLATION_META[v] || {}).label || v).join(' · '));
+  const red = violations.filter((v) => VIOLATION_META[v]?.red === true);
+  const warnings = violations.filter((v) => VIOLATION_META[v]?.red !== true);
+  return `${red.length ? `<span class="vflag is-red" title="${title(red)}">⛔</span>` : ''}`
+    + `${warnings.length ? `<span class="vflag is-warning" title="${title(warnings)}">!</span>` : ''}`;
 }
 
 export function renderTable() {
@@ -159,7 +183,7 @@ export function renderTable() {
       <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.kind === 'pr' ? '#' + esc(r.id) : esc(r.id)}</a>${(r.rework || 0) > 0 ? `<span class="rework" title="被打回 ${r.rework} 輪">↩${r.rework}</span>` : ''}</td>
       <td class="branch" title="${esc(r.branch || '')}">${esc(r.branch || '–')}</td>
       <td class="subject" title="${esc(r.title)}">${typeChip(r.title)}${esc(r.title)}</td>
-      <td class="lvlcell">${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}${r.check && r.check.indexOf('suspect') === 0 ? `<span class="flag" title="${esc(r.check)}">⚠</span>` : ''}${(r.violations || []).length ? `<span class="vflag" title="${esc(r.violations.map((v) => (VIOLATION_META[v] || {}).label || v).join(' · '))}">⛔</span>` : ''}</td>
+      <td class="lvlcell">${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}${r.check && r.check.indexOf('suspect') === 0 ? `<span class="flag" title="${esc(r.check)}">⚠</span>` : ''}${violationFlags(r)}</td>
       <td class="lines">+${r.additions}<span class="del">−${r.deletions}</span></td>
     </tr>`).join('') || '<tr><td colspan="8" class="mono" style="color:var(--muted)">此範圍內無 tasks</td></tr>';
   $('tableCap').textContent = rows.length ? `顯示 ${shown.length} / ${rows.length} 個 tasks` : '';

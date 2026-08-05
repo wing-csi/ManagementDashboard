@@ -5,9 +5,9 @@ export const state = {
   data: null, demo: false, windowDays: 90,
   repo: 'all', branch: 'all', person: 'all', personIndex: new Map(),
   chart: null, sort: { key: 'date', dir: -1 },
-  // 最近 Tasks 表格自己嘅 view state:search 同 level 篩,page 係 1-based,
+  // 最近 Tasks 表格自己嘅 view state:search、level 同 status 篩,page 係 1-based,
   // 任何收窄結果嘅動作都要 reset 返 1,唔係會停喺一個空頁。
-  search: '', level: 'all', page: 1,
+  search: '', level: 'all', taskStatus: 'all', page: 1,
 };
 export const $ = (id) => document.getElementById(id);
 export const pct = (num, den, dp = 1) => (den > 0 ? ((num / den) * 100).toFixed(dp) : null);

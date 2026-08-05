@@ -132,6 +132,50 @@ def test_level_filter_shows_only_that_level(page, server):
     assert levels and all(t.startswith("L4") for t in levels)
 
 
+def test_redline_filter_shows_only_redline_tasks(page, server):
+    open_tasks_tab(page, server)
+    page.click('#statusFilter [data-status="redline"]')
+    rows = page.locator("#taskRows tr")
+    expect(rows).to_have_count(25)
+    assert rows.locator(".vflag.is-red").count() == rows.count()
+    assert page.get_attribute(
+        '#statusFilter [data-status="redline"]', "aria-pressed") == "true"
+    assert page.get_attribute(
+        '#statusFilter [data-status="all"]', "aria-pressed") == "false"
+
+
+def test_governance_warning_is_distinct_from_a_redline(page, server):
+    open_tasks_tab(page, server)
+    page.click('#statusFilter [data-status="warning"]')
+    rows = page.locator("#taskRows tr")
+    expect(rows).to_have_count(2)
+    assert rows.locator(".vflag.is-warning").count() == rows.count()
+    assert rows.locator(".vflag.is-red").count() == 0
+
+
+def test_status_and_level_filters_combine(page, server):
+    open_tasks_tab(page, server)
+    page.click('#statusFilter [data-status="redline"]')
+    page.click('#levelFilter [data-level="L3"]')
+    rows = page.locator("#taskRows tr")
+    assert rows.count() > 0
+    assert rows.locator(".vflag.is-red").count() == rows.count()
+    levels = page.eval_on_selector_all(
+        "#taskRows tr td.lvlcell", "els => els.map(e => e.textContent.trim())")
+    assert all(t.startswith("L3") for t in levels)
+
+
+def test_status_filter_resets_paging(page, server):
+    open_tasks_tab(page, server)
+    page.click("#tableMore")
+    expect(page.locator("#taskRows tr")).to_have_count(50)
+    page.click('#statusFilter [data-status="redline"]')
+    rows = page.locator("#taskRows tr")
+    expect(rows).to_have_count(25)
+    assert rows.locator(".vflag.is-red").count() == rows.count()
+    assert page.is_visible("#tableMore")
+
+
 def test_search_resets_paging(page, server):
     """A narrowed result set must not keep the old page offset."""
     open_tasks_tab(page, server)

@@ -45,7 +45,7 @@ scroll 到幾底都改到 repo / branch / 成員 / window,唔使碌返上去。
 | **總覽** | 主 KPI(L3+ 自動化佔比做 hero)、DORA 條、自動化水平分佈、每週趨勢 + 異常提醒 |
 | **品質** | RAG 燈、品質 × 自動化、各 Level 修復佔比、Defect 追蹤 |
 | **項目 & 團隊** | 項目進度(milestones / 延誤 / 建議)、Repo 概覽、貢獻者 |
-| **Tasks** | 最近 Tasks — 搜尋(title / author / branch)、Level 篩選、每頁 25 行 |
+| **Tasks** | 最近 Tasks — 搜尋(title / author / branch)、Level + 狀態篩選、每頁 25 行 |
 
 **分享某個分頁**:URL 後面加 `#quality`、`#projects`、`#tasks`(`#overview` 係
 預設)。認唔到嘅 hash 會落返總覽。分頁狀態同 `?owner=` 係兩回事 — hash 係
@@ -259,8 +259,10 @@ Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1
 | `↩N` | 呢個 PR 被打回(merge 之前嘅 CHANGES_REQUESTED)N 輪 |
 | ⚠(黃) | level 聲稱同 PR 行為矛盾,hover 見原因(唔會自動降級) |
 | ⛔(紅) | 中咗治理紅線,hover 見邊條 |
+| !(黃) | 中咗治理警告(未經 review / 超大 PR),hover 見邊條 |
 
-表格最多顯示 80 rows,下面註明總數。
+表格可將 Level 同狀態一齊收窄。狀態包括紅線、治理警告、Level 矛盾、被打回同
+CI 失敗;再輸入搜尋字會同時套用。每頁顯示 25 rows,下面註明篩選後總數。
 
 ## 使用注意(點樣用得其所)
 

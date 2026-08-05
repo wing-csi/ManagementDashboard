@@ -154,11 +154,25 @@ export function render() {
     searchTimer = setTimeout(() => { state.search = v; state.page = 1; renderTable(); }, 150);
   });
   $('levelFilter').addEventListener('click', (e) => {
-    const btn = e.target.closest('.lvbtn');
+    const btn = e.target.closest('[data-level]');
     if (!btn) return;
     state.level = btn.dataset.level;
     state.page = 1;
-    for (const b of $('levelFilter').querySelectorAll('.lvbtn')) b.classList.toggle('is-on', b === btn);
+    for (const b of $('levelFilter').querySelectorAll('[data-level]')) {
+      b.classList.toggle('is-on', b === btn);
+      b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+    }
+    renderTable();
+  });
+  $('statusFilter').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-status]');
+    if (!btn) return;
+    state.taskStatus = btn.dataset.status;
+    state.page = 1;
+    for (const b of $('statusFilter').querySelectorAll('[data-status]')) {
+      b.classList.toggle('is-on', b === btn);
+      b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+    }
     renderTable();
   });
   $('tableMore').addEventListener('click', () => { state.page += 1; renderTable(); });
