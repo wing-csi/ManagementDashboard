@@ -53,6 +53,12 @@ Heading 上面嘅 `due:` 優先過 task —— parser 已經讀緊佢入 `cur_du
 
 `parse_plan_markdown()` 加一個 **`due_max`** 欄位,喺**現有嗰個 single pass** 入面順手計,規則:heading 級 `due:` 優先,否則取全部 checkbox(打勾同未打勾)嘅最大值。
 
+**要驗真日曆日先好攞去比大細。** `PLAN_DUE_RE` 只驗**格式**(`\d{4}-\d{2}-\d{2}`),而 `due_max` 係用 `max()` 比**字串** —— 所以 `due:2026-13-01` 呢種打錯咗嘅日子,喺同一年裏面**一定贏晒**所有正常日子(`'2026-13-01' > '2026-09-18'`),跟住前端 `new Date()` 收到個 `NaN`,個圖就白晒。所以每個 `due:` 入賬之前要過 `datetime.date.fromisoformat`,唔係真日曆日就撇除,並且喺 stderr 出一句 warning(ASCII,同呢個檔其他 warning 一樣要諗住 Windows console)。撇除唔等於靜靜哋掉 —— 出咗聲先算。
+
+**擋唔到嘅係「格式啱、日曆又啱、但係荒謬」嘅年份**,例如 `due:2926-09-18`。呢啲 collector 唔會出聲,要靠前端第二道閘(見 §7)。
+
+⚠️ `open_tasks[].due` **未驗**,只有 `due_max` 驗咗。task 級嘅 due 餵緊 今日建議 / 異常 tasks / Defect 追蹤 —— 一個打錯咗嘅年份會令 `render-project.js` 計出 `NaN`,然後喺 `over > 0` 嗰度靜靜哋跌出「異常 tasks」名單。即係話一件真係遲咗嘅嘢會消失,而唔係顯示成一個怪日期。已知,待跟進。
+
 **純新增,唔改 return shape。** 呢個 return 已經餵緊四個行緊嘅畫面(完成度、今日建議、異常 tasks、Defect 追蹤)—— 同 [`defect-register`](2026-07-30-defect-register-design.md) 否決方案 A 一模一樣嘅理由:為一張新卡去郁佢,等於將四個屏幕一齊擺上枱。
 
 ## 4. 收集端 `scripts/plan_history.py`
@@ -74,7 +80,7 @@ Heading 上面嘅 `due:` 優先過 task —— parser 已經讀緊佢入 `cur_du
 
 ### 4.1 API 成本
 
-每個 plan repo 每次夜更:1–2 個 commit-list call(150 個觀測日一定超過一版 100 個 commit,所以要揭版;封頂 20 版)+ 「plan 改過嘅日數」個 blob call。今日兩個 repo 設咗 `plan_file`。GitHub REST 上限 5000/hr,量級上完全唔成問題。
+每個 plan repo 每次夜更:**幾多個 commit-list call 睇「一日改幾多次」**,唔係一個定數 —— 停版條件係「夠 151 個唔同嘅**日**」,所以一日 commit 一次嘅 plan 兩版搞掂,一日三次要五版,一日二十次就會用晒 20 版封頂。加埋「plan 改過嘅日數」個 blob call。今日兩個 repo 設咗 `plan_file`。就算兩個都去到 20 版封頂,GitHub REST 上限 5000/hr 都仲有大把餘,量級上唔成問題。
 
 ## 5. Schema
 
@@ -127,7 +133,8 @@ X 軸:起點 → `due_max`,今日標一條線,剩餘線去到今日為止(右邊
 | commits API 失敗(`history_error` 著) | 出明文訊息,**唔係**一條平線 |
 | 得一個觀測點 | 畫返個點,寫「只有一個觀測點,未成趨勢」,唔畫趨勢線 |
 | `plan.md` 冇任何 `due:` | 冇理想線,剩餘 + scope 照出,卡上講明 |
-| `due:` 唔係一個真日曆日 | 冇理想線,剩餘 + scope 照出,卡上講明「唔係一個有效日期」。Collector 已經擋過一次(§4),呢度係第二道 —— 舊 `metrics.json` 入面嗰個 `due_max` 未驗過,而一個打錯咗嘅年份會叫 Chart.js 喺 main thread 畫三十幾萬個點 |
+| `due:` 唔係一個真日曆日 | 冇理想線,剩餘 + scope 照出,卡上講明「唔係一個有效日期」。Collector 已經擋過一次(**§3**),呢度係第二道 —— 舊 `metrics.json` 入面嗰個 `due_max` 未驗過。同一個 caption 亦都接住「日曆啱但荒謬」嘅年份(`2926-09-18`):嗰啲 collector **唔會**擋,而佢會叫 Chart.js 喺 main thread 畫三十幾萬個點,所以前端呢道閘唔係冗餘 |
+| `due:` 係 `2026-02-30` 呢類「規到第二日」嘅日子 | 同上。**注意 JS 唔會回 `NaN`** —— V8 會將 `2026-02-30` 規做 `2026-03-02`,所以淨係 check `isFinite` 會放佢過骨,然後條理想線用一個冇人寫過嘅日子畫出嚟,或者更衰:講錯咗個 caption。所以前端嗰道閘要用 **round-trip** 比對,唔係 `NaN` 比對 |
 | `due:` 唔遲過第一個觀測(早過或者啱啱等於) | 冇理想線,卡上講明拉唔出。呢個係設計內嘅正路 case:heading 級 `due:` 就算早過所有 task due 都照贏(§3),所以一份喺死線之後先開檔嘅補救計劃一開波就撞正 |
 | `history_truncated` | 卡上標明已截斷 |
 | 舊 `metrics.json` 兩個 key 都冇 | 成個 section 隱藏 —— 同 `people` 一樣嘅向後兼容 fallback |
