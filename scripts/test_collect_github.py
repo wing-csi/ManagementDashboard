@@ -811,6 +811,39 @@ def test_fetch_quality_file_parses_and_tolerates_failure():
     assert fetch_quality_file(FailClient(), "wing/abci", "x.json") is None
 
 
+def test_fetch_outcomes_file_keeps_documented_metrics_and_tolerates_failure():
+    from collect_github import CollectError, fetch_outcomes_file
+
+    class RawClient:
+        def rest_raw(self, path):
+            assert path == "/repos/wing/abci/contents/product/outcomes.json"
+            return '''{
+              "updated_at": "2026-07-05",
+              "adoption": [
+                {"label":"Weekly active accounts","value":1840,"unit":"accounts","change":12.4,"target":2000,"ignored":"x"},
+                {"label":"broken"}
+              ],
+              "customer": [
+                {"label":"Support tickets / 1k orders","value":4.6,"unit":"tickets","change":-11.5,"direction":"down"}
+              ]
+            }'''
+
+    result = fetch_outcomes_file(RawClient(), "wing/abci", "product/outcomes.json")
+    assert result == {
+        "updated_at": "2026-07-05",
+        "adoption": [{"label": "Weekly active accounts", "value": 1840,
+                      "unit": "accounts", "change": 12.4, "target": 2000}],
+        "customer": [{"label": "Support tickets / 1k orders", "value": 4.6,
+                      "unit": "tickets", "change": -11.5, "direction": "down"}],
+    }
+
+    class FailClient:
+        def rest_raw(self, path):
+            raise CollectError("404")
+
+    assert fetch_outcomes_file(FailClient(), "wing/abci", "x.json") is None
+
+
 # ---------------------------------------------------- governance red lines
 
 def test_violation_forbidden_files_and_workflow_delete():
@@ -965,6 +998,24 @@ def test_parse_plan_markdown_counts_and_sections():
     assert plan["done"] == 4 and plan["total"] == 6
     assert [s["title"] for s in plan["sections"]] == ["Phase 1 基礎", "Phase 2 報稅核心"]
     assert plan["sections"][1] == {"title": "Phase 2 報稅核心", "done": 1, "total": 3}
+    assert plan["assignments"] == [] and plan["unassigned"] == 6
+
+
+def test_plan_assignees_count_every_task_and_are_stripped_from_titles():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown(
+        "# Plan\n"
+        "- [x] shipped auth assignee:@wing\n"
+        "- [ ] build reports assignee:Tony\n"
+        "- [ ] test reports assignee:wing\n"
+        "- [ ] unowned work\n"
+    )
+    assert plan["assignments"] == [
+        {"name": "wing", "tasks": 2}, {"name": "Tony", "tasks": 1},
+    ]
+    assert plan["unassigned"] == 1
+    assert plan["open_tasks"][0]["title"] == "build reports"
+    assert plan["open_tasks"][0]["assignee"] == "Tony"
 
 
 def test_plan_file_none_when_missing_or_not_a_plan():
@@ -1000,11 +1051,12 @@ def test_plan_markers_due_priority_bug_and_inheritance():
     plan = parse_plan_markdown(PLAN_MD2)
     t1, t2, t3 = plan["open_tasks"]
     assert t1 == {"title": "feat: IR56B parser", "due": "2026-07-31",
-                  "priority": "P1", "bug": False, "section": "Phase 2 報稅核心"}
+                  "priority": "P1", "bug": False, "assignee": None,
+                  "section": "Phase 2 報稅核心"}
     assert t2["due"] == "2026-07-18" and t2["priority"] == "P0" and t2["bug"] is True
     assert t2["title"] == "fix: rounding 錯數"  # 標記已清走
     assert t3 == {"title": "docs: runbook", "due": None, "priority": None,
-                  "bug": False, "section": "Backlog"}
+                  "bug": False, "assignee": None, "section": "Backlog"}
     assert plan["sections"][0]["title"] == "Phase 2 報稅核心"  # heading 唔帶 due 標記
 
 

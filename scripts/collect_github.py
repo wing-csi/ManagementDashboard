@@ -820,12 +820,60 @@ def fetch_quality_file(client: GitHubClient, repo: str, path: str) -> dict | Non
         return None
 
 
+def fetch_outcomes_file(client: GitHubClient, repo: str, path: str) -> dict | None:
+    """Optional product adoption and customer-outcome metrics from a repo JSON.
+
+    Bad rows are ignored instead of poisoning the nightly collection. The
+    dashboard escapes every label/value, but keeping only the documented keys
+    also prevents an outcomes file from becoming an accidental data tunnel.
+    """
+    try:
+        raw = json.loads(client.rest_raw(f"/repos/{repo}/contents/{path}"))
+    except (CollectError, json.JSONDecodeError):
+        return None
+    if not isinstance(raw, dict):
+        return None
+    out: dict = {}
+    if isinstance(raw.get("updated_at"), str):
+        out["updated_at"] = raw["updated_at"]
+    for group in ("adoption", "customer"):
+        rows = raw.get(group)
+        if not isinstance(rows, list):
+            continue
+        clean = []
+        for row in rows:
+            if not isinstance(row, dict) or not isinstance(row.get("label"), str):
+                continue
+            value = row.get("value")
+            if type(value) not in (str, int, float):
+                continue
+            metric = {"label": row["label"], "value": value}
+            for key in ("unit", "note"):
+                if isinstance(row.get(key), str):
+                    metric[key] = row[key]
+            if type(row.get("change")) in (int, float):
+                metric["change"] = row["change"]
+            if type(row.get("target")) in (str, int, float):
+                metric["target"] = row["target"]
+            if row.get("direction") in ("up", "down"):
+                metric["direction"] = row["direction"]
+            clean.append(metric)
+        out[group] = clean
+    return out if out.get("adoption") or out.get("customer") else None
+
+
 CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[( |x|X)\]\s+(\S.*)$")
 HEADING_RE = re.compile(r"^#{1,6}\s+(.+)$")
 PLAN_DUE_RE = re.compile(r"\bdue:(\d{4}-\d{2}-\d{2})\b")
 PLAN_START_RE = re.compile(r"\bstart:(\d{4}-\d{2}-\d{2})\b")
 PLAN_PRIO_RE = re.compile(r"!(P[0-3])\b", re.IGNORECASE)
 PLAN_BUG_RE = re.compile(r"#bug\b", re.IGNORECASE)
+PLAN_ASSIGNEE_RE = re.compile(r"\bassignee:([^\s]+)", re.IGNORECASE)
+
+
+def _marker_name(match: re.Match[str] | None) -> str | None:
+    """Return a compact person marker without an optional GitHub-style @."""
+    return match.group(1).removeprefix("@") if match else None
 
 
 def _clean_plan_title(text: str) -> str:
@@ -833,6 +881,7 @@ def _clean_plan_title(text: str) -> str:
     text = PLAN_DUE_RE.sub("", text)
     text = PLAN_PRIO_RE.sub("", text)
     text = PLAN_BUG_RE.sub("", text)
+    text = PLAN_ASSIGNEE_RE.sub("", text)
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
@@ -878,8 +927,9 @@ def _calendar_dates(values: list[str], source: str, marker: str) -> list[str]:
 
 def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     """GitHub-flavored task-list plan: `- [ ]` open, `- [x]` done; headings = sections.
-    Inline markers on tasks/headings: due:YYYY-MM-DD, !P0/!P1/!P2, #bug —
-    task-level due overrides the section's. None if no checkboxes (not a plan).
+    Inline markers on tasks/headings: due:YYYY-MM-DD, !P0/!P1/!P2, #bug;
+    tasks also accept assignee:Name. Task-level due overrides the section's.
+    None if no checkboxes (not a plan).
 
     `due_max` is the project's target date for the burndown: a heading-level
     due: wins (an explicit declaration), else the latest date on any checkbox,
@@ -899,6 +949,7 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     task_dues: list[str] = []
     cur: dict | None = None
     cur_due: str | None = None
+    assignments: dict[str, int] = {}
     done = total = 0
     for line in text.splitlines():
         h = HEADING_RE.match(line)
@@ -919,6 +970,9 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
             checked = m.group(1) in "xX"
             done += checked
             raw = m.group(2)
+            assignee = _marker_name(PLAN_ASSIGNEE_RE.search(raw))
+            if assignee:
+                assignments[assignee] = assignments.get(assignee, 0) + 1
             m_due_any = PLAN_DUE_RE.search(raw)
             if m_due_any:
                 task_dues.append(m_due_any.group(1))
@@ -933,6 +987,7 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
                     "due": m_due.group(1) if m_due else cur_due,
                     "priority": m_pri.group(1).upper() if m_pri else None,
                     "bug": bool(PLAN_BUG_RE.search(raw)),
+                    "assignee": assignee,
                     "section": cur["title"] if cur else None,
                 })
     if total == 0:
@@ -942,7 +997,12 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     heading_dues = _calendar_dates(heading_dues, source, "due")
     task_dues = _calendar_dates(task_dues, source, "due")
     heading_starts = _calendar_dates(heading_starts, source, "start")
+    assignment_rows = [
+        {"name": name, "tasks": tasks}
+        for name, tasks in sorted(assignments.items(), key=lambda row: (-row[1], row[0].casefold()))
+    ]
     return {"done": done, "total": total, "open_tasks": open_tasks,
+            "assignments": assignment_rows, "unassigned": total - sum(assignments.values()),
             "due_max": max(heading_dues) if heading_dues else (max(task_dues) if task_dues else None),
             "start_min": min(heading_starts) if heading_starts else None,
             "sections": [s for s in sections if s["total"]][:12]}
@@ -950,11 +1010,13 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
 
 DEFECT_FOUND_RE = re.compile(r"\bfound:(\d{4}-\d{2}-\d{2})\b")
 DEFECT_FIXED_RE = re.compile(r"\bfixed:(\d{4}-\d{2}-\d{2})\b")
+DEFECT_FIXED_BY_RE = re.compile(r"\bfixed-by:([^\s]+)", re.IGNORECASE)
 DEFECT_CAP = 500
 
 
 def _clean_defect_title(text: str) -> str:
-    for rx in (DEFECT_FOUND_RE, DEFECT_FIXED_RE, PLAN_PRIO_RE, PLAN_BUG_RE):
+    for rx in (DEFECT_FOUND_RE, DEFECT_FIXED_RE, DEFECT_FIXED_BY_RE,
+               PLAN_PRIO_RE, PLAN_BUG_RE):
         text = rx.sub("", text)
     return re.sub(r"\s{2,}", " ", text).strip()
 
@@ -972,7 +1034,9 @@ def parse_defect_markdown(text: str) -> dict | None:
     under a 「已修」heading is still open. Headings are decoration, so two
     signals can never contradict each other over one fact.
 
-    Inline markers: !P0-!P3 severity, found:YYYY-MM-DD, fixed:YYYY-MM-DD.
+    Inline markers: !P0-!P3 severity, found:YYYY-MM-DD, fixed:YYYY-MM-DD,
+    fixed-by:Name. A fixer is recorded independently from the checkbox so a
+    malformed open row cannot silently count as a completed repair.
     `found` is optional. An undated defect is kept, not dropped — it still
     belongs in the open backlog, which is a snapshot and needs no date. It
     cannot enter the windowed rate, and the frontend reports how many were
@@ -994,12 +1058,14 @@ def parse_defect_markdown(text: str) -> dict | None:
         raw = m.group(2)
         m_found = DEFECT_FOUND_RE.search(raw)
         m_fixed = DEFECT_FIXED_RE.search(raw)
+        m_fixed_by = DEFECT_FIXED_BY_RE.search(raw)
         m_pri = PLAN_PRIO_RE.search(raw)
         items.append({
             "title": _clean_defect_title(raw),
             "severity": m_pri.group(1).upper() if m_pri else None,
             "found": m_found.group(1) if m_found else None,
             "fixed": m_fixed.group(1) if m_fixed else None,
+            "fixed_by": _marker_name(m_fixed_by),
             "open": m.group(1) not in "xX",
         })
     if not items:
@@ -1149,6 +1215,8 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
     ))
     if repo_cfg.get("quality_file"):
         meta["quality"] = fetch_quality_file(client, repo, repo_cfg["quality_file"])
+    if repo_cfg.get("outcomes_file"):
+        meta["outcomes"] = fetch_outcomes_file(client, repo, repo_cfg["outcomes_file"])
     if repo_classify.get("track_issues", True):
         issues, issues_err = collect_issues(client, repo)
         meta["issues"] = issues

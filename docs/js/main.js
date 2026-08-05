@@ -8,6 +8,8 @@ import {
 import { renderProjects } from './render-project.js';
 import { renderBurndown } from './render-burndown.js';
 import { renderOverview, renderDefects, renderTable } from './render-table.js';
+import { renderProductOutcomes } from './render-product.js';
+import { renderManagement } from './render-management.js';
 import { initTabs } from './tabs.js';
 
 /** eyebrow 要講明而家係邊個嘅視角,否則 filtered dashboard 會被當成全隊數字。 */
@@ -24,6 +26,7 @@ export function render() {
   const cur = statsFromTasks(wt);
   const prev = statsFromTasks(precedingTasks());
   const weeklyRows = buildWeekly(wt);
+  renderManagement();
   renderKPIs(cur, prev);
   renderSpectrum(cur);
   renderChart(weeklyRows);
@@ -33,6 +36,7 @@ export function render() {
   renderQuality(cur);
   renderProjects();
   renderBurndown();
+  renderProductOutcomes();
   renderOverview(cur);
   renderDefects();
   renderTable();

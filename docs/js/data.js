@@ -1,4 +1,5 @@
 import { DEMO_DATA } from '../data/demo-data.js';
+import { DEMO_OUTCOMES } from '../data/demo-outcomes.js';
 import { personOf } from './people.js';
 
 export const state = {
@@ -59,7 +60,10 @@ export class LoadError extends Error {
 
 export async function loadData() {
   if (new URLSearchParams(location.search).get('demo') === '1') {
-    return { data: DEMO_DATA, demo: true };
+    const repoMeta = Object.fromEntries(Object.entries(DEMO_DATA.repo_meta || {}).map(([repo, meta]) => [
+      repo, { ...meta, ...(DEMO_OUTCOMES[repo] ? { outcomes: DEMO_OUTCOMES[repo] } : {}) },
+    ]));
+    return { data: { ...DEMO_DATA, repo_meta: repoMeta }, demo: true };
   }
   const res = await fetch('./data/metrics.json', { cache: 'no-store' });
   if (!res.ok) throw new LoadError(res.status);

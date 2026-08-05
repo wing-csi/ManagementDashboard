@@ -1,4 +1,4 @@
-/** Tab navigation for the dashboard's four panels.
+/** Tab navigation for the dashboard's five panels.
  *
  * Panels are hidden with the `hidden` attribute, never removed: every render
  * module resolves its targets by id and must keep working while its panel is
@@ -6,7 +6,7 @@
  * panel renders correctly — with one exception, the Chart.js canvas, which
  * sizes from its client box. That is what `tab:shown` is for.
  */
-const TABS = ['overview', 'quality', 'projects', 'tasks'];
+const TABS = ['overview', 'quality', 'projects', 'product', 'tasks'];
 const DEFAULT_TAB = 'overview';
 
 const tabEl = (name) => document.getElementById(`tab-${name}`);
@@ -22,7 +22,16 @@ export function activate(name, { focus = false } = {}) {
     el.tabIndex = on ? 0 : -1;
     panelEl(t).hidden = !on;
   }
-  if (focus) tabEl(target).focus();
+  const active = tabEl(target);
+  // Five tabs need horizontal scrolling on a phone. A hash deep-link does not
+  // focus the tab, so the browser will not reveal it for us; keep the active
+  // label inside the tablist without moving the page vertically.
+  const list = active.parentElement;
+  const tabRect = active.getBoundingClientRect();
+  const listRect = list.getBoundingClientRect();
+  if (tabRect.left < listRect.left) list.scrollLeft -= listRect.left - tabRect.left;
+  else if (tabRect.right > listRect.right) list.scrollLeft += tabRect.right - listRect.right;
+  if (focus) active.focus();
   // The hash is view state and ?owner= is data state — rewrite only the hash.
   // replaceState does not fire hashchange, so this cannot loop.
   if (location.hash.slice(1) !== target) {

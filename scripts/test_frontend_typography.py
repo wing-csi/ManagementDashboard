@@ -172,7 +172,7 @@ def test_no_horizontal_overflow_at_supported_widths(page, server, width, height)
 
     Measured one tab at a time, which is the only state a reader ever sees.
     open_all_panels() is right for probing type — font-size does not depend on
-    layout — but revealing four panels at once stacks content the page never
+    layout — but revealing five panels at once stacks content the page never
     stacks, and an overflow measured there would be an artefact of the probe.
     """
     page.set_viewport_size({"width": width, "height": height})

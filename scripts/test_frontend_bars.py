@@ -21,7 +21,7 @@ import pytest
 pytest.importorskip("pytest_playwright",
                     reason="bar rendering tests need pytest-playwright")
 
-TABS = ["overview", "quality", "projects", "tasks"]
+TABS = ["overview", "quality", "projects", "product", "tasks"]
 
 # Scoped to the visible panel — a hidden ancestor zeroes getBoundingClientRect.
 # Only bars the renderers gave a non-zero width are reported, so a legitimately
@@ -67,6 +67,6 @@ def test_every_panel_with_bars_is_covered(page, server):
         page.click(f"#tab-{tab}")
         seen |= {b["where"] for b in page.evaluate(PROBE)}
 
-    assert {"legend", "qLevels", "ovLangs", "ovTypes", "ovMonthly"} <= seen, (
+    assert {"legend", "qLevels", "productRoadmap", "ovLangs", "ovTypes", "ovMonthly"} <= seen, (
         f"expected bar groups missing from the probe; saw {sorted(seen)}"
     )

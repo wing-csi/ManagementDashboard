@@ -15,6 +15,98 @@ function barRow(label, n, max, color, extra) {
     <span class="bar-track"><span class="bar-fill" style="width:${max ? (n / max) * 100 : 0}%;background:${color}"></span></span>
     <span class="n">${extra || n}</span></div>`;
 }
+const PIE_COLORS = ['#24407E', '#3D67B1', '#2E6B5E', '#6D5A8E', '#B07A1F', '#5F8CC6'];
+
+function sortedCounts(counts) {
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function addPersonCount(counts, name, count) {
+  if (!name || !count) return;
+  const person = personOf(name, state.personIndex);
+  counts.set(person, (counts.get(person) || 0) + count);
+}
+
+function pieMarkup(segments, total, centerLabel, centerSub) {
+  let offset = 0;
+  const circles = segments.map((segment) => {
+    const share = total ? segment.count / total * 100 : 0;
+    const dashOffset = -offset;
+    offset += share;
+    const title = `${segment.name}: ${segment.count} / ${total} (${share.toFixed(1)}%)`;
+    return `<circle class="pie-slice" data-name="${esc(segment.name)}" cx="50" cy="50" r="36" pathLength="100"
+      stroke="${segment.color}" stroke-dasharray="${share} ${100 - share}" stroke-dashoffset="${dashOffset}">
+      <title>${esc(title)}</title></circle>`;
+  }).join('');
+  const legend = segments.map((segment) => {
+    const share = total ? segment.count / total * 100 : 0;
+    const selected = segment.name === state.person ? ' is-selected' : '';
+    return `<div class="pie-legend-row${selected}" data-name="${esc(segment.name)}">
+      <span class="pie-swatch" style="background:${segment.color}"></span>
+      <span class="pie-name" title="${esc(segment.name)}">${esc(segment.name)}</span>
+      <span class="pie-metric">${segment.count} / ${total} · ${share.toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+  const aria = segments.map((segment) => `${segment.name} ${segment.count}`).join(', ');
+  return `<div class="pie-layout">
+    <svg class="pie-svg" viewBox="0 0 100 100" role="img" aria-label="${esc(`${centerLabel} ${total}; ${aria}`)}">
+      <circle class="pie-track" cx="50" cy="50" r="36"></circle>${circles}
+      <text class="pie-total" x="50" y="40">${total}</text>
+      <text class="pie-total-label" x="50" y="66">${esc(centerSub)}</text>
+    </svg>
+    <div class="pie-legend">${legend}</div>
+  </div>`;
+}
+
+function renderRegisterPies(rm) {
+  const planCounts = new Map();
+  let planTotal = 0;
+  for (const [repo, meta] of Object.entries(rm)) {
+    if (!repoInScope(repo)) continue;
+    const plan = meta.plan;
+    // Old metrics payloads have no assignments key. Do not misreport those
+    // plans as 100% unassigned; the next collector run makes this measurable.
+    if (!plan || !Array.isArray(plan.assignments)) continue;
+    planTotal += plan.total || 0;
+    for (const row of plan.assignments) addPersonCount(planCounts, row.name, row.tasks || 0);
+    if (plan.unassigned) planCounts.set('未指定', (planCounts.get('未指定') || 0) + plan.unassigned);
+  }
+  if (planTotal) {
+    const planSegments = sortedCounts(planCounts).map(([name, count], index) => ({
+      name, count, color: name === '未指定' ? '#C7CDC9' : PIE_COLORS[index % PIE_COLORS.length],
+    }));
+    $('planAssignmentPie').innerHTML = pieMarkup(planSegments, planTotal, 'Plan tasks', 'plan tasks');
+  } else {
+    $('planAssignmentPie').innerHTML = '<div class="pie-empty">未有可用分配數據 — 喺 plan task 加 <code>assignee:Name</code>,再重新收集。</div>';
+  }
+
+  const fixerCounts = new Map();
+  let defectTotal = 0;
+  let openTotal = 0;
+  let fixedTotal = 0;
+  for (const [repo, meta] of Object.entries(rm)) {
+    if (!repoInScope(repo)) continue;
+    for (const item of (meta.defects?.items || [])) {
+      defectTotal += 1;
+      if (item.open) {
+        openTotal += 1;
+      } else {
+        fixedTotal += 1;
+        addPersonCount(fixerCounts, item.fixed_by || '已修 · 未指定', 1);
+      }
+    }
+  }
+  if (defectTotal) {
+    const defectSegments = sortedCounts(fixerCounts).map(([name, count], index) => ({
+      name, count, color: name === '已修 · 未指定' ? '#C7CDC9' : PIE_COLORS[index % PIE_COLORS.length],
+    }));
+    if (openTotal) defectSegments.push({ name: '未修', count: openTotal, color: '#C2452D' });
+    $('defectFixPie').innerHTML = pieMarkup(defectSegments, defectTotal, 'Defects', `${fixedTotal} fixed`);
+  } else {
+    $('defectFixPie').innerHTML = '<div class="pie-empty">未有 defect 登記冊數據 — 已修項目可加 <code>fixed-by:Name</code>。</div>';
+  }
+}
+
 export function renderOverview(cur) {
   const rm = state.data.repo_meta || {};
   // languages(scope 內 repos 加總)
@@ -51,6 +143,7 @@ export function renderOverview(cur) {
   const mmax = Math.max(...me.map(([, c]) => c), 1);
   $('ovMonthly').innerHTML = me.map(([k, c]) => barRow(k, c, mmax, '#2E6B5E')).join('')
     || '<div class="ov-sub">無數據</div>';
+  renderRegisterPies(rm);
   // contributors(window)
   // 貢獻者係比較視角,亦係揀人嘅入口 — 保持全員,只標示揀咗邊個
   const by = {};
@@ -99,7 +192,7 @@ export function renderDefects() {
         number: null, title: i.title, repo,
         status: i.open ? 'Open' : 'Fixed',
         url: registerUrl(repo, dfx),
-        labels: i.severity ? [i.severity] : [], assignees: [],
+        labels: i.severity ? [i.severity] : [], assignees: i.fixed_by ? [i.fixed_by] : [],
         due: i.fixed || i.found,
       });
     const plan = m.plan;
@@ -107,7 +200,7 @@ export function renderDefects() {
       rows.push({
         number: null, title: t.title, repo, status: 'Open',
         url: registerUrl(repo, plan),
-        labels: t.priority ? [t.priority] : [], assignees: [], due: t.due,
+        labels: t.priority ? [t.priority] : [], assignees: t.assignee ? [t.assignee] : [], due: t.due,
       });
   }
   rows.sort((a, b) => (a.status === 'Open' ? 0 : 1) - (b.status === 'Open' ? 0 : 1));

@@ -64,8 +64,16 @@ def test_severity_found_and_fixed_are_parsed():
         "severity": "P1",
         "found": "2026-07-14",
         "fixed": "2026-07-20",
+        "fixed_by": None,
         "open": False,
     }
+
+
+def test_fixed_by_is_parsed_and_stripped_from_the_title():
+    got = parse_defect_markdown(
+        "- [x] 匯出 CSV 中文亂碼 fixed-by:@wing found:2026-07-14 fixed:2026-07-20\n")
+    assert got["items"][0]["fixed_by"] == "wing"
+    assert got["items"][0]["title"] == "匯出 CSV 中文亂碼"
 
 
 def test_markers_are_stripped_from_the_title():
@@ -90,7 +98,7 @@ def test_absent_markers_are_none_not_missing_keys():
     got = parse_defect_markdown("- [ ] bare defect\n")
     assert got["items"][0] == {
         "title": "bare defect", "severity": None,
-        "found": None, "fixed": None, "open": True,
+        "found": None, "fixed": None, "fixed_by": None, "open": True,
     }
 
 

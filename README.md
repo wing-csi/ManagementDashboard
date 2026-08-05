@@ -35,30 +35,48 @@ config.toml ──▶ GitHub GraphQL API ──▶ 分級(label→trailer→auth
 
 > 步驟 3、4、7 嘅 link 係呢個 hub(`wing-csi/ManagementDashboard`)嘅;第二個 hub 就將 path 換成自己個 repo。PAT 記得設 expiration 同定期 rotate。
 
-## 版面(四個分頁)
+## 版面(五個分頁)
 
-Dashboard 分咗四個分頁。Masthead、四個 filter 同分頁列釘喺頂(sticky),所以
+Dashboard 分咗五個分頁。Masthead、四個 filter 同分頁列釘喺頂(sticky),所以
 scroll 到幾底都改到 repo / branch / 成員 / window,唔使碌返上去。
 
 | 分頁 | 入面有咩 |
 |---|---|
-| **總覽** | 主 KPI(L3+ 自動化佔比做 hero)、DORA 條、自動化水平分佈、每週趨勢 + 異常提醒 |
+| **總覽** | Management summary(交付狀態 / data health / scope / forecast)、Executive attention、主 KPI、DORA、每週趨勢 |
 | **品質** | RAG 燈、品質 × 自動化、各 Level 修復佔比、Defect 追蹤 |
 | **項目 & 團隊** | 項目進度(milestones / 延誤 / 建議)、Repo 概覽、貢獻者 |
+| **產品 & 發佈** | Roadmap / epics、release readiness、產品採用、客戶成果指標 |
 | **Tasks** | 最近 Tasks — 搜尋(title / author / branch)、Level + 狀態篩選、每頁 25 行 |
 
-**分享某個分頁**:URL 後面加 `#quality`、`#projects`、`#tasks`(`#overview` 係
+**分享某個分頁**:URL 後面加 `#quality`、`#projects`、`#product`、`#tasks`(`#overview` 係
 預設)。認唔到嘅 hash 會落返總覽。分頁狀態同 `?owner=` 係兩回事 — hash 係
 「睇緊邊頁」,`?owner=` 係「filter 緊邊個」,兩者互不干涉,可以一齊用:
 `?owner=Wing#quality`。鍵盤:Tab 去到分頁列之後,用 ←/→/Home/End 揀。
 
-**列印**:`@media print` 會強制四個 panel 全部顯示,所以印出嚟仍然係完整報告,
+**列印**:`@media print` 會強制五個 panel 全部顯示,所以印出嚟仍然係完整報告,
 唔會淨係印咗當前分頁。但 Tasks 表格只會印到**已經載入嘅行**(預設 25)— 想印晒
 就先㩒幾次「載入更多」。
 
 ## 指標字典 — 每個數點計、代表咩
 
 **通用機制**:「今日」= 數據 `generated_at` 嗰日;window(近 30/60/90/180 日)以佢倒數;「前一段」= 緊接之前、同樣長度嘅 window;「週」= ISO 週(星期一開始);repo 下拉 filter 影響所有數字。Task = merged PR,或者冇 associated PR 嘅 direct commit(auto mode,唔會重複計)。
+
+### Management summary
+
+總覽最頂係一層規則式管理摘要,唔係黑箱綜合分。缺 planning scope、Issues 收集失敗或
+快照過期時,交付狀態一定係 **Unknown**,唔會當綠燈。已知異常仍然會留喺 Executive
+attention 逐項顯示同連返 GitHub / plan file。
+
+| 數字 | 點計 | 防誤導守則 |
+|---|---|---|
+| Portfolio delivery | 每 repo 先判 On track / At risk / Off track / Unknown,portfolio 取最需要注意嘅狀態 | stale 或缺 planning data 唔會出 On track |
+| Data health | `generated_at` 年齡 + top-level errors + `repo_meta[].issues_error` + planning/history 覆蓋 | 超過 48 小時出不可關閉 banner |
+| Current plan scope | 有 history 嘅 plan 現時總 task;逐次 `total` 上落分開計 gross added / removed | 淨變動同 gross churn 分開,唔會互相抵銷 |
+| Forecast coverage | 有 planning scope 嘅 repo 入面,幾多個有至少 7 日歷史同正完成速度 | 冇速度就顯示不可用,唔會作一個日期 |
+
+預測公式係 `剩餘 task ÷ 觀測完成速度`,投射日期由最後觀測點向前。history 少、scope
+改過或觀測期短會降 confidence;呢個係 trend projection,唔係承諾日期。Scope change 同
+forecast 都只食 `plan_file` history,GitHub milestone 本身冇歷史就唔會扮有。
 
 ### 主 KPI 行
 
@@ -138,11 +156,11 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 - [ ] 登入後 token 冇 refresh !P0 found:2026-07-20
 
 # 已修
-- [x] 資產統計金額用咗股數 !P1 found:2026-07-02 fixed:2026-07-05
+- [x] 資產統計金額用咗股數 !P1 found:2026-07-02 fixed:2026-07-05 fixed-by:Wing
 ```
 
 - **打勾係狀態嘅唯一真相**。一個 `- [ ]` 就算擺喺「已修」標題下面都仍然算未修 — heading 純粹俾人分組,唔咁定義嘅話兩個訊號打交就冇得判。
-- 標記:`!P0`–`!P3` severity(沿用 plan file 同一條 regex)、`found:YYYY-MM-DD`、`fixed:YYYY-MM-DD`。
+- 標記:`!P0`–`!P3` severity(沿用 plan file 同一條 regex)、`found:YYYY-MM-DD`、`fixed:YYYY-MM-DD`、`fixed-by:Name`。`fixed-by:` 會餵 Repo 概覽嘅 Defect 修復 pie;已修但冇寫會歸入「已修 · 未指定」,未修則獨立一塊,所以 pie 分母永遠係登記冊全部 defects。
 - **`found:` 可以唔寫**。冇日期嘅項目照樣入未修積壓(積壓係快照,唔需要日期),但入唔到窗口比率,而卡上會講明「N 個冇 found: 日期」。默默截走會令個率虛低而你睇唔出。
 - 冇任何 checkbox 嘅檔案當「冇登記冊」處理,唔會當成「零缺陷」。
 - 上限 500 條,超過會喺卡上標「清單已截斷」。
@@ -162,7 +180,7 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 
 **完成度嘅前提:成個 project plan 要拆晒落 Issues。** 個 % 嘅分母係「已開咗嘅 issues」,唔係 project 實際 scope — 如果邊做邊開 issue,佢量度嘅只係已知 backlog 嘅消化率,會系統性高估進度;而每次補開新 issues,% 會回跌 — 呢個唔係 bug,係 scope 浮現緊。想個 % 反映真進度:
 
-- **或者用 plan file**:config 設 `plan_file = "docs/project-plan.md"`,collector 讀 markdown checkboxes(`- [ ]` 未做 / `- [x]` 做咗),`#` heading 做 section 出 progress bars — 啱晒 plan 本身喺 markdown 嘅 workflow(例如 project brief)。task / heading 可以帶 inline 標記:`due:YYYY-MM-DD`(task 級 override section 級)、`start:YYYY-MM-DD`(**只喺 heading 有效**,宣告項目起點,多過一個取最早)、`!P0`/`!P1`/`!P2`、`#bug` — 有咗呢啲,「異常 tasks」、「今日建議」同埋 **Defect 追蹤**(見下面)都食到 plan file(list 入面顯示 `plan` link)。冇標記嘅 plain checkbox 只入完成度,唔入建議排序;plan tasks 冇「更新時間」概念,所以呆滯偵測仍然只有 Issues 做到。
+- **或者用 plan file**:config 設 `plan_file = "docs/project-plan.md"`,collector 讀 markdown checkboxes(`- [ ]` 未做 / `- [x]` 做咗),`#` heading 做 section 出 progress bars — 啱晒 plan 本身喺 markdown 嘅 workflow(例如 project brief)。task / heading 可以帶 inline 標記:`due:YYYY-MM-DD`(task 級 override section 級)、`start:YYYY-MM-DD`(**只喺 heading 有效**,宣告項目起點,多過一個取最早)、`!P0`/`!P1`/`!P2`、`#bug`;task 另外可加 `assignee:Name`。有咗呢啲,「異常 tasks」、「今日建議」、**Defect 追蹤**同 Repo 概覽嘅 Plan 工作分配 pie 都食到 plan file。工作分配嘅公式係該人 task 數 ÷ plan 全部 checkboxes,未寫 assignee 嘅會歸入「未指定」,所以永遠加埋 100%。冇標記嘅 plain checkbox 仍然入完成度;plan tasks 冇「更新時間」概念,所以呆滯偵測仍然只有 Issues 做到。
 - 以 **milestone 做 scope 單位** — 開新階段時,一次過將該階段全部 tasks 拆晒做 issues 掛入 milestone、設 due date。咁 milestone bar 先係可信嘅完成度,repo 級總 % 只當參考(佢永遠受「未開嘅嘢睇唔到」影響)。
 - 未估到細節嘅探索性工作,開一個 placeholder issue(例:`spike: X 方案調研`),令 scope 至少喺個分母度。
 - 見到 % 跌,先問「係咪開咗新 issues」,唔好直接當退步。
@@ -228,8 +246,8 @@ Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1
 ```markdown
 ## Issue board
 
-- [ ] P-01 · CI · `lint` 呢個 required check 空跑,實際乜都檢查唔到 #bug !P1 due:2026-07-17
-- [ ] P-02 · docs · README 寫 3 個 required checks,ruleset 實際要 5 個 #bug !P2 due:2026-07-22
+- [ ] P-01 · CI · `lint` 呢個 required check 空跑,實際乜都檢查唔到 #bug !P1 due:2026-07-17 assignee:Wing
+- [ ] P-02 · docs · README 寫 3 個 required checks,ruleset 實際要 5 個 #bug !P2 due:2026-07-22 assignee:Tony
 - [ ] P-03 · CI · Actions 全部用浮動 major tag,又冇 Dependabot #bug !P3 due:2026-09-18
 - [x] P-00 · src · 打咗勾嘅會由 Defect 表消失(當已修好) #bug !P2 due:2026-07-01
 ```
@@ -239,6 +257,7 @@ Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1
 | `#bug` | 標明係 defect | checkbox 只入完成度,唔會出現喺 Defect 表 |
 | `!P1` / `!P2` / `!P3` | Severity → High / Medium / Low(`!P0` 亦當 High) | Severity 欄顯示 `—` |
 | `due:YYYY-MM-DD` | Due 欄。寫喺 `#` heading 就成個 section 共用,task 自己寫會 override | Due 欄顯示 `–` |
+| `assignee:Name` | Assignee 欄 + Repo 概覽 Plan 工作分配 pie | Assignee 顯示 `–`,pie 歸入「未指定」 |
 
 `P-01 · CI ·` 呢類前綴純粹係你自己嘅編號同分類,dashboard 原樣顯示、唔會解析 — 想點編都得。
 
@@ -247,7 +266,7 @@ Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1
 **幾點要知:**
 
 - 表最多顯示 10 行,右上角會寫實際總數(例:`11 項,顯示頭 10`),唔會靜靜截走。
-- Assignee 欄 plan file 冇對應概念,固定 `–`;要 assignee 就要用 GitHub Issues。
+- Defect 登記冊已修項目嘅 Assignee 欄顯示 `fixed-by:`;plan task 顯示 `assignee:`。兩個 marker 都接受可選嘅 `@` 前綴,但名中間唔可以有空格。
 - Plan file 睇唔到「已修好」歷史(打勾就消失)。想睇 Fixed 記錄要用 Issues — closed 嘅 `bug` issue 會以 Fixed 狀態留喺表入面。
 - 兩個來源可以同時用:同一個 repo 可以一邊開 issues、一邊喺 plan file 記,兩邊都會入表。
 
@@ -273,7 +292,7 @@ CI 失敗;再輸入搜尋字會同時套用。每頁顯示 25 rows,下面註明�
 5. **兩套時間邏輯** — tasks / DORA / 品質跟 window selector 郁;項目進度(Issues)係**現時 snapshot**,轉 30/90 日佢唔會變。
 6. **分級靠 convention 同 assumption** — trailer / label 要紀律先準;abci-crm 嘅 L2 係 config 寫明嘅先驗假設(`no_evidence_level`),如果嗰邊工作方式變咗,assumption 要跟住更新。所有 assumption 都喺 config 度,可以 audit。
 7. **公開性** — hub public 嘅話,所有 tracked repo 嘅 commit titles / branch 名 / issue titles 都公開。追 private repo 前先諗清楚(見 Private 模式)。
-8. **數據新鮮度** — 每日跑一次,以 header 嘅 generated_at 為準;本機跑就用返「本地跑」個 flow 重新生成,瀏覽器仲顯示舊數據先 hard refresh(Ctrl+Shift+R)。
+8. **數據新鮮度** — 每日跑一次,以 header 嘅 generated_at 為準;超過 48 小時會出不可關閉提示,Management summary 亦會變 Unknown。本機跑就用返「本地跑」個 flow 重新生成,瀏覽器仲顯示舊數據先 hard refresh(Ctrl+Shift+R)。
 
 ## 分級規則(priority 由高至低)
 
@@ -382,6 +401,38 @@ Attribution caveat:修復佔比量度嘅係**工作構成**,唔係「AI 寫錯�
 | 今日建議 | rule-based 排序:**逾期 → priority label(P0/P1/urgent...)→ 停滯 → 最舊**,取頭 5 個 |
 
 「今日建議」係規則排序,唔係 AI 判斷 — 規則明文喺 dashboard 標題度,可預測、可 audit。
+
+## 產品 & 發佈成果
+
+呢個分頁將「交付咗幾多」同「產品有冇產生結果」放埋同一頁,但唔會將工程
+activity 扮成產品成果:
+
+| 區塊 | 數據來源 / 算法 |
+|---|---|
+| Roadmap / Epics | GitHub Milestones + `plan_file` headings;顯示完成數 / scope 總數 |
+| 發佈次數 | 每個 repo 用 Deployments → tags → Releases fallback,只計目前 window |
+| Release readiness | 下一個未完成 milestone(冇就用整份 plan)嘅完成度 + P0/critical blockers + CI pass rate + due date;逾期、blocker 或 CI <75% = At risk,完成 ≥90% 且 CI ≥90% = Ready |
+| 產品採用 / 客戶成果 | target repo 自己維護嘅 `outcomes_file`;dashboard 只呈現,唔會由 commits、PR 或 LOC 推算 |
+| Outcome coverage | 有有效 `outcomes_file` 嘅 repos ÷ 目前 repo scope |
+
+在 repo 加一份 JSON,再喺 `config.toml` 個 `[[repos]]` entry 設
+`outcomes_file = "product/outcomes.json"`:
+
+```json
+{
+  "updated_at": "2026-07-05",
+  "adoption": [
+    { "label": "Weekly active accounts", "value": 1840, "unit": " accounts", "change": 12.4, "target": 2000 }
+  ],
+  "customer": [
+    { "label": "Support tickets / 1k orders", "value": 4.6, "unit": " tickets", "change": -11.5, "target": 4, "direction": "down" }
+  ]
+}
+```
+
+`change` 係相對上一個 reporting period 嘅百分比;預設越高越好。成本、處理時間、
+support load 呢類越低越好嘅 metric 設 `direction: "down"`。每組可以放多個 metric;
+欄位唔完整嘅 row 會略過,成份 file 缺失/JSON 壞咗就如實顯示「未接通」。
 
 ## 治理紅線偵測(規範四 / 4.3 高風險檔)
 

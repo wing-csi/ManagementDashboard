@@ -17,7 +17,7 @@ pytest.importorskip("pytest_playwright",
 
 from playwright.sync_api import expect  # noqa: E402  (must follow importorskip)
 
-TABS = ["overview", "quality", "projects", "tasks"]
+TABS = ["overview", "quality", "projects", "product", "tasks"]
 
 
 def open_dashboard(page, server, query: str = "?demo=1"):
@@ -43,6 +43,7 @@ def test_hidden_panels_still_render_their_content(page, server):
     assert page.text_content("#taskRows").strip()
     assert page.text_content("#projChips").strip()
     assert page.text_content("#qRework").strip()
+    assert page.text_content("#releaseReadiness").strip()
 
 
 def test_clicking_switches_panels(page, server):
@@ -55,6 +56,29 @@ def test_clicking_switches_panels(page, server):
 def test_hash_deep_links_to_a_tab(page, server):
     open_dashboard(page, server, "?demo=1#quality")
     assert visible_panels(page) == ["quality"]
+
+
+def test_product_tab_shows_release_and_outcome_signals(page, server):
+    open_dashboard(page, server, "?demo=1#product")
+    assert visible_panels(page) == ["product"]
+    assert page.locator("#releaseReadiness .release-row").count() == 2
+    assert page.locator("#productRoadmap .roadmap-row").count() > 0
+    assert page.locator("#adoptionMetrics .outcome-metric").count() == 4
+    assert page.locator("#customerMetrics .outcome-metric").count() == 4
+    assert page.text_content("#productOutcomeCoverage").strip() == "2/2"
+
+
+def test_mobile_deep_link_reveals_the_active_tab(page, server):
+    page.set_viewport_size({"width": 375, "height": 812})
+    open_dashboard(page, server, "?demo=1#tasks")
+    geometry = page.eval_on_selector(
+        "#tab-tasks",
+        "el => { const a = el.getBoundingClientRect(); "
+        "const b = el.parentElement.getBoundingClientRect(); "
+        "return { left: a.left, right: a.right, min: b.left, max: b.right }; }",
+    )
+    assert geometry["left"] >= geometry["min"]
+    assert geometry["right"] <= geometry["max"] + 1
 
 
 def test_unknown_hash_falls_back_to_overview(page, server):
