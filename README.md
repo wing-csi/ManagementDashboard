@@ -456,9 +456,18 @@ Dashboard 已經上線:**https://management-dashboard-emj.pages.dev**
   publish 之後,wrangler 死唔會影響已經 push 好嘅 data repo)。**但 collector 自己
   爆咗就兩邊都唔會出**:deploy 條件釘死 `steps.collect.outcome == 'success'`,寧願
   留住舊數據,都好過派一份殘缺嘅 `metrics.json` 當今日嘅數。
-- **睇唔出數據舊咗**:上面嗰句「唔會拖垮」係講 pipeline,唔係講版面。真係兩邊都
-  跌嘅話,Pages 會繼續派上一次 deploy 嘅嘢,而頁面**除咗 header 個 `generated_at`
-  之外冇任何提示**。懷疑啲數字唔郁,第一件事係對下 `generated_at`。
+- **數據舊咗會出提示**:`generated_at` 超過 **48 鐘**,header 同分頁中間會出一條
+  banner,講明係幾多日前嘅數同去邊度查。48 唔係 24 —— cron 21:00 UTC 行,一日
+  入面大部分時間最新嘅數據本身已經 20 幾個鐘大,一條 24 鐘嘅規矩會每日下晝都
+  嘈一次。時間戳讀唔到、或者喺未來(部機時間唔啱),會出唔同嘅講法,唔會當成
+  「舊咗」。Demo 模式唔出。
+- **但佢淨係捉得到 pipeline 停咗,捉唔到 deploy 停咗。** CI 綠燈但 wrangler 靜靜哋
+  乜都冇上到嘅話,`generated_at` 照樣行前,banner 唔會出聲。
+- **提示淨係入版嗰陣計一次。** 開住個 tab 過咗週末返嚟,見到嘅仲係星期五嗰個
+  判斷 —— 撳 refresh 先啱。
+- **出咗提示都唔會改啲數。** 過期嗰陣「過期 task 數」、SPI、條今日線一律照用
+  `generated_at` 做今日,即係照舊唔準。Banner 講嘅係「唔好信呢頁幾新」,唔係
+  幫你修正啲數。
 - **設定記錄**:Pages project 名 `management-dashboard`(所以 workflow 個
   `--project-name` 唔受 hostname 影響);Access team domain
   `summer-mud-0e86.cloudflareaccess.com`。詳細落成記錄同取捨見
