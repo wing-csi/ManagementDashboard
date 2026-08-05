@@ -44,6 +44,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from plan_history import fetch_plan_history
+from repo_start import first_commit_date
 
 GRAPHQL_URL = "https://api.github.com/graphql"
 LEVEL_RE = re.compile(r"^L?([1-5])$", re.IGNORECASE)
@@ -1168,6 +1169,10 @@ def collect_repo(client: GitHubClient, repo_cfg: dict, since_iso: str, mode: str
                 meta["plan"].update(history)
             else:
                 meta["plan"]["history_error"] = "攞唔到 plan.md 嘅 commit 歷史"
+            # 條軸起點嘅 C 層後備,`plan.md` 冇宣告 `start:` 嗰陣用。兩個
+            # REST request,所以淨係喺真係有 plan 嘅 repo 度畀 —— 冇 plan
+            # 嘅 repo 攞返嚟都冇人讀。
+            meta["plan"]["repo_first_commit"] = first_commit_date(client, repo)
     if repo_cfg.get("defect_file"):
         meta["defects"] = fetch_defect_file(client, repo, repo_cfg["defect_file"], registers_ref)
     return tasks, meta

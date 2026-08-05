@@ -1565,6 +1565,9 @@ def test_collect_repo_folds_plan_history_into_the_plan_block():
             assert "/commits?" in path and "path=plan.md" in path
             return [{"sha": "c1", "commit": {"committer": {"date": "2026-07-28T10:00:00Z"}}}]
 
+        def rest_json_links(self, path):
+            return [], ""   # 呢個 test 唔關 repo 開檔日事
+
         def rest_raw(self, path):
             return "# 計劃\n\n- [ ] 一件事 due:2026-09-18\n- [x] 另一件事\n"
 
@@ -1592,6 +1595,9 @@ def test_collect_repo_omits_history_when_the_commits_call_fails():
         def rest_json(self, path):
             raise CollectError("HTTP 403")
 
+        def rest_json_links(self, path):
+            return [], ""   # 呢個 test 唔關 repo 開檔日事
+
         def rest_raw(self, path):
             return "# 計劃\n\n- [ ] 一件事\n"
 
@@ -1601,6 +1607,71 @@ def test_collect_repo_omits_history_when_the_commits_call_fails():
     assert "history" not in meta["plan"]
     assert "history_truncated" not in meta["plan"]
     assert meta["plan"]["history_error"]
+
+
+def test_collect_repo_records_the_repo_first_commit():
+    """條軸嘅 C 層後備。冇佢嘅話,一個開檔咗半年、上個月先開 plan.md
+    嘅項目,條軸會由上個月起計。"""
+    from collect_github import DEFAULT_BRANCH_QUERY, PRS_QUERY, collect_repo
+
+    class FirstCommitClient:
+        def graphql(self, query, variables, **kw):
+            if query == DEFAULT_BRANCH_QUERY:
+                return DEFAULT_BRANCH_RESP
+            if query == PRS_QUERY:
+                return prs_page([])
+            return {"repository": {}}
+
+        def rest_json(self, path):
+            return [{"sha": "c1", "commit": {"committer": {"date": "2026-07-28T10:00:00Z"}}}]
+
+        def rest_json_links(self, path):
+            if path.endswith("page=1"):
+                return ([{"sha": "new",
+                          "commit": {"committer": {"date": "2026-07-28T10:00:00Z"}}}],
+                        '<https://api.github.com/repositories/1/commits'
+                        '?per_page=1&page=9>; rel="last"')
+            return ([{"sha": "old",
+                      "commit": {"committer": {"date": "2026-05-03T08:00:00Z"}}}], "")
+
+        def rest_raw(self, path):
+            return "# 計劃\n\n- [ ] 一件事 due:2026-09-18\n"
+
+    _, meta = collect_repo(FirstCommitClient(),
+                           {"name": "acme/alpha", "plan_file": "plan.md",
+                            "track_issues": False},
+                           SINCE, "pr", CFG)
+    assert meta["plan"]["repo_first_commit"] == "2026-05-03"
+
+
+def test_an_unreadable_first_commit_leaves_the_key_null_not_missing():
+    """None 同「攞唔到」喺前端係同一件事(跌落下一層),但 key 要在,先
+    分得出「呢份數據行過呢段代碼」同「呢份數據舊過呢個 feature」。"""
+    from collect_github import (CollectError, DEFAULT_BRANCH_QUERY, PRS_QUERY,
+                                collect_repo)
+
+    class NoFirstCommitClient:
+        def graphql(self, query, variables, **kw):
+            if query == DEFAULT_BRANCH_QUERY:
+                return DEFAULT_BRANCH_RESP
+            if query == PRS_QUERY:
+                return prs_page([])
+            return {"repository": {}}
+
+        def rest_json(self, path):
+            return [{"sha": "c1", "commit": {"committer": {"date": "2026-07-28T10:00:00Z"}}}]
+
+        def rest_json_links(self, path):
+            raise CollectError("HTTP 409")
+
+        def rest_raw(self, path):
+            return "# 計劃\n\n- [ ] 一件事\n"
+
+    _, meta = collect_repo(NoFirstCommitClient(),
+                           {"name": "acme/alpha", "plan_file": "plan.md",
+                            "track_issues": False},
+                           SINCE, "pr", CFG)
+    assert meta["plan"]["repo_first_commit"] is None
 
 
 def test_a_plan_without_history_support_leaves_both_keys_off():
