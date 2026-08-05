@@ -106,3 +106,19 @@ def test_the_banner_cannot_be_dismissed(page, server):
     dash.wait_for_selector("#staleBanner", state="visible")
     assert dash.eval_on_selector_all(
         "#staleBanner button, #staleBanner [role=button]", "els => els.length") == 0
+
+
+def test_the_banner_does_not_overflow_the_narrowest_supported_width(page, server):
+    """test_no_horizontal_overflow_at_supported_widths
+    (scripts/test_frontend_typography.py:33,63,180) 成日用 ?demo=1 開,而
+    demo 模式嘅 banner 一定唔會出 —— 嗰條 test 淨係查緊 375px,但從未真係
+    量過呢個 element。呢度攞返同一個闊度,但行真數據(stale)路徑,逼
+    banner 出咗先至量,先算真正補到嗰個缺口。"""
+    page.set_viewport_size({"width": 375, "height": 812})
+    _serve(page, _with_stamp(_ago(days=5)))
+    dash = _open(page, server)
+    dash.wait_for_selector("#staleBanner", state="visible")
+    doc_width = dash.evaluate("() => document.documentElement.scrollWidth")
+    win_width = dash.evaluate("() => window.innerWidth")
+    assert doc_width <= win_width, (
+        f"banner overflows at 375px: scrollWidth {doc_width}px > innerWidth {win_width}px")

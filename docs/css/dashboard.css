@@ -188,7 +188,8 @@ body {
   color: var(--alert);
   font-size: var(--fs-xs);
   /* 1.6 俾中文行距鬆啲;唔設 white-space,等佢喺窄螢幕自己斷行 ——
-     test_no_horizontal_overflow_at_supported_widths 最窄查到 375px。 */
+     test_the_banner_does_not_overflow_the_narrowest_supported_width
+     (scripts/test_frontend_staleness.py) 查到 375px 闊。 */
   line-height: 1.6;
 }
 .stale-banner[hidden] { display: none; }
