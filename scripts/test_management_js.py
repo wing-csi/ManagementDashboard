@@ -102,4 +102,5 @@ def test_issue_permission_errors_are_visible_in_data_health(page, server):
                    f"m.deriveManagement({data}, {{todayStr:'2026-08-05', nowMs:Date.parse('2026-08-05T13:00:00Z')}})")
     assert got["health"]["status"] == "attention"
     assert got["health"]["counts"]["issueErrors"] == 1
-    assert any("收集唔到 Issues" in item["title"] for item in got["attention"])
+    assert any("收集唔到 GitHub Issue" in item["title"]
+               for item in got["attention"])

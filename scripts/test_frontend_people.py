@@ -155,7 +155,7 @@ def test_contributors_are_not_truncated(page, server):
 
     pcts = page.eval_on_selector_all(
         "#ovContribs .contrib .pc", "els => els.map(e => e.textContent)")
-    assert all(p.startswith("11.1%") for p in pcts), pcts
+    assert all(p.strip().endswith("11.1%") for p in pcts), pcts
 
 
 def test_scope_notes_appear_only_when_filtered(people_page, server):
