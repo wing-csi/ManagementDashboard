@@ -9,6 +9,13 @@ const CAPTION = {
   'single-point': '只有一個觀測點,未成趨勢',
 };
 
+/** 冇理想線嘅三個原因,逐個有自己嘅講法 —— 讀嘅人要知去改 plan.md 邊度。 */
+const IDEAL_CAPTION = {
+  'no-due': 'plan.md 冇 due: — 冇理想線',
+  'due-unusable': 'plan.md 個 due: 唔係一個有效日期 — 冇理想線',
+  'due-not-after-start': 'due: 唔遲過第一個觀測,拉唔出理想線',
+};
+
 /** 今日嗰條直線。Chart.js 4 冇內置 annotation,但一個 inline plugin
  *  就夠 —— 為咗一條線裝多個 CDN library 唔抵。
  *
@@ -39,7 +46,13 @@ const todayMarker = {
 function captionFor(series) {
   const bits = [];
   if (CAPTION[series.status]) bits.push(CAPTION[series.status]);
-  if (!series.due) bits.push('plan.md 冇 due: — 冇理想線');
+  // 以前呢度睇 `!series.due`,即係「有冇死線」。但一個宣告咗、畫唔出嘅
+  // 死線(早過或者啱啱等於第一個觀測)一樣係 `due` 有值 —— 結果係冇線
+  // 又冇解釋,正正係 spec §7 唔准嘅嘢。改為問 burndownSeries 本人點解冇
+  // 線:條線畫唔畫同呢句講唔講,由同一個 idealReason 話事。
+  if (series.idealReason) {
+    bits.push(IDEAL_CAPTION[series.idealReason] || '冇理想線');
+  }
   if (series.truncated) bits.push('歷史已截斷,理想線由現存最早嗰個觀測起計');
   return bits.join(' · ');
 }

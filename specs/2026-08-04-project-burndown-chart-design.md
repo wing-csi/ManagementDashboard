@@ -127,6 +127,8 @@ X 軸:起點 → `due_max`,今日標一條線,剩餘線去到今日為止(右邊
 | commits API 失敗(`history_error` 著) | 出明文訊息,**唔係**一條平線 |
 | 得一個觀測點 | 畫返個點,寫「只有一個觀測點,未成趨勢」,唔畫趨勢線 |
 | `plan.md` 冇任何 `due:` | 冇理想線,剩餘 + scope 照出,卡上講明 |
+| `due:` 唔係一個真日曆日 | 冇理想線,剩餘 + scope 照出,卡上講明「唔係一個有效日期」。Collector 已經擋過一次(§4),呢度係第二道 —— 舊 `metrics.json` 入面嗰個 `due_max` 未驗過,而一個打錯咗嘅年份會叫 Chart.js 喺 main thread 畫三十幾萬個點 |
+| `due:` 唔遲過第一個觀測(早過或者啱啱等於) | 冇理想線,卡上講明拉唔出。呢個係設計內嘅正路 case:heading 級 `due:` 就算早過所有 task due 都照贏(§3),所以一份喺死線之後先開檔嘅補救計劃一開波就撞正 |
 | `history_truncated` | 卡上標明已截斷 |
 | 舊 `metrics.json` 兩個 key 都冇 | 成個 section 隱藏 —— 同 `people` 一樣嘅向後兼容 fallback |
 

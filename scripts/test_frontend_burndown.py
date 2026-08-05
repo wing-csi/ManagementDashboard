@@ -126,6 +126,33 @@ def test_a_repo_with_no_plan_file_at_all_hides_the_section(page, server):
     assert dash.eval_on_selector("#burndownCards", "el => el.children.length") == 0
 
 
+def test_a_due_date_that_cannot_be_plotted_still_explains_itself(page, server):
+    """宣告咗但畫唔出嘅死線(早過第一個觀測)以前係「冇線又冇解釋」——
+    `captionFor()` 淨係問 `!series.due`,而呢種 case 個 due 係有值嘅。
+    Heading 級 due: 早過所有 task due 都照贏係本 branch 嘅設計,所以一份
+    喺死線之後先開檔嘅補救計劃一開波就撞正呢個位。"""
+    data = _load()
+    data["repo_meta"]["acme/alpha"]["plan"]["due_max"] = "2026-07-01"
+    _serve(page, data)
+    dash = _open(page, server)
+    dash.wait_for_selector("#burndownCards canvas", state="attached")
+    text = dash.inner_text("#burndownCards")
+    assert "拉唔出理想線" in text
+    # 同「plan.md 冇 due:」要分得開 —— 兩者要改嘅嘢唔同。
+    assert "冇 due:" not in text
+
+
+def test_a_calendar_invalid_due_date_says_so_instead_of_going_blank(page, server):
+    """舊 metrics.json 入面個 `due_max` 冇驗過日曆。`2026-13-01` 喺前端係
+    NaN,以前會出一張有標題、有一格白圖、乜都冇講嘅卡。"""
+    data = _load()
+    data["repo_meta"]["acme/alpha"]["plan"]["due_max"] = "2026-13-01"
+    _serve(page, data)
+    dash = _open(page, server)
+    dash.wait_for_selector("#burndownCards canvas", state="attached")
+    assert "唔係一個有效日期" in dash.inner_text("#burndownCards")
+
+
 def test_today_is_marked_on_the_chart(page, server):
     """今日條線係「追唔追得上」嘅參考點 —— 冇佢,兩條線嘅開叉讀唔出意思。
 

@@ -186,6 +186,7 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 - **`plan.md` 開檔之前嘅嘢睇唔到。** 起點係第一個(留低嘅)commit,唔係項目真正開始嗰日。
 - **歷史封頂 150 個觀測日。** 多過就淨係留返最新嗰 150 日,連理想線嘅起點(佢錨住嗰個 scope)都會跟住搬去現存最舊嗰一日,唔再係項目真正嘅起點;呢種情況卡會標「歷史已截斷」提你,唔會靜靜搬線唔通知。
 - **目標日多數係推斷出嚟**(最遲嗰個 task due),除非有人喺 heading 明文寫。想寫死就喺 heading 加 `due:YYYY-MM-DD`。
+- **冇理想線嘅時候,卡一定會講明係邊個原因。** 三種:`plan.md` 冇寫 `due:`;寫咗但個日期唔存在(例如 `due:2026-13-01`,collector 會喺 log 出 warning 兼且唔收);寫咗一個唔遲過第一個觀測嘅日期(例如一份喺死線之後先開檔嘅補救計劃)—— 三種要改嘅嘢唔同,所以唔會用同一句打發。
 - **重寫過歷史(force push / squash)嘅 plan branch 會失真** —— commits API 只見到現存嘅 history。
 - **讀唔到歷史,卡唔會靜靜消失或者畫一條假嘅平線。** Collector 呢次讀唔到就寫 `history_error`,卡照出但唔畫圖,出張卡講明(例:「攞唔到 plan.md 嘅 commit 歷史」);同「呢份數據仲未有呢個 feature」(`history`、`history_error` 兩個 key 都冇,成張卡唔出)分得開 —— 兩種情況睇落唔一樣。
 - **登記冊住喺自己條 branch 嘅話,`registers_ref` 一樣管住 burndown 嘅歷史查詢。** Ref 錯咗令 `plan.md` 本身都讀唔到嘅話,成張卡都唔會出(同冇設 `registers_ref` 嗰種 404 一樣);如果淨係嗰次歷史攞唔到(例如 commits API 派空 list),就係上面嗰種 `history_error` 卡,卡照出,唔係卡消失。
