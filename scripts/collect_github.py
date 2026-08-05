@@ -864,11 +864,14 @@ def fetch_outcomes_file(client: GitHubClient, repo: str, path: str) -> dict | No
 
 CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[( |x|X)\]\s+(\S.*)$")
 HEADING_RE = re.compile(r"^#{1,6}\s+(.+)$")
+BOLD_PLAN_HEADING_RE = re.compile(r"^\s*\*\*(\S.*)\*\*\s*$")
 PLAN_DUE_RE = re.compile(r"\bdue:(\d{4}-\d{2}-\d{2})\b")
 PLAN_START_RE = re.compile(r"\bstart:(\d{4}-\d{2}-\d{2})\b")
+PLAN_DONE_RE = re.compile(r"\bdone:(\d{4}-\d{2}-\d{2})\b")
 PLAN_PRIO_RE = re.compile(r"!(P[0-3])\b", re.IGNORECASE)
 PLAN_BUG_RE = re.compile(r"#bug\b", re.IGNORECASE)
 PLAN_ASSIGNEE_RE = re.compile(r"\bassignee:([^\s]+)", re.IGNORECASE)
+PLAN_MENTION_RE = re.compile(r"(?<!\S)@([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))\b")
 
 
 def _marker_name(match: re.Match[str] | None) -> str | None:
@@ -876,12 +879,20 @@ def _marker_name(match: re.Match[str] | None) -> str | None:
     return match.group(1).removeprefix("@") if match else None
 
 
+def _plan_assignee(text: str) -> str | None:
+    """Explicit ``assignee:`` wins; otherwise a standalone @handle owns the row."""
+    return (_marker_name(PLAN_ASSIGNEE_RE.search(text))
+            or _marker_name(PLAN_MENTION_RE.search(text)))
+
+
 def _clean_plan_title(text: str) -> str:
     text = PLAN_START_RE.sub("", text)
+    text = PLAN_DONE_RE.sub("", text)
     text = PLAN_DUE_RE.sub("", text)
     text = PLAN_PRIO_RE.sub("", text)
     text = PLAN_BUG_RE.sub("", text)
     text = PLAN_ASSIGNEE_RE.sub("", text)
+    text = PLAN_MENTION_RE.sub("", text)
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
@@ -928,8 +939,11 @@ def _calendar_dates(values: list[str], source: str, marker: str) -> list[str]:
 def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     """GitHub-flavored task-list plan: `- [ ]` open, `- [x]` done; headings = sections.
     Inline markers on tasks/headings: due:YYYY-MM-DD, !P0/!P1/!P2, #bug;
-    tasks also accept assignee:Name. Task-level due overrides the section's.
-    None if no checkboxes (not a plan).
+    tasks also accept assignee:Name or a standalone @GitHub-handle. Task-level
+    due overrides the section's. Scheduled rows containing an @handle plus
+    start: or done: are tasks too; done: marks them complete. Bold-only lines
+    such as ``**M1 · Foundation**`` are their section headings.
+    None if there are no checkboxes or scheduled task rows (not a plan).
 
     `due_max` is the project's target date for the burndown: a heading-level
     due: wins (an explicit declaration), else the latest date on any checkbox,
@@ -952,7 +966,7 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
     assignments: dict[str, int] = {}
     done = total = 0
     for line in text.splitlines():
-        h = HEADING_RE.match(line)
+        h = HEADING_RE.match(line) or BOLD_PLAN_HEADING_RE.match(line)
         if h:
             m_due = PLAN_DUE_RE.search(h.group(1))
             cur_due = m_due.group(1) if m_due else None
@@ -965,12 +979,14 @@ def parse_plan_markdown(text: str, source: str = "") -> dict | None:
             sections.append(cur)
             continue
         m = CHECKBOX_RE.match(line)
-        if m:
+        scheduled_row = (not m and PLAN_MENTION_RE.search(line)
+                         and (PLAN_START_RE.search(line) or PLAN_DONE_RE.search(line)))
+        if m or scheduled_row:
             total += 1
-            checked = m.group(1) in "xX"
+            checked = (m.group(1) in "xX") if m else bool(PLAN_DONE_RE.search(line))
             done += checked
-            raw = m.group(2)
-            assignee = _marker_name(PLAN_ASSIGNEE_RE.search(raw))
+            raw = m.group(2) if m else line.strip()
+            assignee = _plan_assignee(raw)
             if assignee:
                 assignments[assignee] = assignments.get(assignee, 0) + 1
             m_due_any = PLAN_DUE_RE.search(raw)

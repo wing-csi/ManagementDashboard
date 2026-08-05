@@ -153,6 +153,7 @@ registers_ref = "docs/management-dashboard-registers"
 [people]
 Wing = ["wing-csi", "wing2036"]
 Tony = ["Tony-Liu-1248"]
+Pie = ["pie-csi"]
 # Lam 冇喺數據入面出現過(純負責人,唔 commit)—
 # 唔使喺度列。如果佢有 GitHub 帳號,加返落嚟就唔會再出 warning。
 

@@ -167,7 +167,7 @@ def test_pie_explanations_use_plain_readable_language(page, server):
     dash = _open(page, server)
     assert dash.text_content("#planAssignmentTitle").strip() == "Plan 工作分配"
     assert dash.text_content("#planAssignmentTitle + p").strip() == \
-        "assignee:Name task 數 ÷ plan 總 task 數 · 未標記則使用程式庫負責人"
+        "assignee:Name / @GitHub-handle task 數 ÷ plan 總 task 數 · 未標記則使用程式庫負責人"
     assert dash.text_content("#defectFixTitle").strip() == "Defect 修復分佈"
     assert dash.text_content("#defectFixTitle + p").strip() == \
         "fixed-by:Name · 未修亦計入總數"

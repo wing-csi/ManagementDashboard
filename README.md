@@ -180,7 +180,7 @@ GitHub Issues 喺呢個 org 冇訊號(14 個 repo 得 1 個有 issues 數據,而
 
 **完成度嘅前提:成個 project plan 要拆晒落 Issues。** 個 % 嘅分母係「已開咗嘅 issues」,唔係 project 實際 scope — 如果邊做邊開 issue,佢量度嘅只係已知 backlog 嘅消化率,會系統性高估進度;而每次補開新 issues,% 會回跌 — 呢個唔係 bug,係 scope 浮現緊。想個 % 反映真進度:
 
-- **或者用 plan file**:config 設 `plan_file = "docs/project-plan.md"`,collector 讀 markdown checkboxes(`- [ ]` 未做 / `- [x]` 做咗),`#` heading 做 section 出 progress bars — 啱晒 plan 本身喺 markdown 嘅 workflow(例如 project brief)。task / heading 可以帶 inline 標記:`due:YYYY-MM-DD`(task 級 override section 級)、`start:YYYY-MM-DD`(**只喺 heading 有效**,宣告項目起點,多過一個取最早)、`!P0`/`!P1`/`!P2`、`#bug`;task 另外可加 `assignee:Name`。有咗呢啲,「異常 tasks」、「今日建議」、**Defect 追蹤**同 Repo 概覽嘅 Plan 工作分配 pie 都食到 plan file。工作分配嘅公式係該人 task 數 ÷ plan 全部 checkboxes;task 有 `assignee:` 就用 task 負責人,否則用 config 嘅 repo `owner`,兩個都冇先歸入「未指定」,所以永遠加埋 100%。冇標記嘅 plain checkbox 仍然入完成度;plan tasks 冇「更新時間」概念,所以呆滯偵測仍然只有 Issues 做到。
+- **或者用 plan file**:config 設 `plan_file = "docs/project-plan.md"`,collector 讀 markdown checkboxes(`- [ ]` 未做 / `- [x]` 做咗),`#` heading 做 section 出 progress bars — 啱晒 plan 本身喺 markdown 嘅 workflow(例如 project brief)。task / heading 可以帶 inline 標記:`due:YYYY-MM-DD`(task 級 override section 級)、`start:YYYY-MM-DD`(**只喺 heading 有效**,宣告項目起點,多過一個取最早)、`!P0`/`!P1`/`!P2`、`#bug`;task 另外可加 `assignee:Name` 或 standalone `@GitHub-handle`。另一種已支援格式係 `**M1 · 名稱**` section 加每行 `工作 @handle start:YYYY-MM-DD done:YYYY-MM-DD`;有 `done:` 代表完成。呢啲資料會餵「異常 tasks」、「今日建議」、**Defect 追蹤**同 Repo 概覽嘅 Plan 工作分配 pie。工作分配嘅公式係該人 task 數 ÷ plan 全部 tasks;身份會經 `[people]` 合併(例如 `@Tony-Liu-1248` → Tony、`@pie-csi` → Pie);task 冇標記就用 config 嘅 repo `owner`,兩個都冇先歸入「未指定」,所以永遠加埋 100%。冇標記嘅 plain checkbox 仍然入完成度;plan tasks 冇「更新時間」概念,所以呆滯偵測仍然只有 Issues 做到。
 - 以 **milestone 做 scope 單位** — 開新階段時,一次過將該階段全部 tasks 拆晒做 issues 掛入 milestone、設 due date。咁 milestone bar 先係可信嘅完成度,repo 級總 % 只當參考(佢永遠受「未開嘅嘢睇唔到」影響)。
 - 未估到細節嘅探索性工作,開一個 placeholder issue(例:`spike: X 方案調研`),令 scope 至少喺個分母度。
 - 見到 % 跌,先問「係咪開咗新 issues」,唔好直接當退步。
@@ -282,7 +282,7 @@ Marker 顏色**淨係**講急切度(過期 / ≤7 日 / ≤14 日 / 之後);`!P1
 | `#bug` | 標明係 defect | checkbox 只入完成度,唔會出現喺 Defect 表 |
 | `!P1` / `!P2` / `!P3` | Severity → High / Medium / Low(`!P0` 亦當 High) | Severity 欄顯示 `—` |
 | `due:YYYY-MM-DD` | Due 欄。寫喺 `#` heading 就成個 section 共用,task 自己寫會 override | Due 欄顯示 `–` |
-| `assignee:Name` | Assignee 欄 + Repo 概覽 Plan 工作分配 pie | 沒有 repo `owner` 時 Assignee 才顯示 `–`,pie 歸入「未指定」 |
+| `assignee:Name` / `@GitHub-handle` | Assignee 欄 + Repo 概覽 Plan 工作分配 pie;`@handle` 會經 `[people]` 顯示正式名 | 沒有 repo `owner` 時 Assignee 才顯示 `–`,pie 歸入「未指定」 |
 
 `P-01 · CI ·` 呢類前綴純粹係你自己嘅編號同分類,dashboard 原樣顯示、唔會解析 — 想點編都得。
 

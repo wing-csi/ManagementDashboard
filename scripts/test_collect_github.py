@@ -1018,6 +1018,37 @@ def test_plan_assignees_count_every_task_and_are_stripped_from_titles():
     assert plan["open_tasks"][0]["assignee"] == "Tony"
 
 
+def test_plan_scheduled_rows_use_github_mentions_for_work_allocation():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown(
+        "**M1 · Foundation, navigation & design system**\n"
+        "Navigation architecture @Tony-Liu-1248 start:2026-01-20 done:2026-07-06\n"
+        "Shared component library @pie-csi start:2026-01-20 done:2026-08-02\n"
+        "Maven Pro type ramp @wing-csi start:2026-02-27 done:2026-05-18\n"
+        "PNG icon sets converted to SVG @Tony-Liu-1248 start:2026-05-03\n"
+    )
+    assert plan["done"] == 3 and plan["total"] == 4
+    assert plan["assignments"] == [
+        {"name": "Tony-Liu-1248", "tasks": 2},
+        {"name": "pie-csi", "tasks": 1},
+        {"name": "wing-csi", "tasks": 1},
+    ]
+    assert plan["unassigned"] == 0
+    assert plan["sections"] == [{
+        "title": "M1 · Foundation, navigation & design system", "done": 3, "total": 4,
+    }]
+    assert plan["open_tasks"][0]["title"] == "PNG icon sets converted to SVG"
+    assert plan["open_tasks"][0]["assignee"] == "Tony-Liu-1248"
+
+
+def test_plan_checkbox_accepts_a_standalone_github_mention():
+    from collect_github import parse_plan_markdown
+    plan = parse_plan_markdown("- [ ] build reports @pie-csi due:2026-08-20\n")
+    assert plan["assignments"] == [{"name": "pie-csi", "tasks": 1}]
+    assert plan["open_tasks"][0]["title"] == "build reports"
+    assert plan["open_tasks"][0]["assignee"] == "pie-csi"
+
+
 def test_plan_file_none_when_missing_or_not_a_plan():
     from collect_github import CollectError, fetch_plan_file, parse_plan_markdown
     assert parse_plan_markdown("# 冇 checkbox 嘅普通 README") is None
