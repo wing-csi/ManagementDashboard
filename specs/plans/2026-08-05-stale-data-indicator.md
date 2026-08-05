@@ -452,7 +452,7 @@ Append to `docs/css/dashboard.css`, directly after the `.stamp` rule at `:177`:
   color: var(--alert);
   font-size: var(--fs-xs);
   /* 1.6 俾中文行距鬆啲;唔設 white-space,等佢喺窄螢幕自己斷行 ——
-     test_no_horizontal_overflow_at_supported_widths 會喺 320px 度查。 */
+     test_no_horizontal_overflow_at_supported_widths 最窄查到 375px。 */
   line-height: 1.6;
 }
 .stale-banner[hidden] { display: none; }
@@ -553,4 +553,4 @@ Then look at it for real:
 python3 -m http.server -d docs 8000
 ```
 
-Open <http://localhost:8000>. `docs/data/metrics.json` is whatever `sync_data.py` last wrote, so the banner may or may not appear — to force it, temporarily edit that file's `generated_at` to a date a week back and reload. Confirm the banner sits between the header and the tab row, stays visible across all four tabs, and wraps rather than overflowing when the window is narrowed to 320px. `docs/data/metrics.json` is gitignored; do not commit it.
+Open <http://localhost:8000>. `docs/data/metrics.json` is whatever `sync_data.py` last wrote, so the banner may or may not appear — to force it, temporarily edit that file's `generated_at` to a date a week back and reload. Confirm the banner sits between the header and the tab row, stays visible across all four tabs, and wraps rather than overflowing when the window is narrowed to 375px (the narrowest width `WIDTHS` covers, at `scripts/test_frontend_typography.py:33`). `docs/data/metrics.json` is gitignored; do not commit it.
