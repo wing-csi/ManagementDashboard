@@ -35,7 +35,8 @@
    },
    "plan": {
     "done": 3, "total": 12, "path": "plan.md", "ref": null,
-    "due_max": "2026-08-06", "history_truncated": false,
+    "due_max": "2026-08-06", "start_min": null, "repo_first_commit": null,
+    "history_truncated": false,
     "sections": [{"title": "Phase 2", "done": 3, "total": 12}],
     "open_tasks": [
      {"title": "P-01 過咗期嘅嘢", "due": "2026-08-01", "priority": "P1", "bug": true, "section": "Phase 2"},

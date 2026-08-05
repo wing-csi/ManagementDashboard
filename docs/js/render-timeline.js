@@ -13,7 +13,7 @@ function spiBand(spi) {
 const NO_SPI = {
   'no-due': 'plan.md 冇 due: — 冇 SPI',
   'due-unusable': 'plan.md 個 due: 唔係一個有效日期 — 冇 SPI',
-  'due-not-after-start': 'due: 唔遲過第一個觀測 — 冇 SPI',
+  'due-not-after-start': 'due: 唔遲過起點 — 冇 SPI',
   'not-started': '未開始',
   'no-tasks': 'plan.md 冇 task',
 };
@@ -54,7 +54,7 @@ function noteHTML(s) {
   else if (!s.markers.length) bits.push('plan.md 啲 task 冇寫 due:');
   if (s.dueReason === 'no-due') bits.push('冇目標日,條 bar 畫到今日為止');
   if (s.dueReason === 'due-unusable') bits.push('目標日唔係一個有效日期,條 bar 畫到今日為止');
-  if (s.dueReason === 'due-not-after-start') bits.push('目標日唔遲過起點,條 bar 畫到今日為止');
+  if (s.dueReason === 'due-not-after-start') bits.push('目標日唔遲過計劃起點,條 bar 畫到今日為止');
   if (s.invalidDues > 0) bits.push(`${s.invalidDues} 個 task 嘅 due: 唔係有效日期,冇畫`);
   return `<div class="tl-note">${esc(bits.join(' · '))}</div>`;
 }

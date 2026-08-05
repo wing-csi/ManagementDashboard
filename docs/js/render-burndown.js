@@ -14,7 +14,22 @@ const CAPTION = {
 const IDEAL_CAPTION = {
   'no-due': 'plan.md 冇 due: — 冇理想線',
   'due-unusable': 'plan.md 個 due: 唔係一個有效日期 — 冇理想線',
-  'due-not-after-start': 'due: 唔遲過第一個觀測,拉唔出理想線',
+  'due-not-after-start': 'due: 唔遲過起點,拉唔出理想線',
+};
+
+/** 條軸個起點由邊層話事。每次都出:同一條軸,由 repo 開檔拉起同由第一次
+ *  改 plan.md 拉起,理想線同 SPI 嘅意思完全唔同,但畫面上一模一樣。 */
+const START_CAPTION = {
+  plan: '起點:plan.md start:',
+  repo: '起點:repo 第一個 commit',
+  observation: '起點:第一次改 plan.md',
+};
+
+/** 宣告咗但用唔到嘅 start: —— 兩個原因要改嘅嘢唔同。冇宣告唔係一個錯,
+ *  所以呢度冇第三個 key。 */
+const START_REASON_CAPTION = {
+  'start-unusable': 'plan.md 個 start: 唔係一個畫得出嘅日期',
+  'start-after-history': 'start: 遲過第一個觀測,冇採用',
 };
 
 /** 今日嗰條直線。Chart.js 4 冇內置 annotation,但一個 inline plugin
@@ -47,6 +62,10 @@ const todayMarker = {
 function captionFor(series) {
   const bits = [];
   if (CAPTION[series.status]) bits.push(CAPTION[series.status]);
+  if (START_CAPTION[series.startSource]) bits.push(START_CAPTION[series.startSource]);
+  if (START_REASON_CAPTION[series.startReason]) {
+    bits.push(START_REASON_CAPTION[series.startReason]);
+  }
   // 以前呢度睇 `!series.due`,即係「有冇死線」。但一個宣告咗、畫唔出嘅
   // 死線(早過或者啱啱等於第一個觀測)一樣係 `due` 有值 —— 結果係冇線
   // 又冇解釋,正正係 spec §7 唔准嘅嘢。改為問 burndownSeries 本人點解冇
@@ -54,7 +73,12 @@ function captionFor(series) {
   if (series.idealReason) {
     bits.push(IDEAL_CAPTION[series.idealReason] || '冇理想線');
   }
-  if (series.truncated) bits.push('歷史已截斷,理想線由現存最早嗰個觀測起計');
+  // 呢句淨係喺起點真係由「現存最早嗰個觀測」話事嗰陣先啱。起點由 start:
+  // 或者 repo 開檔話事嘅時候,截斷咗嘅係中間嗰段觀測,唔係條理想線個錨 ——
+  // 照出就係講錯嘢。
+  if (series.truncated && series.startSource === 'observation') {
+    bits.push('歷史已截斷,理想線由現存最早嗰個觀測起計');
+  }
   return bits.join(' · ');
 }
 
