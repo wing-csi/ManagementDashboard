@@ -1,5 +1,14 @@
 # Project-Level Burndown Chart Implementation Plan
 
+> **已完成 —— 2026-08-04 出咗街。** 六個 task 全部埋單:`9e05505`(Task 1)、
+> `671e410`(2)、`6ccd50d`(3)、`05f1589`(4)、`5c50c99`(5)、`03b0925`(6)。
+> 之後仲有跟手嘅修正:`9be6968`(commit list 要分頁,150 日上限先至係真)、
+> `04b57d2`(擋走曆法上唔存在嘅 `due:`)、`514608b`(冇理想線一定要講點解)、
+> `3c0038a`(對返啲文檔去實際出咗街嘅嘢)。
+>
+> 落地嘅嘢同下面寫住嘅唔係逐隻字一樣 —— 以代碼同 `README.md` 為準。呢份留低係
+> 做紀錄用,唔好再照住行一次。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a per-repo burndown chart to the 「項目 & 團隊」 tab, driven by the commit history of each repo's `plan_file`.
@@ -55,7 +64,7 @@ The chart's right edge and the ideal line's zero point. It must be computed here
 - Consumes: nothing (first task)
 - Produces: `parse_plan_markdown(text: str) -> dict | None` gains key `"due_max": str | None` (ISO `YYYY-MM-DD`). All existing keys (`done`, `total`, `open_tasks`, `sections`) unchanged.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `scripts/test_collect_github.py`:
 
@@ -103,7 +112,7 @@ def test_due_max_sees_tasks_beyond_the_open_task_cap():
     assert parse_plan_markdown("# 計劃\n\n" + body)["due_max"] == "2026-11-30"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 python -m pytest scripts/test_collect_github.py -k due_max -v
@@ -111,7 +120,7 @@ python -m pytest scripts/test_collect_github.py -k due_max -v
 
 Expected: 4 FAILED with `KeyError: 'due_max'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `scripts/collect_github.py`, edit `parse_plan_markdown`. Add two accumulators next to the existing counters:
 
@@ -178,7 +187,7 @@ Update the docstring to mention it:
     every time a late item lands."""
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 ```bash
 python -m pytest scripts/test_collect_github.py -v
@@ -186,7 +195,7 @@ python -m pytest scripts/test_collect_github.py -v
 
 Expected: the 4 new tests PASS and every pre-existing test in the file still passes (the return shape only gained a key).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/collect_github.py scripts/test_collect_github.py
@@ -211,7 +220,7 @@ git commit -m "feat: parse a project due date off the plan file's own markers"
   - `plan_history.daily_commits(commits: list[dict]) -> list[tuple[str, str]]` — `(date, sha)` ascending, one per calendar day.
   - `plan_history.fetch_plan_history(client, repo: str, path: str, parse, ref: str | None = None, cap: int = HISTORY_CAP) -> dict | None` — returns `{"history": [{"date","done","total"}], "history_truncated": bool}` or `None`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `scripts/test_plan_history.py`:
 
@@ -344,7 +353,7 @@ def test_one_unreadable_blob_does_not_kill_the_series():
     assert got["history"] == [{"date": "2026-07-28", "done": 0, "total": 11}]
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 python -m pytest scripts/test_plan_history.py -v
@@ -352,7 +361,7 @@ python -m pytest scripts/test_plan_history.py -v
 
 Expected: all FAIL with `ModuleNotFoundError: No module named 'plan_history'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/plan_history.py`:
 
@@ -487,7 +496,7 @@ Then add `rest_json` to `GitHubClient` in `scripts/collect_github.py`, directly 
             raise CollectError(f"REST fetch {path} failed: {e}") from e
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 ```bash
 python -m pytest scripts/test_plan_history.py -v
@@ -495,7 +504,7 @@ python -m pytest scripts/test_plan_history.py -v
 
 Expected: 8 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/plan_history.py scripts/test_plan_history.py scripts/collect_github.py
@@ -514,7 +523,7 @@ git commit -m "feat: reconstruct dated plan observations from plan.md commit his
 - Consumes: `fetch_plan_history(...)` (Task 2), `parse_plan_markdown` (Task 1)
 - Produces: `repo_meta[repo]["plan"]` gains **either** `"history"` + `"history_truncated"` (success) **or** `"history_error": str` (failure) — never both, and neither on old data. The frontend cannot otherwise distinguish "this run could not read the history" from "this `metrics.json` predates the feature", and those two need opposite treatment (say so vs. stay hidden).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `scripts/test_collect_github.py`:
 
@@ -575,7 +584,7 @@ def test_a_plan_without_history_support_leaves_both_keys_off():
 > the existing `FakeClient`-based `collect_repo` tests in this file already
 > feed it — reuse those canned responses rather than inventing new ones.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 python -m pytest scripts/test_collect_github.py -k "plan_history or omits_history" -v
@@ -583,7 +592,7 @@ python -m pytest scripts/test_collect_github.py -k "plan_history or omits_histor
 
 Expected: FAIL with `KeyError: 'history'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add the import near the top of `scripts/collect_github.py`, after the stdlib imports:
 
@@ -609,7 +618,7 @@ Replace the `plan_file` branch at `scripts/collect_github.py:1054-1055`:
                 meta["plan"]["history_error"] = "攞唔到 plan.md 嘅 commit 歷史"
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 ```bash
 python -m pytest scripts/ -q
@@ -617,7 +626,7 @@ python -m pytest scripts/ -q
 
 Expected: all pass, count = 274 baseline + 4 (Task 1) + 8 (Task 2) + 3 (Task 3) = 289.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/collect_github.py scripts/test_collect_github.py
@@ -646,7 +655,7 @@ Pure shaping, no DOM, so it can be unit-tested the way `aggregate.js` is.
   - `due`: `string|null`
   - `truncated`: `boolean`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `scripts/test_burndown_js.py`:
 
@@ -737,7 +746,7 @@ def test_a_missing_history_key_is_not_an_empty_chart(page, server):
     assert got["status"] == "no-history"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 python -m pytest scripts/test_burndown_js.py -v
@@ -745,7 +754,7 @@ python -m pytest scripts/test_burndown_js.py -v
 
 Expected: FAIL — the dynamic `import('/js/burndown.js')` rejects because the file does not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `docs/js/burndown.js`:
 
@@ -810,7 +819,7 @@ export function burndownSeries(plan, todayStr) {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 ```bash
 python -m pytest scripts/test_burndown_js.py -v
@@ -818,7 +827,7 @@ python -m pytest scripts/test_burndown_js.py -v
 
 Expected: 7 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/js/burndown.js scripts/test_burndown_js.py
@@ -839,7 +848,7 @@ git commit -m "feat: shape plan observations into remaining, scope and ideal lin
 - Consumes: `burndownSeries(plan, todayStr)` (Task 4); `state`, `$`, `esc`, `repoInScope` from `./data.js`
 - Produces: `renderBurndown(): void`, exported from `docs/js/render-burndown.js`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create the fixture `scripts/fixtures/metrics-fixture-burndown.json` by copying
 `scripts/fixtures/metrics-fixture-defects.json`, setting its top-level
@@ -974,7 +983,7 @@ def test_today_is_marked_on_the_chart(page, server):
     assert drawn == 3  # fixture: 2026-08-01 起,今日 2026-08-04
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 python -m pytest scripts/test_frontend_burndown.py -v
@@ -982,7 +991,7 @@ python -m pytest scripts/test_frontend_burndown.py -v
 
 Expected: FAIL — `#burndownCards` does not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add the container to `docs/index.html`, immediately after `<div id="projMilestones"></div>`:
 
@@ -1107,7 +1116,7 @@ and call it directly after `renderProjects();`:
   renderBurndown();
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 ```bash
 python -m pytest scripts/test_frontend_burndown.py -v
@@ -1124,7 +1133,7 @@ Expected: the 7 new tests PASS and the suite is green. If
 re-record it with `python -m pytest scripts/test_frontend_snapshot.py --snapshot-update`
 and read the diff before committing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/index.html docs/js/main.js docs/js/render-burndown.js scripts/test_frontend_burndown.py scripts/fixtures/metrics-fixture-burndown.json
@@ -1141,7 +1150,7 @@ git commit -m "feat: burndown card per plan repo in the projects tab"
 **Interfaces:**
 - Consumes: everything above. Produces no code.
 
-- [ ] **Step 1: Write the section**
+- [x] **Step 1: Write the section**
 
 Insert into `README.md` after the bullet list ending 「見到 % 跌,先問「係咪開咗新 issues」,唔好直接當退步。」:
 
@@ -1168,7 +1177,7 @@ Insert into `README.md` after the bullet list ending 「見到 % 跌,先問「�
 - 登記冊住喺自己條 branch 嘅話,`registers_ref` 一樣管住 burndown —— ref 錯咗 commits API 派**空** list,而空 list 會當「冇歷史」,卡直接唔出。
 ````
 
-- [ ] **Step 2: Verify the docs match the code**
+- [x] **Step 2: Verify the docs match the code**
 
 ```bash
 python -m pytest scripts/ -q
@@ -1179,7 +1188,7 @@ and `scripts/plan_history.py` and confirm every claim holds — in particular th
 ticked tasks count toward `due_max`, and that nothing in `render-burndown.js`
 consults `state.windowDays`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md

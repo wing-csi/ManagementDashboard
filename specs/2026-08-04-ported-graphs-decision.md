@@ -68,9 +68,10 @@
 
 ## 5. 次序
 
-**先做完 burndown。** `feat/project-burndown` 到目前為止淨係 docs —— 冇
-`scripts/plan_history.py`、冇 `due_max`、前端冇嘢。Gantt、SPI、同四象限個 Schedule 格
-全部靠 `plan.due_max` 同 `plan.history`,兩樣都係 burndown 引入嘅。而家做等於對住唔存在
-嘅數據砌嘢。
+**Burndown 已經出咗街**([實作計劃](plans/2026-08-04-project-burndown.md),六個 task
+2026-08-04 全部埋單),所以 `plan.due_max` 同 `plan.history` 今日已經喺 `metrics.json`
+入面。Gantt、SPI、同四象限個 Schedule 格 —— 三個唯一有依賴嘅 —— 冇嘢等緊。
 
-burndown 埋單之後另開 branch,嗰陣先寫設計文件。
+下一步:**先寫設計文件**,七張圖一份,講清楚每張擺喺現有四個分頁邊度、空狀態點做、
+以及 bus factor 個 `repo_meta[].modules` schema 點加。跟返 burndown 同
+defect-register 一樣嘅做法 —— 設計、計劃、然後先寫代碼。
