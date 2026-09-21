@@ -33,6 +33,22 @@ def open_dashboard(page, server, query: str = "?demo=1"):
     return page
 
 
+def click_language(page, code: str, expected_locale: str):
+    """Click a language button and wait for the RELOADED document.
+
+    Deliberately not `page.expect_navigation()`: it resolves on the FIRST
+    navigation after the click, and the assertions that follow would then run
+    against the document that is on its way out. Waiting on the attribute the
+    new document sets is the thing we actually care about, and it does not
+    care how the toggle gets there.
+    """
+    page.click(f'.controls #langToggle .lang-btn[data-lang="{code}"]')
+    page.wait_for_function(
+        "(locale) => document.documentElement.lang === locale",
+        arg=expected_locale,
+    )
+
+
 # --------------------------- default is untouched ---------------------------
 
 def test_default_url_renders_chinese(page, server):
@@ -100,8 +116,7 @@ def test_owner_and_hash_survive_tab_switch_with_lang_en(page, server):
 
 def test_owner_and_hash_survive_toggling_language(page, server):
     open_dashboard(page, server, f"?demo=1&lang=en&owner={KNOWN_OWNER}#quality")
-    with page.expect_navigation():
-        page.click('.controls #langToggle .lang-btn[data-lang="zh"]')
+    click_language(page, "zh", "zh-Hant")
     assert page.evaluate("() => location.hash") == "#quality"
     assert f"owner={KNOWN_OWNER}" in page.evaluate("() => location.search")
     assert page.get_attribute("html", "lang") == "zh-Hant"
@@ -228,8 +243,7 @@ def test_apply_dom_sets_text_and_attrs_from_data_i18n(page, server):
 
 def test_toggle_persists_choice_and_query_param_wins_over_storage(page, server):
     open_dashboard(page, server, "?demo=1")
-    with page.expect_navigation():
-        page.click('.controls #langToggle .lang-btn[data-lang="en"]')
+    click_language(page, "en", "en")
     assert page.get_attribute("html", "lang") == "en"
     stored = page.evaluate("() => localStorage.getItem('dashboardLang')")
     assert stored == "en"

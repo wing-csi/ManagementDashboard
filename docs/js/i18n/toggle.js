@@ -33,8 +33,13 @@ function selectLanguage(lang) {
     // Private-browsing / blocked-cookie contexts — the ?lang= param still
     // works for this load, it just won't persist to the next one.
   }
-  history.replaceState(null, '', langUrl(lang));
-  location.reload();
+  // ONE navigation, not two. The earlier `history.replaceState()` followed by
+  // `location.reload()` reached the same place, but replaceState is itself a
+  // same-document navigation, so anything watching for "the page navigated"
+  // saw it fire before the reload had begun — and read the OLD document.
+  // location.replace() swaps the history entry and loads the new URL in a
+  // single step, so there is only ever one moment to observe.
+  location.replace(langUrl(lang));
 }
 
 export function mountLanguageToggle(root = document) {
