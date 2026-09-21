@@ -1,5 +1,8 @@
 docs/data/metrics.json
 docs/data/metrics.json.snapshot-backup
+# Any other local copy of the collected data. It carries real repo and
+# contributor names, so a stray backup must never become a commit.
+docs/data/metrics.json.*
 __pycache__/
 
 # Local collector tokens — never commit. scripts/collect-local.sh refuses to

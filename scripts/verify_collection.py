@@ -97,7 +97,17 @@ def main() -> int:
     print(f"owners        : {', '.join(owners) if owners else '(none)'}")
 
     per_repo = collections.Counter(t.get("repo") for t in tasks)
-    silent = [r for r in repos if not per_repo.get(r)]
+
+    # A repo with no tasks is not the same as a repo that failed. The collector
+    # writes a repo_meta entry for every repo it reached, so a repo with an
+    # entry and no tasks was read successfully and simply had no activity in
+    # the window — which is a fact about the repo, not a fault. A repo with no
+    # entry at all never got collected.
+    #
+    # Treating quiet repos as failures made the exit code cry wolf on a healthy
+    # run, and an exit code nobody trusts is worse than none.
+    uncollected = [r for r in repos if r not in meta]
+    quiet = [r for r in repos if r in meta and not per_repo.get(r)]
     with_issues = [r for r in repos if (meta.get(r) or {}).get("issues")]
     with_plan = [r for r in repos if (meta.get(r) or {}).get("plan")]
     print(f"with issues   : {len(with_issues)} / {len(repos)}")
@@ -119,12 +129,19 @@ def main() -> int:
     else:
         print("\nerrors        : none")
 
-    if silent:
-        print(f"\nrepos that produced NO tasks ({len(silent)}):")
-        for repo in silent:
+    if uncollected:
+        print(f"\nNOT COLLECTED — no metadata at all ({len(uncollected)}):")
+        for repo in uncollected:
             print(f"  {repo}")
-        print("  A renamed or moved repo looks exactly like this — check the name"
-              " exists before blaming the token.")
+        print("  A renamed or moved repo, a token that cannot see it, or a"
+              " transient 5xx from GitHub all look like this.")
+
+    if quiet:
+        print(f"\ncollected, but no tasks in the window ({len(quiet)}):")
+        for repo in quiet:
+            print(f"  {repo}")
+        print("  These were read successfully — they simply had no activity."
+              " Not counted as failures.")
 
     # An excused repo is still printed above — it just does not decide the
     # verdict. Hiding it would turn "I know about that one" into "I forgot
@@ -135,19 +152,35 @@ def main() -> int:
         print(f"\nnote: --allow-missing named {', '.join(sorted(unknown))}, "
               "which is not in this run's repo list — check the spelling.")
 
+    def still_blocking(message: str, affected: list[str]) -> list[str]:
+        """Drop the excused repos from one error's affected list.
+
+        A run-level error is not attached to a repo, but it usually names one
+        in its text ("Could not resolve to a Repository with the name 'x/y'").
+        Excusing x/y and then still failing the verdict on that same error
+        would make --allow-missing look broken, so a run-level message that
+        names only excused repos is excused with them.
+        """
+        named = [r for r in affected if r != "(run-level)"]
+        rest = [r for r in named if r not in excused]
+        if "(run-level)" in affected:
+            if not any(r in message for r in excused):
+                rest.append("(run-level)")
+        return rest
+
     blocking_errors = {
-        message: [r for r in affected if r not in excused]
+        message: still_blocking(message, affected)
         for message, affected in grouped.items()
     }
     blocking = any(affected for affected in blocking_errors.values())
-    blocking_silent = [r for r in silent if r not in excused]
+    blocking_uncollected = [r for r in uncollected if r not in excused]
 
     if excused:
         print(f"\nexcused       : {', '.join(sorted(excused))} "
               "(--allow-missing; reported above, not counted)")
 
-    ok = not blocking and not blocking_silent
-    print("\nverdict       :", "every configured repo produced data"
+    ok = not blocking and not blocking_uncollected
+    print("\nverdict       :", "every configured repo was collected"
           if ok else "INCOMPLETE — see above")
     return 0 if ok else 1
 
