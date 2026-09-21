@@ -1,14 +1,17 @@
 import { state, $, esc, refDate, repoInScope, toDate, windowTasks } from './data.js';
+import { t } from './i18n/index.js?v=i18n-20260922-1';
 
 const BLOCKER_RE = /^(p0|critical|blocker|urgent|priority:\s*(urgent|highest))$/i;
+// Built once at module evaluation — see docs/js/render-table.js TYPE_LABEL
+// for why a static object (not a live getter) is correct here.
 const READINESS = {
-  ready: { label: '已準備', color: 'var(--good)' },
-  'on-track': { label: '進度正常', color: '#5F8CC6' },
-  watch: { label: '需要留意', color: 'var(--warn)' },
-  'at-risk': { label: '存在風險', color: 'var(--alert)' },
-  unavailable: { label: '未有範圍', color: '#9AA5A0' },
+  ready: { label: t('product.readiness.ready'), color: 'var(--good)' },
+  'on-track': { label: t('product.readiness.onTrack'), color: '#5F8CC6' },
+  watch: { label: t('product.readiness.watch'), color: 'var(--warn)' },
+  'at-risk': { label: t('product.readiness.atRisk'), color: 'var(--alert)' },
+  unavailable: { label: t('product.readiness.unavailable'), color: '#9AA5A0' },
 };
-const SOURCE_LABEL = { milestone: '里程碑', plan: '計劃' };
+const SOURCE_LABEL = { milestone: t('product.sourceLabel.milestone'), plan: t('product.sourceLabel.plan') };
 
 const scopedRepos = () => (state.data.repos || []).filter(repoInScope);
 function releaseEvents(meta) {
@@ -46,7 +49,7 @@ export function readinessForRepo(repo, tasks, todayStr) {
     ? { title: milestone.title, done: milestone.closed || 0,
         total: (milestone.open || 0) + (milestone.closed || 0), due: milestone.due, source: 'milestone' }
     : plan && plan.total
-      ? { title: plan.path || '計劃', done: plan.done || 0, total: plan.total,
+      ? { title: plan.path || t('product.sourceLabel.plan'), done: plan.done || 0, total: plan.total,
           due: plan.due_max || null, source: 'plan' }
       : null;
   const open = ((meta.issues || {}).open || []).filter((i) =>
@@ -92,16 +95,16 @@ function renderReadiness(rows) {
   $('releaseReadiness').innerHTML = rows.map((row) => {
     const meta = READINESS[row.status];
     const progress = row.progress == null ? '–' : `${row.progress.toFixed(0)}%`;
-    const ci = row.ciPass == null ? 'CI 無數據' : `CI ${row.ciPass.toFixed(0)}%`;
-    const due = row.scope?.due ? `期限 ${row.scope.due}` : '未設期限';
-    const last = row.lastRelease ? `上次發佈 ${row.lastRelease}` : '未有發佈記錄';
+    const ci = row.ciPass == null ? t('product.noCiData') : t('product.ciValue', { value: row.ciPass.toFixed(0) });
+    const due = row.scope?.due ? t('product.dueLabel', { due: row.scope.due }) : t('product.noDueDate');
+    const last = row.lastRelease ? t('product.lastReleaseLabel', { date: row.lastRelease }) : t('product.noReleaseHistory');
     return `<article class="release-row">
       <div class="release-title"><span class="readiness-dot" style="background:${meta.color}"></span>
-        <strong>${esc(row.repo.split('/').pop())}</strong><span class="readiness-state">${meta.label}</span></div>
-      <div class="release-scope">${row.scope ? `${esc(row.scope.title)} · ${progress}` : '未有里程碑 / 計劃範圍'}</div>
-      <div class="release-meta"><span>${row.blockers} 個阻礙項目</span><span>${ci}</span><span>${due}</span><span>${last}</span></div>
+        <strong>${esc(row.repo.split('/').pop())}</strong><span class="readiness-state">${esc(meta.label)}</span></div>
+      <div class="release-scope">${row.scope ? `${esc(row.scope.title)} · ${progress}` : esc(t('product.noScope'))}</div>
+      <div class="release-meta"><span>${esc(t('product.blockerCount', { n: row.blockers }))}</span><span>${esc(ci)}</span><span>${esc(due)}</span><span>${esc(last)}</span></div>
     </article>`;
-  }).join('') || '<p class="outcome-empty">此範圍內沒有程式庫。</p>';
+  }).join('') || `<p class="outcome-empty">${esc(t('product.readinessEmpty'))}</p>`;
 }
 
 function renderRoadmap(items) {
@@ -109,12 +112,75 @@ function renderRoadmap(items) {
   $('productRoadmap').innerHTML = shown.map((item) => {
     const pct = item.total ? (item.done / item.total) * 100 : 0;
     return `<div class="roadmap-row">
-      <div class="roadmap-label"><strong>${esc(item.title)}</strong><span>${esc(item.repo.split('/').pop())} · ${SOURCE_LABEL[item.source] || item.source}</span></div>
+      <div class="roadmap-label"><strong>${esc(item.title)}</strong><span>${esc(item.repo.split('/').pop())} · ${esc(SOURCE_LABEL[item.source] || item.source)}</span></div>
       <span class="bar-track"><span class="bar-fill" style="width:${pct}%;background:#5F8CC6"></span></span>
       <span class="roadmap-value">${item.done}/${item.total}${item.due ? ` · ${esc(item.due)}` : ''}</span>
     </div>`;
-  }).join('') || '<p class="outcome-empty">未有里程碑或計劃分段。</p>';
-  $('productRoadmapNote').textContent = items.length > shown.length ? `顯示 ${shown.length} / ${items.length}` : `${items.length} 個大型工作項`;
+  }).join('') || `<p class="outcome-empty">${esc(t('product.roadmapEmpty'))}</p>`;
+  $('productRoadmapNote').textContent = items.length > shown.length
+    ? t('product.roadmapShown', { shown: shown.length, total: items.length })
+    : t('product.roadmapCount', { n: items.length });
+}
+
+/** Flattens each in-scope repo's adoption + customer outcome entries into
+ * one list. `item.key` indexes docs/js/i18n/dict/{zh,en}/product.js under
+ * `outcomes.<key>` for both the label and the value's unit template — see
+ * docs/data/demo-outcomes.js for why label/unit never get built by string
+ * concatenation here. */
+function outcomeRows(repos) {
+  const rm = state.data.repo_meta || {};
+  const rows = [];
+  for (const repo of repos) {
+    const outcomes = rm[repo]?.outcomes;
+    if (!outcomes) continue;
+    for (const item of [...(outcomes.adoption || []), ...(outcomes.customer || [])]) {
+      rows.push({ repo, ...item });
+    }
+  }
+  return rows;
+}
+
+/* item.key arrives from a repo-committed outcomes file — the same trust tier as
+   plan.md — and is spliced into a dotted dictionary path. Restricting it to a
+   plain identifier keeps a crafted key (`__proto__`, `constructor`) out of the
+   lookup walk entirely, rather than relying on that walk staying read-only. */
+const OUTCOME_KEY_RE = /^[A-Za-z0-9_]+$/;
+
+function outcomeRowHTML(item) {
+  const key = OUTCOME_KEY_RE.test(item.key || '') ? item.key : null;
+  const label = key ? t(`product.outcomes.${key}.label`) : String(item.key ?? '');
+  const value = key
+    ? t(`product.outcomes.${key}.unit`, { value: item.value, n: item.value })
+    : String(item.value ?? '');
+  return `<div class="roadmap-row">
+    <div class="roadmap-label"><strong title="${esc(label)}">${esc(label)}</strong><span>${esc(item.repo.split('/').pop())}</span></div>
+    <span class="roadmap-value">${esc(value)}</span>
+  </div>`;
+}
+
+/** Mounted once as a sibling of .product-duo, inside #panel-product — the
+ * outcomes fixture (docs/data/demo-outcomes.js) has no static container in
+ * docs/index.html, and that file is out of scope for this module. Idempotent:
+ * re-render() calls (filter changes) update the existing container in place
+ * rather than appending a duplicate. */
+function renderOutcomes(repos) {
+  let section = $('productOutcomes');
+  if (!section) {
+    section = document.createElement('section');
+    section.className = 'card';
+    section.id = 'productOutcomes';
+    section.innerHTML = '<div class="card-head"><h2 id="productOutcomesTitle"></h2></div>'
+      + '<div id="productOutcomesBody"></div>';
+    document.querySelector('#panel-product .product-duo')?.after(section);
+  }
+  const titleEl = section.querySelector('#productOutcomesTitle');
+  if (titleEl) titleEl.textContent = t('product.outcomesTitle');
+  const bodyEl = section.querySelector('#productOutcomesBody');
+  if (!bodyEl) return;
+  const rows = outcomeRows(repos);
+  bodyEl.innerHTML = rows.length
+    ? rows.map(outcomeRowHTML).join('')
+    : `<p class="outcome-empty">${esc(t('product.outcomesEmpty'))}</p>`;
 }
 
 export function renderProductOutcomes() {
@@ -134,4 +200,5 @@ export function renderProductOutcomes() {
   $('productOutcomeCoverage').textContent = repos.length ? `${withOutcomes}/${repos.length}` : '–';
   renderReadiness(rows);
   renderRoadmap(items);
+  renderOutcomes(repos);
 }

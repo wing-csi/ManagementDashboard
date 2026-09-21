@@ -1,3 +1,5 @@
+import { t } from './i18n/index.js';
+
 /** Snapshot freshness is pure calculation so callers can supply a fixed clock. */
 const HOUR = 3600e3;
 const DAY = 864e5;
@@ -26,10 +28,9 @@ export function staleness(generatedAt, nowMs) {
 }
 
 const MESSAGE = {
-  stale: (result) => `數據係 ${result.ageDays} 日前嘅舊快照；所有「今日」、逾期同預測都以舊數據為準。`
-    + '請到 GitHub Actions 檢查最近的收集及部署工作流程。',
-  unreadable: () => '讀唔到數據嘅時間戳，所以唔知呢頁係幾時嘅數。請檢查 metrics.json 的 generated_at 欄位。',
-  future: () => '數據嘅時間戳喺未來，本機或數據收集器的時間唔啱。呢頁所有「今日」、過期同 SPI 都信唔過。',
+  stale: (result) => t('misc.staleMessage', { days: result.ageDays }),
+  unreadable: () => t('misc.unreadableMessage'),
+  future: () => t('misc.futureMessage'),
 };
 
 export function stalenessMessage(result) {
