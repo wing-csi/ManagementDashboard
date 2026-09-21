@@ -582,10 +582,10 @@ python3 -m http.server -d docs 8000   # http://localhost:8000
 
 `docs/index.html` 用緊 ES modules,直接雙擊個檔案用 `file://` 打開會俾瀏覽器 CORS 擋晒,一定要用返上面嗰個 http server。
 
-**唔使再自己手動跑 collector** — CI 而家每日 05:00 HKT 自動幫 data repo 刷新一次。想睇仲新鮮過 nightly 嗰份數據,人手跑都仲得,一樣要 `GH_METRICS_TOKEN`(追埋 benegg 嗰堆 repo 就仲要 `BEN_GH_METRICS_TOKEN`):
+**唔使再自己手動跑 collector** — CI 而家每日 05:00 HKT 自動幫 data repo 刷新一次。想睇仲新鮮過 nightly 嗰份數據,人手跑都仲得,一樣要 `GH_METRICS_TOKEN`(追埋 csihk 嗰堆 repo 就仲要 `CSI_GH_METRICS_TOKEN`):
 ```bash
 export GH_METRICS_TOKEN=github_pat_xxx
-export BEN_GH_METRICS_TOKEN=github_pat_xxx   # 冇追 benegg repos 可以唔設
+export CSI_GH_METRICS_TOKEN=github_pat_xxx   # 冇追 csihk repos 可以唔設
 python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.json
 python3 -m http.server -d docs 8000
 ```
@@ -650,7 +650,7 @@ Alias 係**宣告**出嚟,唔係估:`metrics.json` 冇 author email 可以夾。
 
 ```toml
 [[repos]]
-name = "benegg/BoostBank-ReactNative-SMEApp"
+name = "csihk/BoostBank-ReactNative-SMEApp"
 owner = "Wing"        # 寫正式名或者佢任何一個身份都得
 ```
 

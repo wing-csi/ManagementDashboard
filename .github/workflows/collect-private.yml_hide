@@ -51,7 +51,7 @@ jobs:
           # private target repo 必須用 PAT(Contents:Read + Pull requests:Read)
           GH_METRICS_TOKEN: ${{ secrets.GH_METRICS_TOKEN }}
           # per-repo tokens(config token_env 對應):每加一個 token 加一行
-          BEN_GH_METRICS_TOKEN: ${{ secrets.BEN_GH_METRICS_TOKEN }}
+          CSI_GH_METRICS_TOKEN: ${{ secrets.CSI_GH_METRICS_TOKEN }}
         run: python3 scripts/collect_github.py --config config.toml --out docs/data/metrics.json
 
       - name: Commit metrics back

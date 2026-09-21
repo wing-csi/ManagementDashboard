@@ -35,7 +35,7 @@ jobs:
           GH_METRICS_TOKEN: ${{ secrets.GH_METRICS_TOKEN || github.token }}
           # per-repo tokens(config token_env 對應):secrets 唔會自動變 env,
           # 每加一個 token 都要喺度加一行
-          BEN_GH_METRICS_TOKEN: ${{ secrets.BEN_GH_METRICS_TOKEN }}
+          CSI_GH_METRICS_TOKEN: ${{ secrets.CSI_GH_METRICS_TOKEN }}
         run: python3 scripts/collect_github.py --config config.toml --out /tmp/metrics.json
 
       - name: Checkout private data repo

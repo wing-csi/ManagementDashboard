@@ -41,93 +41,98 @@ sop_paths = []
 # 監察 master + hotfix branch(共享 commits 歸 master;merge 入呢兩條唔算跨 branch 紅線)
 branches = ["master", "hotfix/v2.6.1"]
 
-# ---- benegg 項目群(用 BEN_GH_METRICS_TOKEN;workflow env 要傳入)----
+# ---- csihk 項目群(用 CSI_GH_METRICS_TOKEN;workflow env 要傳入)----
 # 未知 AI 使用情況 → 唔設 no_evidence_level,跟全局誠實 fallback;
 # 呢啲 repos 冇 testcases/ 規範,sop_paths 清空免 SOP 模式誤 cap
 
 [[repos]]
-name = "benegg/BOCPT-EE-Web"
+name = "csihk/BOCPT-EE-Web"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 branches = ["feature/new-client-develop"]
 
 [[repos]]
-name = "benegg/BOCPT-EE-APP-IOS"
+name = "csihk/BOCPT-EE-APP-IOS"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
-name = "benegg/BOCPT-EE-APP-ANDROID"
+name = "csihk/BOCPT-EE-APP-ANDROID"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
-name = "benegg/BOCPT-ER-WEB"
+name = "csihk/BOCPT-ER-WEB"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
-name = "benegg/BOCPT-CMS-API"
+name = "csihk/BOCPT-CMS-API"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 branches = ["feature/new-client-develop"]
 
 [[repos]]
-name = "benegg/BOCPT-ORSO-API"
+name = "csihk/BOCPT-ORSO-API"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
-name = "benegg/BOCPT-WEB-API"
+name = "csihk/BOCPT-WEB-API"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
-name = "benegg/BOCPT-CMS-WEB"
+name = "csihk/BOCPT-CMS-WEB"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 branches = ["feature/new-client-develop"]
 
 # ⚠ 「general-web」實際 repo 名待確認(BOCPT-GENERAL-WEB 唔存在)—
-# 去 github.com/benegg?tab=repositories 搵返真名,填入下面再解 comment,
+# 去 github.com/csihk?tab=repositories 搵返真名,填入下面再解 comment,
 # 同時確認 Ben 個 token 嘅 Repository access 有揀埋佢
 # [[repos]]
-# name = "benegg/???"
+# name = "csihk/???"
 # owner = "Lam"
-# token_env = "BEN_GH_METRICS_TOKEN"
+# token_env = "CSI_GH_METRICS_TOKEN"
 # sop_paths = []
 # branches = ["feature/new-client-develop"]
 
 [[repos]]
-name = "benegg/SUNLIFE-EE-APP-ANDROID"
-token_env = "BEN_GH_METRICS_TOKEN"
+name = "csihk/SUNLIFE-EE-APP-ANDROID"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
-name = "benegg/BOCPT-EE-APP-EMBED-WEB"
+name = "csihk/BOCPT-EE-APP-EMBED-WEB"
 owner = "Lam"
-token_env = "BEN_GH_METRICS_TOKEN"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 
-# Smart Patient Tracking Dashboard — benegg 入面第一個行 PR flow 嘅 repo,
+# Smart Patient Tracking Dashboard — csihk 入面第一個行 PR flow 嘅 repo,
 # 而且 source branch 係 codex/*(agent 生成嘅痕跡)→ 留返俾 smart inference 判,
 # 唔預設 level;睇實際判成點先決定使唔使 override
 [[repos]]
-name = "benegg/HA-SPDT-NFP0394"
-token_env = "BEN_GH_METRICS_TOKEN"
+name = "csihk/HA-SPDT-NFP0394"
+token_env = "CSI_GH_METRICS_TOKEN"
 sop_paths = []
 
 [[repos]]
-name = "benegg/BoostBank-ReactNative-SMEApp"
-token_env = "BEN_GH_METRICS_TOKEN"
+name = "csihk/NFP0402-MessagePro"
+token_env = "CSI_GH_METRICS_TOKEN"
+sop_paths = []
+
+[[repos]]
+name = "csihk/BoostBank-ReactNative-SMEApp"
+token_env = "CSI_GH_METRICS_TOKEN"
 owner = "Wing"                 # 項目負責人;repo select 會有「按負責人」分組
 sop_paths = []
 # main 排首名:共享 commits 歸 main,兩條工作 branch 嘅獨有 commits 各自入帳
