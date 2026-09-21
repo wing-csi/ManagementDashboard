@@ -1,3 +1,7 @@
 docs/data/metrics.json
 docs/data/metrics.json.snapshot-backup
 __pycache__/
+
+# Local collector tokens — never commit. scripts/collect-local.sh refuses to
+# run if this stops being ignored.
+.secrets.env
