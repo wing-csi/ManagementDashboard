@@ -1,22 +1,38 @@
 import { state, $, esc, loadData, windowTasks, precedingTasks, LoadError, repoInScope, singleRepo } from './data.js';
 import { buildPersonIndex, personOptions } from './people.js';
-import { statsFromTasks, buildWeekly, metaInWindow } from './aggregate.js?v=zh-20260805-3';
+import { statsFromTasks, buildWeekly, metaInWindow } from './aggregate.js?v=i18n-20260922-1';
 import {
   renderKPIs, renderSpectrum, renderChart, renderAlerts, renderDora,
   renderRag, renderQuality, setScopeNotes,
-} from './render-kpi.js?v=zh-20260805-3';
-import { renderProjects } from './render-project.js?v=zh-20260805-3';
-import { renderBurndown } from './render-burndown.js?v=zh-20260805-5';
-import { renderOverview, renderDefects, renderTable } from './render-table.js?v=zh-20260805-3';
-import { renderProductOutcomes } from './render-product.js?v=zh-20260805-3';
-import { renderManagement } from './render-management.js?v=zh-20260805-5';
+} from './render-kpi.js?v=i18n-20260922-1';
+import { renderProjects } from './render-project.js?v=i18n-20260922-1';
+import { renderBurndown } from './render-burndown.js?v=i18n-20260922-1';
+import { renderOverview, renderDefects, renderTable } from './render-table.js?v=i18n-20260922-1';
+import { renderProductOutcomes } from './render-product.js?v=i18n-20260922-1';
+import { renderManagement } from './render-management.js?v=i18n-20260922-1';
 import { initTabs } from './tabs.js';
+import { LOCALE, t } from './i18n/index.js';
+import { applyDom } from './i18n/apply-dom.js';
+import { mountLanguageToggle } from './i18n/toggle.js';
+
+// Set before loadData() and before any render call, so there is no flash of
+// untranslated static markup once string extraction lands. applyDom() walks
+// zero data-i18n elements today (that work is later, by other agents) — the
+// call site exists now so nothing has to remember to add it.
+document.documentElement.lang = LOCALE;
+applyDom();
+mountLanguageToggle();
 
 /** eyebrow 要講明而家係邊個嘅視角,否則 filtered dashboard 會被當成全隊數字。 */
 export function renderEyebrow() {
   const repos = state.data.repos || [];
-  const base = (repos.length === 1 ? repos[0].toUpperCase() : `${repos.length} 個程式庫`) + ' · GITHUB 數據監測';
-  $('eyebrow').textContent = state.person === 'all' ? base : `${base} · 負責人 ${state.person}`;
+  const repoLabel = repos.length === 1
+    ? repos[0].toUpperCase()
+    : t('chrome.repoCount', { n: repos.length });
+  const base = `${repoLabel} · ${t('chrome.telemetry')}`;
+  $('eyebrow').textContent = state.person === 'all'
+    ? base
+    : `${base} · ${t('chrome.ownerLabel', { name: state.person })}`;
 }
 
 export function render() {
@@ -51,8 +67,10 @@ export function render() {
     box.hidden = false;
     $('loadErrorDetail').textContent =
       e instanceof LoadError && e.status === 401
-        ? '需要登入。'
-        : `（${e instanceof LoadError ? e.status : '網絡錯誤'}）`;
+        ? t('chrome.signInRequired')
+        : t('chrome.loadErrorDetailWrapped', {
+            detail: e instanceof LoadError ? e.status : t('chrome.networkError'),
+          });
     return;
   }
   state.data = data;
@@ -70,19 +88,19 @@ export function render() {
     if (owner) ownerCounts.set(owner, (ownerCounts.get(owner) || 0) + 1);
   }
   const ownerGroup = ownerCounts.size
-    ? `<optgroup label="按負責人">` + [...ownerCounts.entries()]
+    ? `<optgroup label="${esc(t('chrome.byOwnerGroup'))}">` + [...ownerCounts.entries()]
         .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
-        .map(([o, n]) => `<option value="owner:${esc(o)}">${esc(o)} 的項目 (${n})</option>`).join('')
+        .map(([o, n]) => `<option value="owner:${esc(o)}">${esc(t('chrome.ownerProjectsOption', { owner: o, n }))}</option>`).join('')
       + `</optgroup>`
     : '';
   const repoOptions = repos.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
   const repoGroup = ownerCounts.size
-    ? `<optgroup label="個別程式庫">${repoOptions}</optgroup>` : repoOptions;
-  $('repoSel').innerHTML = `<option value="all">全部程式庫</option>` + ownerGroup + repoGroup;
+    ? `<optgroup label="${esc(t('chrome.individualReposGroup'))}">${repoOptions}</optgroup>` : repoOptions;
+  $('repoSel').innerHTML = `<option value="all">${esc(t('chrome.allRepos'))}</option>` + ownerGroup + repoGroup;
 
   const ts = data.generated_at.replace('T', ' ').slice(0, 16) + ' UTC';
   $('stamp').textContent = ts;
-  $('footStamp').textContent = '產生於 ' + ts;
+  $('footStamp').textContent = t('chrome.generatedAt', { ts });
 
   const rebuildBranches = () => {
     const sel = $('branchSel');
@@ -90,20 +108,20 @@ export function render() {
     if (!only) {
       // branch 名喺唔同 repo 之間冇比較意義 — 唔係單一 repo 就鎖死
       state.branch = 'all';
-      sel.innerHTML = `<option value="all">全部分支</option>`;
+      sel.innerHTML = `<option value="all">${esc(t('chrome.allBranches'))}</option>`;
       sel.disabled = true;
-      sel.title = '選擇單一程式庫後才可篩選分支';
+      sel.title = t('chrome.branchSelectTitle');
       return;
     }
     sel.disabled = false;
     sel.title = '';
     const set = new Set();
-    for (const t of state.data.tasks || []) {
-      if (t.repo === only && t.branch) set.add(t.branch);
+    for (const task of state.data.tasks || []) {
+      if (task.repo === only && task.branch) set.add(task.branch);
     }
     const branches = [...set].sort();
     if (state.branch !== 'all' && !set.has(state.branch)) state.branch = 'all';
-    sel.innerHTML = `<option value="all">全部分支</option>` +
+    sel.innerHTML = `<option value="all">${esc(t('chrome.allBranches'))}</option>` +
       branches.map((b) => `<option value="${esc(b)}"${b === state.branch ? ' selected' : ''}>${esc(b)}</option>`).join('');
   };
 
@@ -116,12 +134,12 @@ export function render() {
 
   // 人係跨 repo 可比較嘅(同 branch 唔同),所以全部 repos 時一樣開住
   const rebuildPeople = () => {
-    const inScope = (t) => repoInScope(t.repo) && (state.branch === 'all' || t.branch === state.branch);
+    const inScope = (task) => repoInScope(task.repo) && (state.branch === 'all' || task.branch === state.branch);
     const opts = personOptions(state.data.tasks || [], state.personIndex, inScope);
     if (state.person !== 'all' && !opts.some((o) => o.person === state.person)) {
       state.person = 'all';
     }
-    $('personSel').innerHTML = `<option value="all">全部成員</option>` +
+    $('personSel').innerHTML = `<option value="all">${esc(t('chrome.allContributors'))}</option>` +
       opts.map((o) => `<option value="${esc(o.person)}"${o.person === state.person ? ' selected' : ''}>${esc(o.person)} (${o.count})</option>`).join('');
     syncOwnerParam();
   };

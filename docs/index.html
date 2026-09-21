@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 自動化水平儀</title>
+<title data-i18n="chrome.title">AI 自動化水平儀</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link rel="stylesheet" href="./css/dashboard.css?v=zh-20260805-4">
+<link rel="stylesheet" href="./css/dashboard.css?v=i18n-20260922-2">
 </head>
 <body>
 
@@ -13,30 +13,30 @@
   <div class="chrome-inner">
     <header class="masthead">
       <div class="brand">
-        <h1>自動化水平儀 <small>AI 自動化水平儀</small></h1>
-        <div class="eyebrow" id="eyebrow">GITHUB 數據監測</div>
+        <h1><span data-i18n="chrome.brand">自動化水平儀</span> <small data-i18n="chrome.title">AI 自動化水平儀</small></h1>
+        <div class="eyebrow" id="eyebrow" data-i18n="chrome.telemetry">GITHUB 數據監測</div>
       </div>
       <div class="controls">
-        <span class="badge-demo" id="demoBadge">示範數據 · 手動要求（?demo=1）</span>
-        <select id="repoSel" aria-label="程式庫"></select>
-        <select id="branchSel" aria-label="分支"></select>
-        <select id="personSel" aria-label="貢獻者"></select>
-        <select id="windowSel" aria-label="統計範圍">
-          <option value="30">近 30 日</option>
-          <option value="60">近 60 日</option>
-          <option value="90" selected>近 90 日</option>
-          <option value="180">近 180 日</option>
+        <span class="badge-demo" id="demoBadge" data-i18n="chrome.demoBadge">示範數據 · 手動要求（?demo=1）</span>
+        <select id="repoSel" aria-label="程式庫" data-i18n-attr="aria-label:chrome.repoAriaLabel"></select>
+        <select id="branchSel" aria-label="分支" data-i18n-attr="aria-label:chrome.branchAriaLabel"></select>
+        <select id="personSel" aria-label="貢獻者" data-i18n-attr="aria-label:chrome.contributorAriaLabel"></select>
+        <select id="windowSel" aria-label="統計範圍" data-i18n-attr="aria-label:chrome.windowAriaLabel">
+          <option value="30" data-i18n="chrome.window30">近 30 日</option>
+          <option value="60" data-i18n="chrome.window60">近 60 日</option>
+          <option value="90" selected data-i18n="chrome.window90">近 90 日</option>
+          <option value="180" data-i18n="chrome.window180">近 180 日</option>
         </select>
         <span class="stamp" id="stamp"></span>
       </div>
     </header>
     <div class="stale-banner" id="staleBanner" role="status" hidden></div>
-    <div class="tabs" role="tablist" aria-label="儀表板分頁">
-      <button class="tab" id="tab-overview" data-tab="overview" role="tab" aria-controls="panel-overview" aria-selected="true">總覽</button>
-      <button class="tab" id="tab-quality" data-tab="quality" role="tab" aria-controls="panel-quality" aria-selected="false">品質</button>
-      <button class="tab" id="tab-projects" data-tab="projects" role="tab" aria-controls="panel-projects" aria-selected="false">項目 &amp; 團隊</button>
-      <button class="tab" id="tab-product" data-tab="product" role="tab" aria-controls="panel-product" aria-selected="false">產品 &amp; 發佈</button>
-      <button class="tab" id="tab-tasks" data-tab="tasks" role="tab" aria-controls="panel-tasks" aria-selected="false">工作</button>
+    <div class="tabs" role="tablist" aria-label="儀表板分頁" data-i18n-attr="aria-label:chrome.tablistAriaLabel">
+      <button class="tab" id="tab-overview" data-tab="overview" role="tab" aria-controls="panel-overview" aria-selected="true" data-i18n="chrome.tabOverview">總覽</button>
+      <button class="tab" id="tab-quality" data-tab="quality" role="tab" aria-controls="panel-quality" aria-selected="false" data-i18n="chrome.tabQuality">品質</button>
+      <button class="tab" id="tab-projects" data-tab="projects" role="tab" aria-controls="panel-projects" aria-selected="false" data-i18n="chrome.tabProjects">項目 &amp; 團隊</button>
+      <button class="tab" id="tab-product" data-tab="product" role="tab" aria-controls="panel-product" aria-selected="false" data-i18n="chrome.tabProduct">產品 &amp; 發佈</button>
+      <button class="tab" id="tab-tasks" data-tab="tasks" role="tab" aria-controls="panel-tasks" aria-selected="false" data-i18n="chrome.tabTasks">工作</button>
     </div>
   </div>
 </div>
@@ -44,33 +44,33 @@
 <div class="wrap">
 
   <div id="loadError" hidden role="alert" class="card">
-    <strong>載入數據失敗。</strong>
+    <strong data-i18n="chrome.loadErrorTitle">載入數據失敗。</strong>
     <span id="loadErrorDetail"></span>
     <div style="margin-top:6px;color:var(--muted);font-size:var(--fs-sm)">
-      未登入或者工作階段已過期？<a href="./">重新登入</a>。想睇示範數據：<a href="./?demo=1">?demo=1</a>
+      <span data-i18n="chrome.loadErrorSignedOut">未登入或者工作階段已過期？</span><a href="./" data-i18n="chrome.loadErrorRelogin">重新登入</a><span data-i18n="chrome.loadErrorDemoHint">。想睇示範數據：</span><a href="./?demo=1">?demo=1</a>
     </div>
   </div>
 
   <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
 
-    <section class="management-kpis" aria-label="管理摘要">
+    <section class="management-kpis" aria-label="管理摘要" data-i18n-attr="aria-label:misc.managementSummaryAriaLabel">
       <div class="card kpi management-primary">
-        <div class="label">項目組合交付</div>
+        <div class="label" data-i18n="misc.labelPortfolioDelivery">項目組合交付</div>
         <div class="value management-value" id="managementStatus">–</div>
         <div class="sub" id="managementStatusSub">–</div>
       </div>
       <div class="card kpi">
-        <div class="label">數據健康狀態</div>
+        <div class="label" data-i18n="misc.labelDataHealth">數據健康狀態</div>
         <div class="value management-value" id="managementHealth">–</div>
         <div class="sub" id="managementHealthSub">–</div>
       </div>
       <div class="card kpi">
-        <div class="label">目前計劃範圍</div>
+        <div class="label" data-i18n="misc.labelCurrentScope">目前計劃範圍</div>
         <div class="value management-value" id="managementScope">–</div>
         <div class="sub" id="managementScopeSub">–</div>
       </div>
       <div class="card kpi">
-        <div class="label">預測覆蓋率</div>
+        <div class="label" data-i18n="misc.labelForecastCoverage">預測覆蓋率</div>
         <div class="value management-value" id="managementForecast">–</div>
         <div class="sub" id="managementForecastSub">–</div>
       </div>
@@ -79,15 +79,15 @@
     <section class="management-duo">
       <div class="card management-attention-card">
         <div class="card-head">
-          <h2>管理層需關注</h2>
-          <span class="card-note">逾期 · 數據失敗 · 預測 · CI · 治理紅線</span>
+          <h2 data-i18n="misc.h2ManagementAttention">管理層需關注</h2>
+          <span class="card-note" data-i18n="misc.cardNoteAttentionScope">逾期 · 數據失敗 · 預測 · CI · 治理紅線</span>
         </div>
         <ul class="management-attention" id="managementAttention"></ul>
       </div>
       <div class="card">
         <div class="card-head">
-          <h2>項目前景</h2>
-          <span class="card-note">規則式狀態 · 無資料一律標示為「未知」</span>
+          <h2 data-i18n="misc.h2ProjectOutlook">項目前景</h2>
+          <span class="card-note" data-i18n="misc.cardNoteProjectOutlook">規則式狀態 · 無資料一律標示為「未知」</span>
         </div>
         <div class="management-projects" id="managementProjects"></div>
       </div>
@@ -96,30 +96,30 @@
     <section class="kpis">
       <div class="card kpi hero">
         <div>
-          <div class="label">L3+ 自動化佔比 — 北極星</div>
+          <div class="label" data-i18n="misc.labelL3Hero">L3+ 自動化佔比 — 北極星</div>
           <div class="value" id="kpiL3">–</div>
           <div class="delta" id="kpiL3d"></div>
         </div>
         <div class="hero-spark" id="heroSpark"></div>
         <div class="hero-foot">
-          <div class="sub">工作由 AI 代理主導完成的比例</div>
+          <div class="sub" data-i18n="misc.subL3Hero">工作由 AI 代理主導完成的比例</div>
           <span class="hero-tag">L3+L4+L5</span>
         </div>
       </div>
       <div class="card kpi">
-        <div class="label">出碼率（近似）</div>
+        <div class="label" data-i18n="misc.labelLocApprox">出碼率（近似）</div>
         <div class="value" id="kpiLoc">–</div>
         <div class="delta" id="kpiLocd"></div>
-        <div class="sub">L2+ 工作插入行數佔比</div>
+        <div class="sub" data-i18n="misc.subLocApprox">L2+ 工作插入行數佔比</div>
       </div>
       <div class="card kpi">
-        <div class="label">已分級工作</div>
+        <div class="label" data-i18n="misc.labelClassifiedTasks">已分級工作</div>
         <div class="value" id="kpiTasks">–</div>
         <div class="delta" id="kpiTasksd"></div>
         <div class="sub" id="kpiTasksSub">–</div>
       </div>
       <div class="card kpi">
-        <div class="label">分級覆蓋率</div>
+        <div class="label" data-i18n="misc.labelClassificationCoverage">分級覆蓋率</div>
         <div class="value" id="kpiCov">–</div>
         <div class="delta" id="kpiCovd"></div>
         <div class="sub" id="kpiCovSub">–</div>
@@ -129,35 +129,35 @@
     <div class="dora-lead">DORA</div>
     <section class="dora-strip">
       <div class="d">
-        <div class="dl">部署頻率<span class="scope-note" hidden>全程式庫範圍</span></div>
+        <div class="dl"><span data-i18n="chrome.doraDeployFreq">部署頻率</span><span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span></div>
         <div class="dv" id="dDeploy">–</div>
         <div class="ds" id="dDeploySub">–</div>
       </div>
       <div class="d">
-        <div class="dl">前置時間（至合併）</div>
+        <div class="dl" data-i18n="chrome.doraLeadTime">前置時間（至合併）</div>
         <div class="dv" id="dLead">–</div>
-        <div class="ds">PR 開啟 → 合併時間中位數</div>
+        <div class="ds" data-i18n="chrome.doraLeadTimeSub">PR 開啟 → 合併時間中位數</div>
       </div>
       <div class="d">
-        <div class="dl">回退密度</div>
+        <div class="dl" data-i18n="chrome.doraChangeFailureRate">回退密度</div>
         <div class="dv" id="dCfr">–</div>
-        <div class="ds" id="dCfrSub">補救工作 ÷ 全部工作</div>
+        <div class="ds" id="dCfrSub" data-i18n="chrome.doraChangeFailureRateSub">補救工作 ÷ 全部工作</div>
       </div>
       <div class="d">
-        <div class="dl">MTTR（近似）</div>
+        <div class="dl" data-i18n="chrome.doraMttr">MTTR（近似）</div>
         <div class="dv" id="dMttr">–</div>
-        <div class="ds">修復類工作的前置時間中位數</div>
+        <div class="ds" data-i18n="chrome.doraMttrSub">修復類工作的前置時間中位數</div>
       </div>
     </section>
 
     <section class="card spectrum-card">
       <div class="card-head">
-        <h2>自動化水平分佈</h2>
+        <h2 data-i18n="misc.h2SpectrumDistribution">自動化水平分佈</h2>
         <span class="card-note" id="specNote"></span>
       </div>
       <div class="spectrum">
         <div class="strip" id="strip"></div>
-        <div class="threshold" id="threshold"><em>L3 自動化門檻</em></div>
+        <div class="threshold" id="threshold"><em data-i18n="misc.thresholdL3">L3 自動化門檻</em></div>
       </div>
       <div class="legend" id="legend"></div>
     </section>
@@ -165,13 +165,13 @@
     <section class="duo">
       <div class="card">
         <div class="card-head">
-          <h2>每週工作構成 × L3+ 趨勢</h2>
-          <span class="card-note">長條 = 每週工作數 · 折線 = L3+ %</span>
+          <h2 data-i18n="misc.h2WeeklyMixTrend">每週工作構成 × L3+ 趨勢</h2>
+          <span class="card-note" data-i18n="misc.cardNoteWeeklyMix">長條 = 每週工作數 · 折線 = L3+ %</span>
         </div>
         <div class="chart-box"><canvas id="weeklyChart"></canvas></div>
       </div>
       <div class="card alerts">
-        <div class="card-head"><h2>異常提醒</h2></div>
+        <div class="card-head"><h2 data-i18n="misc.h2Alerts">異常提醒</h2></div>
         <ul id="alertList"></ul>
       </div>
     </section>
@@ -182,62 +182,62 @@
 
     <section class="card quality">
       <div class="card-head">
-        <h2>品質 × 自動化</h2>
-        <span class="card-note">fix / hotfix / revert 標題前綴 · PR 打回輪數（以推送分隔）</span>
-        <span class="scope-note" hidden>紅黃綠燈為全程式庫範圍</span>
+        <h2 data-i18n="misc.h2QualityAutomation">品質 × 自動化</h2>
+        <span class="card-note" data-i18n="misc.cardNoteQuality">fix / hotfix / revert 標題前綴 · PR 打回輪數（以推送分隔）</span>
+        <span class="scope-note" hidden data-i18n="misc.scopeNoteRagFullRepo">紅黃綠燈為全程式庫範圍</span>
       </div>
       <div class="rag" id="ragRow"></div>
-      <div class="ov-sub" id="ragHint" style="display:none;margin:-6px 0 14px">灰燈 = 無品質信號（PR 需要有 CI 檢查，或在設定檔指定 <code>quality_file</code>）— 詳見 README 品質指標</div>
+      <div class="ov-sub" id="ragHint" style="display:none;margin:-6px 0 14px"><span data-i18n="misc.ragHintPrefix">灰燈 = 無品質信號（PR 需要有 CI 檢查，或在設定檔指定 </span><code>quality_file</code><span data-i18n="misc.ragHintSuffix">）— 詳見 README 品質指標</span></div>
       <div class="qgrid">
         <div class="kpi">
-          <div class="label">修復佔比</div>
+          <div class="label" data-i18n="misc.labelReworkShare">修復佔比</div>
           <div class="value" id="qFix">–</div>
           <div class="sub" id="qFixSub">–</div>
         </div>
         <div class="kpi">
-          <div class="label">PR 打回率</div>
+          <div class="label" data-i18n="misc.labelChangesRequestedRate">PR 打回率</div>
           <div class="value" id="qRework">–</div>
           <div class="sub" id="qReworkSub">–</div>
         </div>
         <div class="kpi">
-          <div class="label">返工周轉時間</div>
+          <div class="label" data-i18n="misc.labelReworkTurnaround">返工周轉時間</div>
           <div class="value" id="qTurn">–</div>
           <div class="sub" id="qTurnSub">–</div>
         </div>
         <div class="kpi">
-          <div class="label">PR 接受率</div>
+          <div class="label" data-i18n="misc.labelPrAcceptRate">PR 接受率</div>
           <div class="value" id="qAccept">–</div>
           <div class="sub" id="qAcceptSub">–</div>
         </div>
         <div class="kpi">
-          <div class="label">每週有效工作數</div>
+          <div class="label" data-i18n="misc.labelEffectiveTasksPerWeek">每週有效工作數</div>
           <div class="value" id="qMeaning">–</div>
-          <div class="sub">改動 ≥10 行的工作</div>
+          <div class="sub" data-i18n="misc.subEffectiveTasks">改動 ≥10 行的工作</div>
         </div>
         <div class="kpi">
-          <div class="label">缺陷率<span class="scope-note" id="qDefectScope" hidden>全程式庫範圍</span></div>
+          <div class="label"><span data-i18n="misc.labelDefectRate">缺陷率</span><span class="scope-note" id="qDefectScope" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span></div>
           <div class="value" id="qDefect">–</div>
           <div class="sub" id="qDefectSub">–</div>
         </div>
       </div>
       <div class="qlevels">
-        <div class="label" style="font-size:var(--fs-sm);color:var(--muted);margin:16px 0 10px">各級別的修復佔比</div>
+        <div class="label" style="font-size:var(--fs-sm);color:var(--muted);margin:16px 0 10px" data-i18n="misc.labelReworkByLevel">各級別的修復佔比</div>
         <div id="qLevels"></div>
       </div>
     </section>
 
     <section class="card defects">
       <div class="card-head">
-        <h2>缺陷追蹤</h2>
-        <span class="card-note">來源：有 bug 標籤的 GitHub Issue + 計劃檔 <code>#bug</code> · 未修優先 · <span id="defectCount"></span></span>
-        <span class="scope-note" hidden>全程式庫範圍</span>
+        <h2 data-i18n="misc.h2DefectTracking">缺陷追蹤</h2>
+        <span class="card-note"><span data-i18n="misc.cardNoteDefectSourcePrefix">來源：有 bug 標籤的 GitHub Issue + 計劃檔 </span><code>#bug</code><span data-i18n="misc.cardNoteDefectSourceSuffix"> · 未修優先 · </span><span id="defectCount"></span></span>
+        <span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span>
       </div>
       <table>
         <colgroup>
           <col style="width:64px"><col style="width:130px"><col style="width:104px"><col>
           <col style="width:64px"><col style="width:120px"><col style="width:104px">
         </colgroup>
-        <thead><tr><th>編號</th><th>程式庫</th><th>嚴重程度</th><th>描述</th><th>狀態</th><th>負責人</th><th>期限</th></tr></thead>
+        <thead><tr><th data-i18n="misc.thId">編號</th><th data-i18n="misc.thRepo">程式庫</th><th data-i18n="misc.thSeverity">嚴重程度</th><th data-i18n="misc.thDescription">描述</th><th data-i18n="misc.thStatus">狀態</th><th data-i18n="misc.thOwner">負責人</th><th data-i18n="misc.thDeadline">期限</th></tr></thead>
         <tbody id="defectRows"></tbody>
       </table>
     </section>
@@ -248,20 +248,20 @@
 
     <section class="card projects">
       <div class="card-head">
-        <h2>項目進度</h2>
-        <span class="card-note">來源：GitHub Issue / 里程碑 · 完成度以已建立的 Issue 計算</span>
-        <span class="scope-note" hidden>全程式庫範圍</span>
+        <h2 data-i18n="misc.h2ProjectProgress">項目進度</h2>
+        <span class="card-note" data-i18n="misc.cardNoteProjectProgress">來源：GitHub Issue / 里程碑 · 完成度以已建立的 Issue 計算</span>
+        <span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span>
       </div>
       <div class="rag" id="projChips"></div>
       <div id="projMilestones"></div>
       <div id="burndownCards"></div>
       <div class="proj-duo">
         <div>
-          <div class="proj-h">異常工作（延誤 / 呆滯 &gt;14 日）</div>
+          <div class="proj-h" data-i18n="misc.projHLateWork">異常工作（延誤 / 呆滯 &gt;14 日）</div>
           <ul class="proj-list" id="projLate"></ul>
         </div>
         <div>
-          <div class="proj-h">今日建議優先處理</div>
+          <div class="proj-h" data-i18n="misc.projHTodayPriority">今日建議優先處理</div>
           <ol class="proj-list" id="projTodo"></ol>
         </div>
       </div>
@@ -269,37 +269,37 @@
 
     <section class="card overview">
       <div class="card-head">
-        <h2>程式庫概覽</h2>
-        <span class="card-note">程式語言按位元組計算 · 月度活躍度不受統計範圍影響</span>
+        <h2 data-i18n="misc.h2RepoOverview">程式庫概覽</h2>
+        <span class="card-note" data-i18n="misc.cardNoteRepoOverview">程式語言按位元組計算 · 月度活躍度不受統計範圍影響</span>
       </div>
       <div class="ov-grid">
-        <div><div class="proj-h">程式碼庫（語言構成）<span class="scope-note" hidden>全程式庫範圍</span></div><div id="ovLangs"></div></div>
-        <div><div class="proj-h">提交類型（統計範圍內）</div><div id="ovTypes"></div></div>
-        <div><div class="proj-h">月度活躍(全收集範圍)</div><div id="ovMonthly"></div></div>
+        <div><div class="proj-h"><span data-i18n="misc.projHCodebase">程式碼庫（語言構成）</span><span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span></div><div id="ovLangs"></div></div>
+        <div><div class="proj-h" data-i18n="misc.projHCommitTypes">提交類型（統計範圍內）</div><div id="ovTypes"></div></div>
+        <div><div class="proj-h" data-i18n="misc.projHMonthlyActivity">月度活躍(全收集範圍)</div><div id="ovMonthly"></div></div>
       </div>
       <div class="register-pies">
         <section class="register-pie" aria-labelledby="planAssignmentTitle">
           <div class="register-pie-head">
             <div>
-              <h3 id="planAssignmentTitle">Plan 工作分配</h3>
-              <p>assignee:Name / @GitHub-handle task 數 ÷ plan 總 task 數 · 未標記則使用程式庫負責人</p>
+              <h3 id="planAssignmentTitle" data-i18n="misc.h3PlanAssignment">Plan 工作分配</h3>
+              <p data-i18n="misc.pPlanAssignmentDesc">assignee:Name / @GitHub-handle task 數 ÷ plan 總 task 數 · 未標記則使用程式庫負責人</p>
             </div>
-            <span class="scope-note" hidden>全程式庫範圍</span>
+            <span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span>
           </div>
           <div id="planAssignmentPie"></div>
         </section>
         <section class="register-pie" aria-labelledby="defectFixTitle">
           <div class="register-pie-head">
             <div>
-              <h3 id="defectFixTitle">Defect 修復分佈</h3>
-              <p>fixed-by:Name · 未修亦計入總數</p>
+              <h3 id="defectFixTitle" data-i18n="misc.h3DefectFix">Defect 修復分佈</h3>
+              <p data-i18n="misc.pDefectFixDesc">fixed-by:Name · 未修亦計入總數</p>
             </div>
-            <span class="scope-note" hidden>全程式庫範圍</span>
+            <span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span>
           </div>
           <div id="defectFixPie"></div>
         </section>
       </div>
-      <div class="proj-h" style="margin-top:18px">貢獻者</div>
+      <div class="proj-h" style="margin-top:18px" data-i18n="misc.projHContributors">貢獻者</div>
       <div class="contribs" id="ovContribs"></div>
     </section>
 
@@ -309,38 +309,38 @@
 
     <section class="product-kpis">
       <div class="card kpi">
-        <div class="label">路線圖 / 大型工作項<span class="scope-note" hidden>全程式庫範圍</span></div>
+        <div class="label"><span data-i18n="misc.roadmapEpics">路線圖 / 大型工作項</span><span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span></div>
         <div class="value" id="productEpicTotal">–</div>
-        <div class="sub">里程碑 + 計劃分段</div>
+        <div class="sub" data-i18n="misc.subRoadmapEpics">里程碑 + 計劃分段</div>
       </div>
       <div class="card kpi">
-        <div class="label">發佈次數<span class="scope-note" hidden>全程式庫範圍</span></div>
+        <div class="label"><span data-i18n="misc.labelReleaseCount">發佈次數</span><span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span></div>
         <div class="value" id="productReleaseCount">–</div>
-        <div class="sub">目前統計範圍 · 依次採用部署、標籤或發佈記錄</div>
+        <div class="sub" data-i18n="misc.subReleaseCount">目前統計範圍 · 依次採用部署、標籤或發佈記錄</div>
       </div>
       <div class="card kpi">
-        <div class="label">可發佈<span class="scope-note" hidden>全程式庫範圍</span></div>
+        <div class="label"><span data-i18n="misc.labelReadyToRelease">可發佈</span><span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span></div>
         <div class="value" id="productReadyCount">–</div>
-        <div class="sub">已準備 / 有計劃範圍的程式庫</div>
+        <div class="sub" data-i18n="misc.subReadyToRelease">已準備 / 有計劃範圍的程式庫</div>
       </div>
       <div class="card kpi">
-        <div class="label">成果數據覆蓋率<span class="scope-note" hidden>全程式庫範圍</span></div>
+        <div class="label"><span data-i18n="misc.labelOutcomeDataCoverage">成果數據覆蓋率</span><span class="scope-note" hidden data-i18n="misc.scopeNoteFullRepo">全程式庫範圍</span></div>
         <div class="value" id="productOutcomeCoverage">–</div>
-        <div class="sub">有成果數據檔 / 範圍內程式庫</div>
+        <div class="sub" data-i18n="misc.subOutcomeDataCoverage">有成果數據檔 / 範圍內程式庫</div>
       </div>
     </section>
 
     <section class="product-duo">
       <div class="card">
         <div class="card-head">
-          <h2>發佈準備狀態</h2>
-          <span class="card-note">範圍完成度 · 阻礙項目 · CI · 期限 · 上次發佈</span>
+          <h2 data-i18n="misc.h2ReleaseReadiness">發佈準備狀態</h2>
+          <span class="card-note" data-i18n="misc.cardNoteReleaseReadiness">範圍完成度 · 阻礙項目 · CI · 期限 · 上次發佈</span>
         </div>
         <div class="release-list" id="releaseReadiness"></div>
       </div>
       <div class="card">
         <div class="card-head">
-          <h2>路線圖 / 大型工作項</h2>
+          <h2 data-i18n="misc.roadmapEpics">路線圖 / 大型工作項</h2>
           <span class="card-note" id="productRoadmapNote"></span>
         </div>
         <div id="productRoadmap"></div>
@@ -353,32 +353,32 @@
 
     <section class="card">
       <div class="card-head">
-        <h2>最近工作</h2>
-        <span class="card-note" id="tableNote">每項工作顯示所屬 PR · 直接提交標示為無 PR</span>
+        <h2 data-i18n="misc.h2RecentTasks">最近工作</h2>
+        <span class="card-note" id="tableNote" data-i18n="misc.cardNoteTasksTable">每項工作顯示所屬 PR · 直接提交標示為無 PR</span>
       </div>
       <div class="table-controls">
-        <input type="search" id="taskSearch" placeholder="搜尋標題 / 作者 / 分支 / PR" aria-label="搜尋工作">
+        <input type="search" id="taskSearch" placeholder="搜尋標題 / 作者 / 分支 / PR" aria-label="搜尋工作" data-i18n-attr="placeholder:misc.taskSearchPlaceholder,aria-label:misc.taskSearchAriaLabel">
         <div class="task-filter-stack">
           <div class="filter-group">
-            <span class="filter-label" id="levelFilterLabel">級別</span>
+            <span class="filter-label" id="levelFilterLabel" data-i18n="misc.levelFilterLabel">級別</span>
             <div class="level-filter" id="levelFilter" role="group" aria-labelledby="levelFilterLabel">
-              <button type="button" class="lvbtn is-on" data-level="all" aria-pressed="true">全部</button>
+              <button type="button" class="lvbtn is-on" data-level="all" aria-pressed="true" data-i18n="misc.filterAll">全部</button>
               <button type="button" class="lvbtn" data-level="L1" aria-pressed="false">L1</button>
               <button type="button" class="lvbtn" data-level="L2" aria-pressed="false">L2</button>
               <button type="button" class="lvbtn" data-level="L3" aria-pressed="false">L3</button>
               <button type="button" class="lvbtn" data-level="L4" aria-pressed="false">L4</button>
               <button type="button" class="lvbtn" data-level="L5" aria-pressed="false">L5</button>
-              <button type="button" class="lvbtn" data-level="none" aria-pressed="false">未分級</button>
+              <button type="button" class="lvbtn" data-level="none" aria-pressed="false" data-i18n="misc.levelNone">未分級</button>
             </div>
           </div>
           <div class="filter-group">
-            <span class="filter-label" id="statusFilterLabel">狀態</span>
+            <span class="filter-label" id="statusFilterLabel" data-i18n="misc.statusFilterLabel">狀態</span>
             <div class="level-filter" id="statusFilter" role="group" aria-labelledby="statusFilterLabel">
-              <button type="button" class="lvbtn is-on" data-status="all" aria-pressed="true">全部</button>
-              <button type="button" class="lvbtn" data-status="redline" aria-pressed="false">紅線</button>
-              <button type="button" class="lvbtn" data-status="warning" aria-pressed="false">治理警告</button>
-              <button type="button" class="lvbtn" data-status="suspect" aria-pressed="false">級別矛盾</button>
-              <button type="button" class="lvbtn" data-status="ci-fail" aria-pressed="false">CI 失敗</button>
+              <button type="button" class="lvbtn is-on" data-status="all" aria-pressed="true" data-i18n="misc.filterAll">全部</button>
+              <button type="button" class="lvbtn" data-status="redline" aria-pressed="false" data-i18n="misc.statusRedline">紅線</button>
+              <button type="button" class="lvbtn" data-status="warning" aria-pressed="false" data-i18n="misc.statusWarning">治理警告</button>
+              <button type="button" class="lvbtn" data-status="suspect" aria-pressed="false" data-i18n="misc.statusSuspect">級別矛盾</button>
+              <button type="button" class="lvbtn" data-status="ci-fail" aria-pressed="false" data-i18n="misc.statusCiFail">CI 失敗</button>
             </div>
           </div>
         </div>
@@ -391,31 +391,31 @@
         </colgroup>
           <thead>
             <tr>
-              <th class="sortable" data-key="date">日期<span class="arrow"></span></th>
-              <th>程式庫</th>
-              <th>作者</th>
-              <th>所屬 PR</th>
-              <th>分支</th>
-              <th>標題</th>
-              <th class="sortable" data-key="level">級別<span class="arrow"></span></th>
-              <th class="sortable" data-key="additions" style="text-align:right">± 行數<span class="arrow"></span></th>
+              <th class="sortable" data-key="date"><span data-i18n="misc.thDate">日期</span><span class="arrow"></span></th>
+              <th data-i18n="misc.thRepo">程式庫</th>
+              <th data-i18n="misc.thAuthor">作者</th>
+              <th data-i18n="misc.thPr">所屬 PR</th>
+              <th data-i18n="misc.thBranch">分支</th>
+              <th data-i18n="misc.thTitle">標題</th>
+              <th class="sortable" data-key="level"><span data-i18n="misc.thLevel">級別</span><span class="arrow"></span></th>
+              <th class="sortable" data-key="additions" style="text-align:right"><span data-i18n="misc.thDelta">± 行數</span><span class="arrow"></span></th>
             </tr>
           </thead>
           <tbody id="taskRows"></tbody>
         </table>
       </div>
       <div class="table-note" id="tableCap"></div>
-      <button class="load-more" id="tableMore" hidden>載入更多</button>
+      <button class="load-more" id="tableMore" hidden data-i18n="misc.loadMore">載入更多</button>
     </section>
 
   </div>
 
   <footer>
-    <span>資料來源：GitHub GraphQL API → scripts/collect_github.py → GitHub Actions（每日驗證）→ 本機檢視</span>
+    <span data-i18n="chrome.footerSource">資料來源：GitHub GraphQL API → scripts/collect_github.py → GitHub Actions（每日驗證）→ 本機檢視</span>
     <span id="footStamp"></span>
   </footer>
 </div>
 
-<script type="module" src="./js/main.js?v=zh-20260805-5"></script>
+<script type="module" src="./js/main.js?v=i18n-20260922-1"></script>
 </body>
 </html>

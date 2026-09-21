@@ -171,7 +171,10 @@ body {
   margin-left: 10px;
   letter-spacing: 0.06em;
 }
-.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* flex:1 matters when .controls wraps onto its own line under .brand: without
+   it the row shrinks to its content and stops short of the masthead's right
+   edge, so the margin-left:auto on .stamp has no free space to push into. */
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1 1 auto; }
 .controls select {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
@@ -193,7 +196,36 @@ body {
   padding: 4px 10px;
 }
 .badge-demo.on { display: inline-block; }
-.stamp { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); }
+/* margin-left:auto pushes the timestamp — and the language toggle that follows
+   it — to the far right of the controls row, away from the filter selects.
+   They are chrome, not filters, and the separation says so. On a narrow screen
+   .controls wraps and `auto` simply resolves per flex line, so nothing breaks. */
+.stamp {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-left: auto;
+}
+/* Styled like .stamp on purpose — chrome, not another filter control. */
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.lang-toggle .lang-sep { color: var(--line-strong); }
+.lang-toggle .lang-btn {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.lang-toggle .lang-btn.is-active { color: var(--ink); font-weight: 700; }
+.lang-toggle .lang-btn:hover { color: var(--ink); }
 
 /* ---------- KPI ---------- */
 /* The hero takes the wide first column: the north star must not look like

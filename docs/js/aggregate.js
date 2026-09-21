@@ -1,13 +1,14 @@
 import { state, toDate, refDate, repoInScope } from './data.js';
+import { t } from './i18n/index.js';
 
 export const LEVELS = ['L1', 'L2', 'L3', 'L4', 'L5'];
 export const AI_LOC_LEVELS = new Set(['L2', 'L3', 'L4', 'L5']);
 export const META = {
-  L1: { name: '輔助', color: '#CBD2D9', dark: false },
-  L2: { name: '部分自動', color: '#9FB6D1', dark: false },
-  L3: { name: '有條件自動', color: '#5F8CC6', dark: true },
-  L4: { name: '高度自動', color: '#2E5EB8', dark: true },
-  L5: { name: '完全自動', color: '#0A2F9C', dark: true },
+  L1: { name: t('levels.L1'), color: '#CBD2D9', dark: false },
+  L2: { name: t('levels.L2'), color: '#9FB6D1', dark: false },
+  L3: { name: t('levels.L3'), color: '#5F8CC6', dark: true },
+  L4: { name: t('levels.L4'), color: '#2E5EB8', dark: true },
+  L5: { name: t('levels.L5'), color: '#0A2F9C', dark: true },
 };
 export const UNTAGGED_COLOR = '#DFE1D8';
 export const INK = '#191D1B';
@@ -44,16 +45,18 @@ export function isRemediation(t) {
   return REVERT_RE.test(title) && !NON_SHIPPING_REVERT_RE.test(title);
 }
 export const VIOLATION_META = {
-  'direct-push-main': { label: '直接推送到受監察分支（冇 PR）', red: true },
-  'forbidden-files': { label: '提交咗 .env / node_modules / __pycache__', red: true },
-  'workflow-deleted': { label: '刪除咗 GitHub Actions 工作流程', red: true },
-  'cross-branch-merge': { label: '跨功能分支合併', red: true },
-  'core-without-double-review': { label: '核心模組改動欠二次複核', red: true },
-  'merged-without-review': { label: '未經任何審核就合併', red: false },
-  'oversized-pr': { label: '超大 PR（欠分階段提交）', red: false },
+  'direct-push-main': { label: t('kpi.violations.direct-push-main'), red: true },
+  'forbidden-files': { label: t('kpi.violations.forbidden-files'), red: true },
+  'workflow-deleted': { label: t('kpi.violations.workflow-deleted'), red: true },
+  'cross-branch-merge': { label: t('kpi.violations.cross-branch-merge'), red: true },
+  'core-without-double-review': { label: t('kpi.violations.core-without-double-review'), red: true },
+  'merged-without-review': { label: t('kpi.violations.merged-without-review'), red: false },
+  'oversized-pr': { label: t('kpi.violations.oversized-pr'), red: false },
 };
 export const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-export const fmtHours = (h) => h == null ? '–' : (h >= 48 ? (h / 24).toFixed(1) + '<span class="unit">日</span>' : h.toFixed(1) + '<span class="unit">小時</span>');
+export const fmtHours = (h) => h == null ? '–' : (h >= 48
+  ? t('kpi.fmtHours.days', { d: (h / 24).toFixed(1) })
+  : t('kpi.fmtHours.hours', { h: h.toFixed(1) }));
 
 /* ---------------- aggregation ---------------- */
 export function statsFromTasks(list) {

@@ -1,12 +1,20 @@
 import { state, $, esc, windowTasks, repoInScope, personInScope, registerUrl } from './data.js';
 import { personOf } from './people.js';
-import { PAGE_SIZE, DEFECT_CAP, VIOLATION_META } from './aggregate.js?v=zh-20260805-3';
+import { PAGE_SIZE, DEFECT_CAP, VIOLATION_META } from './aggregate.js?v=i18n-20260922-1';
+import { t } from './i18n/index.js?v=i18n-20260922-1';
 
 const TYPE_RE = /^(feat|fix|hotfix|revert|refactor|test|docs|chore|build|ci|perf|style)\b/i;
+// Built once at module evaluation — LANG/t() are already resolved by the
+// time this runs (see docs/js/i18n/index.js), and language switching
+// reloads the page, so a static object (not a live getter) is correct here.
 const TYPE_LABEL = {
-  feat: '功能', fix: '修復', hotfix: '緊急修復', revert: '回退', refactor: '重構',
-  test: '測試', docs: '文件', chore: '雜項', build: '建置', ci: 'CI', perf: '效能',
-  style: '格式', other: '其他',
+  feat: t('table.typeLabel.feat'), fix: t('table.typeLabel.fix'),
+  hotfix: t('table.typeLabel.hotfix'), revert: t('table.typeLabel.revert'),
+  refactor: t('table.typeLabel.refactor'), test: t('table.typeLabel.test'),
+  docs: t('table.typeLabel.docs'), chore: t('table.typeLabel.chore'),
+  build: t('table.typeLabel.build'), ci: t('table.typeLabel.ci'),
+  perf: t('table.typeLabel.perf'), style: t('table.typeLabel.style'),
+  other: t('table.typeLabel.other'),
 };
 export function typeChip(t) {
   const m = TYPE_RE.exec(t || '');
@@ -22,8 +30,8 @@ function barRow(label, n, max, color, extra) {
     <span class="n">${extra || n}</span></div>`;
 }
 const PIE_COLORS = ['#24407E', '#3D67B1', '#2E6B5E', '#6D5A8E', '#B07A1F', '#5F8CC6'];
-const UNASSIGNED = '未指定';
-const FIXED_UNASSIGNED = '已修 · 未指定';
+const UNASSIGNED = t('table.unassigned');
+const FIXED_UNASSIGNED = t('table.fixedUnassigned');
 
 function sortedCounts(counts) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
@@ -101,9 +109,9 @@ function renderRegisterPies(rm) {
     const planSegments = sortedCounts(planCounts).map(([name, count], index) => ({
       name, count, color: name === UNASSIGNED ? '#C7CDC9' : PIE_COLORS[index % PIE_COLORS.length],
     }));
-    $('planAssignmentPie').innerHTML = pieMarkup(planSegments, planTotal, '計劃工作', '項工作');
+    $('planAssignmentPie').innerHTML = pieMarkup(planSegments, planTotal, t('table.pie.planLabel'), t('table.pie.planSub'));
   } else {
-    $('planAssignmentPie').innerHTML = '<div class="pie-empty">未有可用分配數據 — 請設定程式庫負責人或工作負責人。</div>';
+    $('planAssignmentPie').innerHTML = `<div class="pie-empty">${esc(t('table.pie.planEmpty'))}</div>`;
   }
 
   const fixerCounts = new Map();
@@ -140,10 +148,10 @@ function renderRegisterPies(rm) {
     const defectSegments = sortedCounts(fixerCounts).map(([name, count], index) => ({
       name, count, color: name === FIXED_UNASSIGNED ? '#C7CDC9' : PIE_COLORS[index % PIE_COLORS.length],
     }));
-    if (openTotal) defectSegments.push({ name: '未修', count: openTotal, color: '#C2452D' });
-    $('defectFixPie').innerHTML = pieMarkup(defectSegments, defectTotal, '缺陷', `${fixedTotal} 已修`);
+    if (openTotal) defectSegments.push({ name: t('table.pie.unfixed'), count: openTotal, color: '#C2452D' });
+    $('defectFixPie').innerHTML = pieMarkup(defectSegments, defectTotal, t('table.pie.defectLabel'), t('table.pie.defectSub', { n: fixedTotal }));
   } else {
-    $('defectFixPie').innerHTML = '<div class="pie-empty">未有缺陷數據 — 可使用有 bug 標籤的 GitHub Issue、計劃檔 #bug 或缺陷登記冊。</div>';
+    $('defectFixPie').innerHTML = `<div class="pie-empty">${esc(t('table.pie.defectEmpty'))}</div>`;
   }
 }
 
@@ -160,8 +168,8 @@ export function renderOverview(cur) {
   const lmax = langs.length ? langs[0][1] : 0;
   const RAMP = ['#24407E', '#3D67B1', '#5F8CC6', '#8FA8CB', '#BFCCE0', '#D7DEEA'];
   $('ovLangs').innerHTML = langs.map(([n, b], i) => barRow(n, b, lmax, RAMP[i], fmtBytes(b))).join('')
-    || '<div class="ov-sub">無語言數據</div>';
-  if (langs.length) $('ovLangs').innerHTML += `<div class="ov-sub">程式庫大小 ${(disk / 1024).toFixed(1)} MB（Git）</div>`;
+    || `<div class="ov-sub">${esc(t('table.overview.noLanguageData'))}</div>`;
+  if (langs.length) $('ovLangs').innerHTML += `<div class="ov-sub">${esc(t('table.overview.repoSize', { mb: (disk / 1024).toFixed(1) }))}</div>`;
   // commit types(window)
   const types = {};
   for (const t of windowTasks()) {
@@ -172,7 +180,7 @@ export function renderOverview(cur) {
   const te = Object.entries(types).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const tmax = te.length ? te[0][1] : 0;
   $('ovTypes').innerHTML = te.map(([n, c], i) => barRow(TYPE_LABEL[n] || n, c, tmax, RAMP[i])).join('')
-    || '<div class="ov-sub">此範圍內無工作</div>';
+    || `<div class="ov-sub">${esc(t('table.overview.noWorkInScope'))}</div>`;
   // monthly(全部 tasks,唔跟 window)
   const mon = {};
   for (const t of (state.data.tasks || []).filter((t) => repoInScope(t.repo) && personInScope(t) && (state.branch === 'all' || t.branch === state.branch))) {
@@ -182,7 +190,7 @@ export function renderOverview(cur) {
   const me = Object.entries(mon).sort().slice(-10);
   const mmax = Math.max(...me.map(([, c]) => c), 1);
   $('ovMonthly').innerHTML = me.map(([k, c]) => barRow(k, c, mmax, '#2E6B5E')).join('')
-    || '<div class="ov-sub">無數據</div>';
+    || `<div class="ov-sub">${esc(t('table.overview.noData'))}</div>`;
   renderRegisterPies(rm);
   // contributors(window)
   // 貢獻者係比較視角,亦係揀人嘅入口 — 保持全員,只標示揀咗邊個
@@ -198,17 +206,17 @@ export function renderOverview(cur) {
   const AV = ['#24407E', '#3D67B1', '#5F8CC6', '#2E6B5E', '#B07A1F', '#6D5A8E'];
   $('ovContribs').innerHTML = ce.map(([n, c], i) => `<div class="contrib${n === state.person ? ' is-selected' : ''}">
       <div class="nm"><span class="av" style="background:${AV[i % 6]}">${esc(n[0].toUpperCase())}</span><span title="${esc(n)}">${esc(n)}</span></div>
-      <div class="ct">${c}<span style="font-size:var(--fs-xs);color:var(--muted)"> 項工作</span></div>
-      <div class="pc">佔此範圍 ${total ? ((c / total) * 100).toFixed(1) : 0}%</div>
-    </div>`).join('') || '<div class="ov-sub">此範圍內無工作</div>';
+      <div class="ct">${c}<span style="font-size:var(--fs-xs);color:var(--muted)">${esc(t('table.overview.taskCountSuffix'))}</span></div>
+      <div class="pc">${esc(t('table.overview.scopeShare', { pct: total ? ((c / total) * 100).toFixed(1) : 0 }))}</div>
+    </div>`).join('') || `<div class="ov-sub">${esc(t('table.overview.noWorkInScope'))}</div>`;
 }
 export function renderDefects() {
   const rm = state.data.repo_meta || {};
   const sev = (labels) => {
     const L = labels.map((x) => x.toLowerCase());
-    if (L.some((x) => /critical|high|p0|p1/.test(x))) return ['高', 'var(--alert)'];
-    if (L.some((x) => /medium|p2/.test(x))) return ['中', 'var(--warn)'];
-    if (L.some((x) => /low|p[34]/.test(x))) return ['低', '#2E7D4F'];
+    if (L.some((x) => /critical|high|p0|p1/.test(x))) return [t('table.defects.severityHigh'), 'var(--alert)'];
+    if (L.some((x) => /medium|p2/.test(x))) return [t('table.defects.severityMedium'), 'var(--warn)'];
+    if (L.some((x) => /low|p[34]/.test(x))) return [t('table.defects.severityLow'), '#2E7D4F'];
     return ['—', '#9AA5A0'];
   };
   const rows = [];
@@ -245,19 +253,19 @@ export function renderDefects() {
   }
   rows.sort((a, b) => (a.status === 'Open' ? 0 : 1) - (b.status === 'Open' ? 0 : 1));
   $('defectCount').textContent = rows.length > DEFECT_CAP
-    ? `${rows.length} 項,顯示頭 ${DEFECT_CAP}` : `${rows.length} 項`;
+    ? t('table.defects.countCapped', { n: rows.length, cap: DEFECT_CAP }) : t('table.defects.count', { n: rows.length });
   $('defectRows').innerHTML = rows.slice(0, DEFECT_CAP).map((r) => {
     const [sl, sc] = sev(r.labels || []);
     return `<tr>
-      <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.number ? '#' + r.number : '計劃'}</a></td>
+      <td><a class="tlink" href="${esc(r.url)}" target="_blank" rel="noopener">${r.number ? '#' + r.number : esc(t('table.defects.planSource'))}</a></td>
       <td class="repo">${esc(r.repo.split('/').pop())}</td>
       <td><span class="sevdot" style="background:${sc}"></span>${sl}</td>
       <td class="subject" title="${esc(r.title)}">${esc(r.title)}</td>
-      <td style="color:${r.status === 'Open' ? 'var(--alert)' : 'var(--muted)'};font-weight:${r.status === 'Open' ? 700 : 400}">${r.status === 'Open' ? '未修' : '已修'}</td>
+      <td style="color:${r.status === 'Open' ? 'var(--alert)' : 'var(--muted)'};font-weight:${r.status === 'Open' ? 700 : 400}">${r.status === 'Open' ? esc(t('table.defects.statusOpen')) : esc(t('table.defects.statusFixed'))}</td>
       <td class="mono" style="font-size:var(--fs-xs)">${esc((r.assignees || []).join(', ') || '–')}</td>
       <td class="mono" style="font-size:var(--fs-xs)">${esc(r.due || r.closed || '–')}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="mono" style="color:var(--muted)">無缺陷 — 可建立有 bug 標籤的 GitHub Issue，或在計劃檔寫入 <code>- [ ] … #bug !P1 due:2026-08-01</code></td></tr>';
+  }).join('') || `<tr><td colspan="7" class="mono" style="color:var(--muted)">${esc(t('table.defects.emptyPrefix'))}<code>${esc(t('table.defects.emptyCode'))}</code></td></tr>`;
 }
 
 /** 搜尋比對原始欄位,唔係 render 出嚟嘅 HTML — markup(例如 typechip、⛔ 標記)
@@ -287,12 +295,12 @@ export function taskMatchesStatus(t, status) {
 
 /** Make the parent PR explicit. A direct commit has no parent PR, but its SHA
  * remains available as a secondary link so the row is still traceable. */
-export function taskPullRequestMarkup(t) {
-  if (t.kind === 'pr') {
-    return `<a class="tlink pr-ref" href="${esc(t.url)}" target="_blank" rel="noopener" aria-label="PR #${esc(t.id)}">#${esc(t.id)}</a>`;
+export function taskPullRequestMarkup(task) {
+  if (task.kind === 'pr') {
+    return `<a class="tlink pr-ref" href="${esc(task.url)}" target="_blank" rel="noopener" aria-label="${esc(t('table.row.prAriaLabel', { id: task.id }))}">#${esc(task.id)}</a>`;
   }
-  return `<span class="no-pr" title="直接提交 · 無所屬 PR">無 PR</span>`
-    + `<a class="commit-ref" href="${esc(t.url)}" target="_blank" rel="noopener" title="提交 ${esc(t.id)}">${esc(t.id)}</a>`;
+  return `<span class="no-pr" title="${esc(t('table.row.directCommitTooltip'))}">${esc(t('table.row.noPr'))}</span>`
+    + `<a class="commit-ref" href="${esc(task.url)}" target="_blank" rel="noopener" title="${esc(t('table.row.commitTooltip', { id: task.id }))}">${esc(task.id)}</a>`;
 }
 
 function violationFlags(t) {
@@ -329,7 +337,7 @@ export function renderTable() {
       <td class="subject" title="${esc(r.title)}">${typeChip(r.title)}${esc(r.title)}</td>
       <td class="lvlcell">${r.level ? `<span class="chip ${r.level}">${r.level}</span>` : '<span class="chip none">—</span>'}${r.check && r.check.indexOf('suspect') === 0 ? `<span class="flag" title="${esc(r.check)}">⚠</span>` : ''}${violationFlags(r)}</td>
       <td class="lines">+${r.additions}<span class="del">−${r.deletions}</span></td>
-    </tr>`).join('') || '<tr><td colspan="8" class="mono" style="color:var(--muted)">此範圍內無工作</td></tr>';
-  $('tableCap').textContent = rows.length ? `顯示 ${shown.length} / ${rows.length} 項工作` : '';
+    </tr>`).join('') || `<tr><td colspan="8" class="mono" style="color:var(--muted)">${esc(t('table.row.emptyTable'))}</td></tr>`;
+  $('tableCap').textContent = rows.length ? t('table.row.shownCount', { shown: shown.length, total: rows.length }) : '';
   $('tableMore').hidden = shown.length >= rows.length;
 }
